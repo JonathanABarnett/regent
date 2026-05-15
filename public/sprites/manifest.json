@@ -1,0 +1,40 @@
+{
+  "$schema": "./manifest.schema.json",
+  "version": 1,
+  "description": "Drop PNG files into the matching folders, list them here, reload — the engine prefers manifest entries over programmatic placeholders. Anything missing falls back to the procedural sprite.",
+  "tiles": {
+    "ocean":    [],
+    "coast":    [],
+    "river":    [],
+    "plain":    [],
+    "forest":   [],
+    "hill":     [],
+    "mountain": [],
+    "snow":     []
+  },
+  "structures": {
+    "castle":   null,
+    "town":     null,
+    "library":  null,
+    "forge":    null,
+    "mine":     null
+  },
+  "characters": {
+    "villager":   { "sheet": null, "directions": 4, "frames": 4, "frameW": 32, "frameH": 32 },
+    "courier":    { "sheet": null, "directions": 4, "frames": 4, "frameW": 32, "frameH": 32 },
+    "scholar":    { "sheet": null, "directions": 4, "frames": 4, "frameW": 32, "frameH": 32 },
+    "blacksmith": { "sheet": null, "directions": 4, "frames": 4, "frameW": 32, "frameH": 32 },
+    "miner":      { "sheet": null, "directions": 4, "frames": 4, "frameW": 32, "frameH": 32 },
+    "guard":      { "sheet": null, "directions": 4, "frames": 4, "frameW": 32, "frameH": 32 }
+  },
+  "props": {
+    "airship":     null,
+    "monster":     null,
+    "rain_drop":   null,
+    "snow_flake":  null,
+    "spark":       null,
+    "smoke":       null,
+    "firework":    null,
+    "cloud":       null
+  }
+}

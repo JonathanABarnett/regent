@@ -1,0 +1,104 @@
+import { describe, expect, it } from "vitest";
+import { World } from "../World";
+import { Aspirations } from "./Aspirations";
+
+describe("Aspirations", () => {
+  it("seedInitial fills 3 active slots from the pool", () => {
+    const a = new Aspirations(() => 0.1);
+    a.seedInitial();
+    expect(a.active.length).toBe(3);
+    expect(new Set(a.active).size).toBe(3); // all unique
+  });
+
+  it("definitions list is non-empty and well-formed", () => {
+    const defs = Aspirations.definitions();
+    expect(defs.length).toBeGreaterThan(5);
+    for (const d of defs) {
+      expect(d.id).toBeTruthy();
+      expect(d.title).toBeTruthy();
+      expect(d.description).toBeTruthy();
+      expect(typeof d.progress).toBe("function");
+    }
+  });
+
+  it("each definition's progress function returns a finite number on a fresh world", () => {
+    const w = new World({ seed: 42 });
+    for (const d of Aspirations.definitions()) {
+      const p = d.progress(w);
+      expect(Number.isFinite(p)).toBe(true);
+      expect(p).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("evaluate marks completion when progress >= 1 and replaces the slot", () => {
+    const w = new World({ seed: 42 });
+    // Force-seed an aspiration we can complete on the spot.
+    w.aspirations.active = ["year_2"];
+    w.aspirations.completed = {};
+    w.state.year = 5; // far past Y2
+    const completed = w.aspirations.evaluate(w);
+    expect(completed).toContain("year_2");
+    expect(w.aspirations.completed.year_2).toBeDefined();
+    // A new aspiration should have replaced the old one (or the pool is exhausted).
+    expect(w.aspirations.active.length).toBeLessThanOrEqual(3);
+  });
+
+  it("evaluate does NOT mark completion when progress < 1", () => {
+    const w = new World({ seed: 42 });
+    w.aspirations.active = ["pop_50"];
+    w.aspirations.completed = {};
+    // Brand-new world has ~12 NPCs, so 12/50 = 0.24 — not complete.
+    const completed = w.aspirations.evaluate(w);
+    expect(completed.length).toBe(0);
+    expect(w.aspirations.completed.pop_50).toBeUndefined();
+  });
+
+  it("getActive returns snapshots with progress clamped to [0,1]", () => {
+    const w = new World({ seed: 42 });
+    w.aspirations.active = ["year_5"];
+    w.state.year = 999; // unrealistically high
+    const snap = w.aspirations.getActive(w);
+    expect(snap.length).toBe(1);
+    expect(snap[0].progress).toBe(1);
+    expect(snap[0].complete).toBe(true);
+  });
+
+  it("hydrate filters unknown ids and refills to 3", () => {
+    const a = new Aspirations(() => 0.5);
+    a.hydrate(["pop_25", "completely_made_up_id", "vault_10"], { ancient_id: "2024-01-01" });
+    expect(a.active).toContain("pop_25");
+    expect(a.active).toContain("vault_10");
+    expect(a.active).not.toContain("completely_made_up_id");
+    expect(a.active.length).toBe(3); // refilled
+  });
+
+  it("never picks an aspiration that is currently active or already completed", () => {
+    const a = new Aspirations(() => 0.0);
+    a.active = ["pop_25"];
+    a.completed = { vault_10: "2024-01-01" };
+    a.seedInitial();
+    expect(a.active.filter((id) => id === "pop_25").length).toBe(1); // not duplicated
+    expect(a.active).not.toContain("vault_10");
+  });
+
+  it("World.tick writes a milestone journal entry on aspiration completion", () => {
+    const w = new World({ seed: 42 });
+    const milestones: string[] = [];
+    w.onJournal = (e) => {
+      if (e.kind === "milestone") milestones.push(e.text);
+    };
+    w.aspirations.active = ["year_2"];
+    w.aspirations.completed = {};
+    // Force a day rollover with calendar.year already past the goal — the
+    // tick will overwrite state.year from cal.year, so the hijack has to
+    // bump year (not just day) for the aspiration to register as complete.
+    const cal = w.calendar.snapshot();
+    (w.calendar as unknown as { snapshot(): typeof cal }).snapshot = () => ({
+      ...cal,
+      day: cal.day + 1,
+      year: 5,
+    });
+    w.tick(0.1);
+    expect(milestones.some((t) => t.includes("Aspiration fulfilled"))).toBe(true);
+  });
+});

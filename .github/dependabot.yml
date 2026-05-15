@@ -1,0 +1,54 @@
+version: 2
+updates:
+  # JavaScript dependencies — npm
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    labels:
+      - "dependencies"
+      - "automated"
+    groups:
+      # Bundle minor + patch bumps to reduce PR noise. Major bumps still
+      # arrive individually so they get attention.
+      npm-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Pixi v8 → v9 will be a breaking change; pin until we're ready.
+      - dependency-name: "pixi.js"
+        update-types: ["version-update:semver-major"]
+      # Pin React 18; React 19 is a deliberate migration.
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "ci"
+      - "automated"
+
+  # Rust crates (Cargo) — for src-tauri
+  - package-ecosystem: "cargo"
+    directory: "/src-tauri"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "rust"
+      - "automated"

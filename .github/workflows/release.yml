@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  itch-deploy:
+    name: Build + deploy to itch.io
+    runs-on: ubuntu-latest
+    # Required secrets (set in repo Settings → Secrets and variables → Actions):
+    #   BUTLER_API_KEY   — from https://itch.io/user/settings/api-keys
+    #   ITCH_USER        — your itch.io username (or "jonat" by default)
+    #   ITCH_GAME        — the project slug (e.g. "kingdomos")
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Setup Butler
+        run: |
+          curl -L -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip butler.zip
+          chmod +x butler
+          ./butler -V
+
+      - name: Push to itch.io (HTML5)
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+          ITCH_USER: ${{ secrets.ITCH_USER }}
+          ITCH_GAME: ${{ secrets.ITCH_GAME }}
+        run: |
+          ./butler push dist/ "$ITCH_USER/$ITCH_GAME:html5" --userversion "${GITHUB_REF#refs/tags/v}"
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kingdomos-release-${{ github.ref_name }}
+          path: dist/
+          retention-days: 90
