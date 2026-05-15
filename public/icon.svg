@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  KingdomOS favicon / app icon. Single SVG used for:
+  - <link rel="icon"> in index.html (modern browsers)
+  - PWA manifest icons (Android via image/svg+xml, with PNG fallbacks)
+  - Apple touch icon (Safari renders SVG fine but caching is unreliable)
+
+  Drawn as a tiny crenellated castle on a dark navy ground with a warm
+  banner-yellow flag, matching the in-app palette. 64×64 viewBox so it
+  rasterizes cleanly to every common icon size (16, 32, 64, 192, 512).
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 64 64"
+  shape-rendering="crispEdges"
+>
+  <!-- background -->
+  <rect width="64" height="64" rx="10" fill="#1a1a2e"/>
+
+  <!-- castle silhouette: walls + tower + crenellations -->
+  <!-- main wall -->
+  <rect x="12" y="36" width="40" height="20" fill="#9ca3af"/>
+  <rect x="12" y="36" width="40" height="2" fill="#c0c8d0"/>
+  <rect x="12" y="54" width="40" height="2" fill="#5a6573"/>
+  <!-- left wall crenellations -->
+  <rect x="12" y="32" width="4" height="4" fill="#9ca3af"/>
+  <rect x="20" y="32" width="4" height="4" fill="#9ca3af"/>
+  <!-- right wall crenellations -->
+  <rect x="40" y="32" width="4" height="4" fill="#9ca3af"/>
+  <rect x="48" y="32" width="4" height="4" fill="#9ca3af"/>
+
+  <!-- central tower -->
+  <rect x="26" y="20" width="12" height="36" fill="#9ca3af"/>
+  <rect x="26" y="20" width="12" height="2" fill="#c0c8d0"/>
+  <rect x="26" y="20" width="2" height="36" fill="#c0c8d0"/>
+  <rect x="36" y="20" width="2" height="36" fill="#5a6573"/>
+  <!-- tower crenellations -->
+  <rect x="26" y="16" width="3" height="4" fill="#9ca3af"/>
+  <rect x="31" y="16" width="3" height="4" fill="#9ca3af"/>
+  <rect x="36" y="16" width="2" height="4" fill="#9ca3af"/>
+  <!-- tower window (warm glow) -->
+  <rect x="30" y="28" width="4" height="6" fill="#1c1917"/>
+  <rect x="31" y="29" width="2" height="4" fill="#fde68a"/>
+
+  <!-- flag pole + banner -->
+  <rect x="32" y="6" width="1" height="10" fill="#1f2937"/>
+  <rect x="32" y="6" width="1" height="1" fill="#fbbf24"/>
+  <rect x="33" y="7" width="6" height="4" fill="#dc2626"/>
+  <rect x="33" y="7" width="6" height="1" fill="#ef4444"/>
+
+  <!-- door -->
+  <rect x="29" y="44" width="6" height="12" fill="#3f2616"/>
+  <rect x="29" y="44" width="6" height="1" fill="#1a0e07"/>
+  <rect x="32" y="44" width="1" height="12" fill="#1a0e07"/>
+</svg>

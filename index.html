@@ -4,7 +4,52 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="dark" />
-    <title>KingdomOS</title>
+    <meta name="theme-color" content="#1a1a2e" />
+
+    <title>KingdomOS — a small fantasy world, living on your desktop</title>
+    <meta
+      name="description"
+      content="A 16-bit SNES-style fantasy kingdom that lives on your desktop. It runs on its own, reacts to your real-world activity (git commits, system load, Twitch events) as flavor, and tells you stories about a place that's now yours."
+    />
+
+    <!-- Open Graph (Facebook, Discord, Slack, LinkedIn, most aggregators) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="KingdomOS — an ambient fantasy kingdom" />
+    <meta
+      property="og:description"
+      content="A 16-bit kingdom that lives on your desktop. NPCs walk their schedules, the seasons turn, the chronicle fills with stories — even when you're not watching."
+    />
+    <meta property="og:url" content="https://jonathanabarnett.github.io/kingdomos/" />
+    <meta property="og:site_name" content="KingdomOS" />
+    <!--
+      og:image must be a raster image (PNG/JPG) for most social previews to
+      render. The committed og-image.svg is the design source; render it to
+      og-image.png with `npx svgexport public/og-image.svg public/og-image.png 1200:630`
+      and the meta tag below will then produce previews on every major platform.
+      The svg fallback is included so platforms that DO support SVG (Mastodon,
+      Bluesky) still get a card.
+    -->
+    <meta property="og:image" content="https://jonathanabarnett.github.io/kingdomos/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="A pixel-art castle under a night sky, with the wordmark KingdomOS below." />
+
+    <!-- Twitter card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="KingdomOS — an ambient fantasy kingdom" />
+    <meta
+      name="twitter:description"
+      content="A 16-bit kingdom that lives on your desktop. NPCs walk their schedules, the seasons turn, the chronicle fills with stories — even when you're not watching."
+    />
+    <meta name="twitter:image" content="https://jonathanabarnett.github.io/kingdomos/og-image.png" />
+    <meta name="twitter:image:alt" content="A pixel-art castle under a night sky, with the wordmark KingdomOS below." />
+
+    <!-- Favicons + app icons -->
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+
+    <!-- PWA manifest -->
+    <link rel="manifest" href="./manifest.webmanifest" />
   </head>
   <body>
     <div id="root"></div>

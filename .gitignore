@@ -11,6 +11,15 @@ src-tauri/gen/
 # TypeScript build info (regenerated on every tsc -b)
 *.tsbuildinfo
 
+# Generated branding rasters — committed only as SVG sources; the Pages
+# workflow renders these PNGs from public/icon.svg + public/og-image.svg
+# via rsvg-convert at build time. Generate locally with the same commands
+# if you need to verify them.
+public/icon-192.png
+public/icon-512.png
+public/icon-maskable.png
+public/og-image.png
+
 # Environment
 .env
 .env.*

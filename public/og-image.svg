@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Social-share preview card (1200×630 — the standard og:image size).
+
+  Most platforms (Twitter, Discord, Facebook, LinkedIn) do NOT render SVG
+  og:images. Render this to og-image.png for the proper preview:
+
+    npx svgexport public/og-image.svg public/og-image.png 1200:630
+    # OR
+    rsvg-convert -w 1200 -h 630 public/og-image.svg > public/og-image.png
+
+  Once og-image.png exists, swap the og:image meta tag in index.html.
+  Until then this SVG is committed as a placeholder + design source.
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="1200"
+  height="630"
+  viewBox="0 0 1200 630"
+  shape-rendering="crispEdges"
+>
+  <!-- Background: warm dark gradient like the in-app night sky -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a1a2e"/>
+      <stop offset="0.6" stop-color="#2a2a44"/>
+      <stop offset="1" stop-color="#3f3a52"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1f3a2e"/>
+      <stop offset="1" stop-color="#0f1f17"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#sky)"/>
+
+  <!-- Stars (a few pixel-art twinkles) -->
+  <g fill="#fde68a">
+    <rect x="120" y="80" width="2" height="2"/>
+    <rect x="220" y="140" width="2" height="2"/>
+    <rect x="380" y="60" width="2" height="2"/>
+    <rect x="640" y="120" width="2" height="2"/>
+    <rect x="800" y="50" width="2" height="2"/>
+    <rect x="980" y="100" width="2" height="2"/>
+    <rect x="1080" y="180" width="2" height="2"/>
+    <rect x="180" y="200" width="2" height="2"/>
+  </g>
+
+  <!-- Distant hills (parallax 1) -->
+  <path d="M0,420 L150,360 L320,400 L500,340 L680,390 L850,330 L1050,380 L1200,360 L1200,470 L0,470 Z"
+        fill="#1f2937" opacity="0.6"/>
+  <!-- Closer hills (parallax 2) -->
+  <path d="M0,470 L200,430 L400,460 L600,420 L800,450 L1000,415 L1200,440 L1200,510 L0,510 Z"
+        fill="#1f2937"/>
+
+  <!-- Ground -->
+  <rect x="0" y="490" width="1200" height="140" fill="url(#ground)"/>
+
+  <!-- The castle, dead center -->
+  <g transform="translate(540 270) scale(4.5)">
+    <!-- main wall -->
+    <rect x="0" y="36" width="40" height="20" fill="#9ca3af"/>
+    <rect x="0" y="36" width="40" height="2" fill="#c0c8d0"/>
+    <rect x="0" y="54" width="40" height="2" fill="#5a6573"/>
+    <!-- left wall crenellations -->
+    <rect x="0" y="32" width="4" height="4" fill="#9ca3af"/>
+    <rect x="8" y="32" width="4" height="4" fill="#9ca3af"/>
+    <!-- right wall crenellations -->
+    <rect x="28" y="32" width="4" height="4" fill="#9ca3af"/>
+    <rect x="36" y="32" width="4" height="4" fill="#9ca3af"/>
+
+    <!-- central tower -->
+    <rect x="14" y="20" width="12" height="36" fill="#9ca3af"/>
+    <rect x="14" y="20" width="12" height="2" fill="#c0c8d0"/>
+    <rect x="14" y="20" width="2" height="36" fill="#c0c8d0"/>
+    <rect x="24" y="20" width="2" height="36" fill="#5a6573"/>
+    <rect x="14" y="16" width="3" height="4" fill="#9ca3af"/>
+    <rect x="19" y="16" width="3" height="4" fill="#9ca3af"/>
+    <rect x="24" y="16" width="2" height="4" fill="#9ca3af"/>
+    <!-- tower window -->
+    <rect x="18" y="28" width="4" height="6" fill="#1c1917"/>
+    <rect x="19" y="29" width="2" height="4" fill="#fde68a"/>
+
+    <!-- flag -->
+    <rect x="20" y="6" width="1" height="10" fill="#1f2937"/>
+    <rect x="21" y="7" width="6" height="4" fill="#dc2626"/>
+    <rect x="21" y="7" width="6" height="1" fill="#ef4444"/>
+
+    <!-- door -->
+    <rect x="17" y="44" width="6" height="12" fill="#3f2616"/>
+    <rect x="20" y="44" width="1" height="12" fill="#1a0e07"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="600" y="540"
+        font-family="'Press Start 2P', 'Courier New', monospace"
+        font-size="56"
+        font-weight="bold"
+        text-anchor="middle"
+        fill="#fde68a">
+    KingdomOS
+  </text>
+
+  <!-- Tagline -->
+  <text x="600" y="585"
+        font-family="'Georgia', serif"
+        font-size="22"
+        font-style="italic"
+        text-anchor="middle"
+        fill="#c0c8d0">
+    A small fantasy world, living on your desktop.
+  </text>
+</svg>
