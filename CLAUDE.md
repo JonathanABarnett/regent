@@ -2,7 +2,7 @@
 
 A 16-bit ambient fantasy kingdom that lives on the desktop. Runs autonomously; reacts to real-world signals (git, system, Twitch) as flavor.
 
-> Status at last full pass: **250 tests passing across 25 files · TypeScript strict · production build ~3s.** Release automation in place (`npm run release`).
+> Status at last full pass: **285 tests passing across 29 files · TypeScript strict · production build ~2.7s.** Live demo at https://jonathanabarnett.github.io/kingdomos/ — auto-deployed on every push to `main` via `.github/workflows/pages.yml`.
 
 ## TL;DR
 
@@ -10,7 +10,7 @@ A 16-bit ambient fantasy kingdom that lives on the desktop. Runs autonomously; r
 npm install           # one-time
 npm run dev           # Vite-only frontend (works in browser; Tauri APIs stub)
 npm run tauri:dev     # Full desktop app (needs Rust + MSVC)
-npm test              # Vitest suite (195+ tests)
+npm test              # Vitest suite (285 tests across 29 files)
 npm run typecheck     # tsc -b strict
 npm run build         # Production bundle → dist/
 npm run release       # Tag + push → CI publishes to itch.io
@@ -40,6 +40,10 @@ npm run release       # Tag + push → CI publishes to itch.io
 6. **Identity is sacred.** Once the player founds a kingdom they get a 17-section monarch creator, pet creator, banner color. All persist forever, survive succession.
 7. **Determinism from the seed.** Same seed + same in-world day sequence → same NPC roster, same quest arcs, same decision IDs, same trait assignments. RNG flows through `world.rand` (mulberry32). `Math.random()` is only allowed for *transient* effects (sprite jitter, animation tuning) — never anything that should round-trip through a save.
 8. **Court seats have real mechanical effects.** Player-appointed Royal Advisor / Captain / Scholar each modify a sim system. Wired via `world.courtEffects` (three booleans) + `world.setCourt(...)` validating ids against the live roster. App.tsx mirrors `identity.court` → `world.setCourt` on change. Day rollover auto-revalidates seats so deaths free them up.
+9. **Journal entries are spatial.** Each `SavedJournalEntry` carries an optional `targetStructureId`. Most non-system entries (life events, founding, anniversaries, holidays, threats, court speech, quest phases, courier arrivals, forge/library/mine activity) are pinned to a structure. The journal panel renders a `[ go to ]` button next to each pinned entry; clicking snaps the camera to that structure.
+10. **Two interior lenses on the same data.** `src/sim/Interiors.ts` defines a layout (rooms + furniture stations) for every structure kind. The same data drives:
+    - **Tier 2** (modal "Step inside" view): click a building → detailed 24px-tile interior + roster — `src/ui/InteriorView.tsx`
+    - **Tier 3** (cutaway / dollhouse mode, press `X`): roofs go translucent, every building shows its interior overlay at world scale, non-walking NPCs render at their stations — `src/engine/layers/CutawayLayer.ts` + `src/sim/Associations.ts`
 
 ## Directory map
 
@@ -50,6 +54,8 @@ src/
 │   ├── Map.ts                # procgen overworld (simplex noise)
 │   ├── Persistence.ts        # save/load with hardened validation + export/import
 │   ├── KingdomArchive.ts     # past-kingdoms vault (compact summaries, up to 20)
+│   ├── Interiors.ts          # interior layouts + stationFor() for every structure kind
+│   ├── Associations.ts       # pure helper: which building is an NPC "inside" right now?
 │   ├── types.ts              # NPC, Pet, Structure, WorldState, NPCTrait
 │   ├── events/
 │   │   ├── EventSchema.ts    # Zod-validated v1 event schema (HARDENED)
@@ -66,7 +72,7 @@ src/
 │       ├── Calendar.ts       # wall-clock anchored day/year/season
 │       ├── Journal.ts        # narrative entry writer (subscribes to bus, 5 entry kinds)
 │       ├── LifeEvents.ts     # aging, marriage, birth, death (trait-flavored, 3 phrasing variants each)
-│       ├── Quests.ts         # 6 multi-day arcs + 8 decision archetypes — all seeded
+│       ├── Quests.ts         # 9 multi-day arcs + 10 decision archetypes — all seeded
 │       ├── Decisions.ts      # interactive decision queue with timed expiry
 │       ├── Succession.ts     # monarch death + heir ascension
 │       ├── Treasury.ts       # vault of artifacts across all monarchs (cap 200)
@@ -78,6 +84,7 @@ src/
 │       ├── Aspirations.ts    # player-facing soft goals (15 pool, 3 active)
 │       ├── History.ts        # per-day snapshots for the stats sparklines (90-day ring)
 │       ├── Threats.ts        # rare monster siege → decision; captain seat reduces chance
+│       ├── Discoveries.ts    # spontaneous map landmarks (standing_stones, ruin, camp, …)
 │       └── Achievements.ts   # 27 milestone badges (17 visible + 10 hidden mysteries)
 ├── engine/                   # PIXI RENDERING — reads sim, never writes
 │   ├── PixiApp.ts            # bootstraps Pixi v8, runs sim/render ticks
@@ -93,7 +100,9 @@ src/
 │   └── layers/
 │       ├── ParallaxBackground.ts
 │       ├── StructureLayer.ts    # sprites for buildings, reconciles new ones
-│       ├── EntityLayer.ts       # NPCs, pets, couriers, effects, speech bubbles
+│       ├── BorderLayer.ts       # dashed gold convex-hull outline around the kingdom
+│       ├── CutawayLayer.ts      # Tier 3 dollhouse overlay — interior decor at world scale
+│       ├── EntityLayer.ts       # NPCs, pets, couriers, effects, speech bubbles (incl. cutaway relocation)
 │       ├── WeatherLayer.ts      # rain/snow/cloud particles
 │       └── CrtOverlay.ts        # scanline + vignette overlay
 ├── ui/                       # REACT chrome
@@ -113,7 +122,11 @@ src/
 │   ├── DecisionPrompt.tsx    # quest decision popup
 │   ├── CourtPicker.tsx       # pick advisor/captain/scholar
 │   ├── NpcInspect.tsx        # hover tooltip (name · role · age · trait · partner · parents)
-│   ├── StructureInspector.tsx# click-to-inspect building
+│   ├── StructureInspector.tsx# click-to-inspect building + "Step inside" entry point
+│   ├── InteriorView.tsx      # Tier 2 modal: detailed interior render via Canvas2D
+│   ├── interior-renderer.ts  # pure Canvas2D primitives — drawRoom, drawStation, drawNpcAt
+│   ├── PastKingdoms.tsx      # read-only archive of past kingdoms (title screen entry)
+│   ├── Sparkline.tsx         # tiny SVG line chart used by the stats panel
 │   ├── MiniMap.tsx           # corner overworld preview
 │   ├── SpeedControl.tsx      # pause/0.5x/1x/2x/3x
 │   ├── StreamerOverlay.tsx   # Twitch event ticker (only in streamer mode)
@@ -255,13 +268,14 @@ Space          follow random NPC
 F              center on castle
 R              resume autopilot drift
 P              photo mode (framed screenshot)
+X              cutaway / dollhouse mode — see NPCs inside buildings
 ,  .           slow / speed up sim
 /              toggle pause
 ? / H          help overlay
 Esc            close any panel
 ```
 
-Mouse: click NPC → camera follows; click structure → inspector; drag → pan; wheel → zoom.
+Mouse: click NPC → camera follows; click structure → inspector → "Step inside"; drag → pan (with inertia on flick-release); wheel → zoom. Uses pointer events so touch / pen / middle-click all work. Cursor flips `grab` → `grabbing` during a drag.
 
 ## Content systems (current state)
 
@@ -282,9 +296,13 @@ Mouse: click NPC → camera follows; click structure → inspector; drag → pan
 | Surname-part pools | 20 left × 20 right |
 | Onboarding suggestions | 24 kingdom + 24 monarch + 20 pet names |
 | Photo-mode frames | 5 (wood, parchment, stone, window, naked) |
-| Audio | procedural drone pad + sparse melody layer (toggleable) + 9 event SFX |
+| Audio | procedural drone pad (toggleable) + sparse melody layer (toggleable) + 9 event SFX + 5 category chimes |
 | Threat flavors | 5 (wolves, bandits, beast, raiders, haunting) — captain seat reduces chance 60% |
+| Discovered landmarks | 5 kinds (standing stones, ruin, camp, wellspring, obelisk) × 3 opening sentences = 15 flavor variants |
 | Stats history retained | 90 in-world days (population, gold, vault as sparklines) |
+| Interior layouts | 13 (one per structure kind: castle, cottage/town, library, forge, mine, watchtower, mill, shrine + 5 landmarks) |
+| Furniture station tags | 29 distinct (anvil, throne, bookshelf, bed, loom, mill_wheel, telescope, altar, kneeler, well_mouth, …) |
+| Past kingdoms archived | up to 20 retained (oldest fall off); each preserves milestones + final census |
 
 ## Adding new content (typical recipes)
 
@@ -326,6 +344,13 @@ Add to the relevant `ADVISOR_LINES` / `CAPTAIN_LINES` / `SCHOLAR_LINES` array in
 ### NPC backstory pools
 The four pools in `src/sim/systems/Backstories.ts` (`ORIGINS`, `CARRYING`, `STATED_REASONS`, `TRADES`) are combinatorial — adding one entry to each multiplies the total backstory count. Keep entries thematically grounded (medieval-flavored, no anachronisms).
 
+### A new interior layout
+1. Add the structure kind to `INTERIORS` in `src/sim/Interiors.ts`. Each layout is `{ width, height, stations: Station[] }` where `width`/`height` are in interior tiles (one interior tile renders at `INTERIOR_TILE_PX` = 24px in the modal and at world-scale in cutaway mode).
+2. Each `Station` is `{ x, y, tag, capacity? }`. Pick existing `StationTag` values when possible (anvil, throne, bed, …) to reuse the renderer; new tags require a `drawStationMarker` case in `src/engine/layers/CutawayLayer.ts` AND a `drawStation` case in `src/ui/interior-renderer.ts` AND a label in `stationLabel()` (Interiors.ts).
+3. If a new role should associate with this building, extend `stationFor(npc, building, taken)` so the NPC's role maps to the right station tag (e.g., a `gardener` role → `flowerbed` station).
+4. The cutaway placement is automatic: any non-walking NPC whose `associatedBuildingId()` resolves to this structure will be drawn at their station via `stationWorldPos()`. No additional wiring needed for Tier 3.
+5. Add at least one test in `Interiors.test.ts` confirming the layout exists and a `stationFor()` test for the new role/station mapping.
+
 ## Testing
 
 ```sh
@@ -334,7 +359,7 @@ npm run test:watch  # watch mode
 npm run typecheck   # tsc -b strict
 ```
 
-195 tests across 19 files. New systems should have at least 4–6 tests covering:
+285 tests across 29 files. New systems should have at least 4–6 tests covering:
 - Happy path
 - Adversarial / oversized / NaN input
 - Round-trip save/load (if persisted)

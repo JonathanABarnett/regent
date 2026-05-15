@@ -1,6 +1,89 @@
 # KingdomOS — Morning Report
 
-Written overnight across multiple batches. Status: **250 tests passing across 25 files · TypeScript clean · production build succeeds in 2.96s · code-split bundles · `MARKETING.md` shipped · full release automation in place · ready to ship to itch.io today if you want.**
+Written overnight across multiple batches. Status: **285 tests passing across 29 files · TypeScript clean · production build succeeds in 2.67s · code-split bundles · live demo at https://jonathanabarnett.github.io/kingdomos/ · full release automation in place · ready to ship to itch.io today if you want.**
+
+## Pass 26 — documentation refresh
+
+The codebase moved substantially between Pass 18 and Pass 26 (interiors, journal pin navigation, landmarks, drag UX, NPC de-stacking, kingdom borders). Pass 26 brings CLAUDE.md / README.md / this report into line with what actually ships:
+
+- Updated test count everywhere (250 → 285), build time (2.96s → 2.67s), file count (25 → 29).
+- CLAUDE.md gained two new architectural pillars: **(9) Journal entries are spatial** and **(10) Two interior lenses on the same data**.
+- Directory map now lists `Interiors.ts`, `Associations.ts`, `Discoveries.ts`, `BorderLayer.ts`, `CutawayLayer.ts`, `InteriorView.tsx`, `interior-renderer.ts`, `PastKingdoms.tsx`, `Sparkline.tsx`.
+- Content tables added: 13 interior layouts, 29 station tags, 5 landmark kinds × 3 opening sentences, drone toggleable, 5 category chimes, 20 archived kingdoms cap.
+- New recipe: "A new interior layout" — explains how to add a structure kind to `INTERIORS`, wire `stationFor()`, and register the renderer cases in both `CutawayLayer` and `interior-renderer`.
+- README gained a "Step inside any building" section, the `X` cutaway keybind, the "click to fly there" journal-pin behaviour, the dashed kingdom border, and the landmark-discovery system.
+
+## Pass 25 — interior dollhouse mode (Tier 3)
+
+The same data that powered Pass 24's modal "Step inside" view now drives a god's-eye dollhouse: press `X` and every building goes translucent, every non-walking NPC renders at their interior station at world scale.
+
+### New modules
+- **`src/sim/Associations.ts`** — pure helper `associatedBuildingId(npc)` answering "which building, if any, is this NPC currently *inside*?". Pure function, 11 tests covering every activity × role combination. Sleeping → home. Working → work. Idle for specialists → work. Idle for villagers/monarchs → home. Walking → null (render outdoors). Empty homeId for walking-equivalent → null. The whole table is unit-tested before we ever asked the renderer to use it.
+- **`src/engine/layers/CutawayLayer.ts`** — new Pixi container that mirrors `StructureLayer` at world coords but draws translucent roofs + the interior decor on top. `stationWorldPos(structure, station)` returns the pixel coord for any station, used by `EntityLayer` to relocate sprites.
+
+### Wiring
+- `EntityLayer` consults `associatedBuildingId(npc)` + `stationFor()` when cutaway is on: if the NPC has a station inside a building, draw them there instead of at their world tile.
+- The roof translucency uses Pixi alpha 0.45 on the structure layer when cutaway is active — no double-render, just an alpha toggle.
+- `X` keybind in App.tsx flips `useGameStore.settings.cutawayMode` which threads to `pixi.cutawayLayer.setEnabled(on)`.
+
+### Net
+- 11 new tests in `Associations.test.ts`.
+- Cutaway mode visually integrates with the kingdom-border dashed outline from Pass 23 — together they make the whole map legible.
+
+## Pass 24 — interior modal "Step inside" (Tier 2)
+
+When you click a building, the StructureInspector now has a "Step inside" button. Click it → modal opens with a detailed Canvas2D interior render.
+
+- **`src/sim/Interiors.ts`** — defines `INTERIORS: Record<StructureKind, Interior>`. 13 layouts (castle, cottage, town, library, forge, mine, watchtower, mill, shrine + 5 landmarks). Each layout is `{ width, height, stations: Station[] }`. 29 distinct station tags (`anvil`, `throne`, `bookshelf`, `bed`, `loom`, `mill_wheel`, `telescope`, `altar`, `kneeler`, `well_mouth`, …).
+- **`stationFor(npc, building, taken)`** — picks the right station for an NPC based on role/activity, never assigning two NPCs to the same `capacity:1` station. Deterministic and pure.
+- **`src/ui/InteriorView.tsx`** — the modal component. Mounts a `<canvas>`, calls `drawRoom / drawStation / drawNpcAt`, lists the roster with each NPC's station label ("Tessa at the anvil", "the monarch on the throne").
+- **`src/ui/interior-renderer.ts`** — pure Canvas2D primitives. `INTERIOR_TILE_PX = 24`. `bodyColorFor(role)` palette by role. 29-case `drawStation` switch.
+
+The architecture is intentionally identical to what Pass 25 reuses for cutaway — the modal is the testbed.
+
+## Pass 23 — kingdom borders + dynamic landmarks
+
+Two big content drops that make the map feel alive between events.
+
+### Kingdom border (`src/engine/layers/BorderLayer.ts`)
+- Convex hull (Andrew's monotone chain) computed every few seconds around all structures with per-kind padding (castle gets more breathing room than a shrine).
+- Rendered as a dashed gold polygon with a continuous-rhythm dash pattern + soft 4% alpha fill inside the hull.
+- Expands automatically as Construction adds watchtowers / mills / shrines further out — visualizes kingdom growth without a UI element.
+
+### Discoveries (`src/sim/systems/Discoveries.ts`)
+- 5% chance per day after day 8, gated by ≥10 day cadence between discoveries.
+- 5 landmark kinds: `standing_stones`, `ruin`, `camp`, `wellspring`, `obelisk`. Each has 3 opening sentence variants.
+- Picks a walkable plain/forest/hill tile ≥5 tiles from any existing structure.
+- Writes a milestone journal entry pinned to the new landmark (so clicking the entry flies you there).
+- Persists through save with `snapshot()` / hydrate, validated by `validateLandmarks()` in `Persistence.ts`.
+
+## Pass 22 — drag UX
+
+Replaced mouse-only drag with pointer events for touch/pen/middle-click support. Added inertia (0.92 decay per frame, samples last 100ms of motion). Cursor flips `grab` → `grabbing` during the drag. Right-mouse passes through to other handlers. Pointer-capture means you can drag off the canvas without the gesture breaking.
+
+## Pass 21 — journal pin navigation
+
+Every meaningful `SavedJournalEntry` now carries an optional `targetStructureId`. Most non-system entries (life events, founding, anniversaries, holidays, threats, court speech, quest phases, courier arrivals, forge/library/mine activity) pin to their structure when they're written. The journal panel renders a "go to" button (text + border + background, not an emoji — confirmed visible by user) next to each pinned entry. Clicking snaps the camera to the structure via `pixi.camera.centerOn(structure.pos)`.
+
+## Pass 20 — NPC de-stacking + journal panel reflow
+
+- **De-stack** — each NPC gets a deterministic sub-tile offset via `hash01(npc.seed)` so multiple villagers sharing a tile fan out instead of overlapping. The hash flows through the seed so it's stable across reloads.
+- **Journal panel** — moved to the right side and gained a `with-event-log` class that shifts it left when the event log is open, so they never overlap. Search + filter chips kept.
+
+## Pass 19 — bug-fix triage (live demo regressions)
+
+The Pages deploy surfaced six issues that the local dev loop hadn't caught. Each one was either a deployment-environment quirk or a timing bug masked by fresh state.
+
+1. **Sprite manifest 404 on Pages.** Manifest was loading from `/sprites/manifest.json`; Pages mounts the app at `/kingdomos/`. Fixed by prefixing `import.meta.env.BASE_URL + "sprites/"`. Added `src/vite-env.d.ts` for the type. `GITHUB_PAGES_BASE` env var threaded through `vite.config.ts`.
+2. **Begin button infinite loop.** `resetKingdom()` was always called even on first launch. Fixed with `if (hasSaveRef.current) resetKingdom(); else setTitleOpen(false);`.
+3. **Drone pad hum (110Hz triangle wave beating).** Replaced with sine waves at 220Hz root, ±7c detune, gain 0.18. Audio is now properly toggleable from settings.
+4. **Journal 99-item spam.** `Quests.tick()` runs at 10Hz; quest phases had no dedup. Added `firedPhases: number[]` to `ActiveArc` and gated each phase write on `!firedPhases.includes(elapsed)`.
+5. **Day-1 wedding bug.** `LifeEvents.lastProcessedDay = -1` caused gap=2 retroactive processing on the first tick. Sentinel `< 0` check now bails without processing.
+6. **NPC bouncing (stationary).** Stale `prevPos` for non-walking NPCs caused interpolation jitter. Fixed: `npc.prevPos = npc.pos` in the non-walking branch.
+7. **Pre-founding sim ticking.** `PixiApp.speedMultiplier` now returns 0 when `!store.identity` so the world doesn't tick during the title/onboarding screens.
+8. **Duplicate pet welcome.** Both `adoptPet` AND the founding chronicle wrote it; added `{ silent: true }` opt to `adoptPet`.
+
+Also added a stress test improvement to `Stress.test.ts`: previously only asserted elapsed time; now asserts the journal doesn't balloon past a reasonable bound. Would have caught the quest spam class of bug.
 
 ## Pass 18 — the kingdoms you've ruled
 
@@ -387,11 +470,12 @@ All work passes `npm test` (97/97), `npm run typecheck`, and `npm run build`.
 ## Current project state (cheat sheet)
 
 ```
-Tests          97 passing
-TypeScript     clean
-Build          ✓ in 2.36s
-Main chunk     187 KB (gzip 56 KB) — was 684 KB before splitting
+Tests          285 passing across 29 files
+TypeScript     clean (strict)
+Build          ✓ in ~2.7s
+Main chunk     ~187 KB (gzip ~56 KB)
 Pixi chunk     562 KB (gzip 165 KB) — loads after React shell paints
+Live demo      https://jonathanabarnett.github.io/kingdomos/
 ```
 
 **Features inventory:**

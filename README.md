@@ -2,7 +2,9 @@
 
 > A 16-bit fantasy kingdom that lives on your desktop. It runs on its own, reacts to what you're already doing, and tells you stories about a place that's now yours.
 
-[![Tests](https://img.shields.io/badge/tests-250%20passing-brightgreen)](./src) [![TypeScript](https://img.shields.io/badge/typescript-strict-blue)]() [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange)]()
+[![Tests](https://img.shields.io/badge/tests-285%20passing-brightgreen)](./src) [![TypeScript](https://img.shields.io/badge/typescript-strict-blue)]() [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange)]()
+
+**Play it now:** https://jonathanabarnett.github.io/kingdomos/ — no install required.
 
 KingdomOS is an ambient simulation, not a game. You found a kingdom, name your monarch, design their look, then watch a small SNES-flavored world live its own life — NPCs walk daily schedules, fall in love, raise children, grow old. The economy ticks. Weather rolls in. Seasons turn. A narrative director writes a chronicle of what's happening. When you do real things in the real world (commits to a watched repo, a Twitch sub on your channel, a CPU spike from a build) the kingdom flavors itself accordingly: couriers ride, blacksmiths forge, mines glow.
 
@@ -33,6 +35,10 @@ You boot the app. You're asked for a kingdom name ("Aurelia"), a monarch's name 
 You can:
 
 - **Just watch.** The camera drifts gently between points of interest. NPCs walk to work, eat, sleep, wander. After a few minutes the journal will start to fill: "Berta and Olen were wed at Highkeep," "A storm rolled in from the east," "the ever-cheerful Pim took charge of festival preparations."
+- **Step inside any building.** Click a structure → "Step inside" opens a detailed interior view: anvil, forge, library shelves, the throne in the castle hall. The NPCs currently inside show up at their stations with little labels ("Tessa at the anvil", "the monarch on the throne").
+- **Or pop the roofs off the whole kingdom.** Press `X` for cutaway / dollhouse mode: every building goes translucent and you see every non-walking villager living their life at their station — the blacksmith hammering, the scholar at the bookshelf, sleepers in their beds. It's a god's-eye view of an ant farm in progress.
+- **Click any journal entry to fly there.** Most entries are pinned to a place — a wedding to a home, a forge milestone to the forge, a storm to wherever it broke. Click "go to" next to the entry and the camera snaps to it.
+- **Discover landmarks.** Over time the world spontaneously gains things the simulation didn't start with: a ring of standing stones in a forest clearing, the ruin of an older keep at the marsh edge, a hunters' camp on a hillside, a wellspring discovered by a wandering child. Five kinds, drawn from the deterministic seed.
 - **Take photos.** Press `P` to freeze the moment in one of five frames (parchment, wood, stone, window, naked). Save it. Share it. The whole app is built around making every screenshot worth keeping.
 - **Read your kingdom's chronicle.** Open the Journal panel — day-by-day entries grouped by season and year. Filter by kind. Search by NPC name. Export as a markdown file you can keep.
 - **Inspect anyone.** Hover any villager to see their name, role, age, personality trait, partner, and (if they were born in your kingdom) who their parents were.
@@ -94,8 +100,12 @@ git push --follow-tags    # release.yml does the deploy
 - **Wall-clock calendar** — the day count tracks real time since the kingdom was founded
 - **Day/night cycle** with seasonal palette tints
 - **Weather system** (clear / cloudy / rain / storm / snow) with particles
-- **Programmatic audio** — Web Audio ambient pad + sparse melody layer (sparse phrases play every 15-40s, tuned to the season + time of day) + 9 event SFX. No sound files required. Melody is toggleable in settings.
+- **Programmatic audio** — Web Audio ambient pad + sparse melody layer (sparse phrases play every 15-40s, tuned to the season + time of day) + 9 event SFX + 5 category chimes. No sound files required. Melody and pad are toggleable in settings.
 - **Procedural sprites** for every tile, building, NPC, and pet — real pixel art can be dropped in via a manifest
+- **Dashed kingdom border** drawn around your structures — a soft gold convex-hull outline that expands as you build watchtowers, mills, and shrines further out
+- **Spatial journal** — every meaningful entry remembers *where* it happened. Click → camera flies there.
+- **Two ways to see indoors** — Tier 2 modal (detailed Canvas2D interior, click "Step inside"), Tier 3 dollhouse (whole map at once, press `X`). 13 distinct interior layouts, 29 furniture station types.
+- **NPCs de-stack** — multiple villagers sharing a tile each get a small per-NPC offset (deterministic from their seed) so you can actually see who's there.
 
 ## The chronicle (your kingdom's journal)
 
@@ -136,13 +146,14 @@ Space          follow random NPC
 F              center on castle
 R              resume autopilot drift
 P              photo mode (framed screenshot)
+X              cutaway / dollhouse mode — see NPCs inside buildings
 ,  .           slow / speed up sim
 /              toggle pause
 ? / H          help overlay
 Esc            close any panel
 ```
 
-Mouse: click NPC → camera follows; click structure → inspector; drag → pan; wheel → zoom.
+Mouse: click NPC → camera follows; click structure → inspector → "Step inside"; drag → pan (with inertia when you flick-release); wheel → zoom. Pointer events back the drag, so touch and pen and middle-click all work. Cursor flips `grab` → `grabbing` while you drag.
 
 ## Architecture
 
@@ -169,7 +180,7 @@ npm run test:watch  # watch mode
 npm run typecheck   # tsc -b strict
 ```
 
-**250 tests across 25 files.** TypeScript strict mode. Hardened against:
+**285 tests across 29 files.** TypeScript strict mode. Hardened against:
 
 - Twitch raid floods (NPC + effect runtime caps)
 - Tampered save files (clamps NaN, drops unknown roles, caps roster, validates parent ids)
