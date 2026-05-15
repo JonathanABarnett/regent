@@ -2,7 +2,7 @@
 
 A 16-bit ambient fantasy kingdom that lives on the desktop. Runs autonomously; reacts to real-world signals (git, system, Twitch) as flavor.
 
-> Status at last full pass: **292 tests passing across 29 files · TypeScript strict · production build ~2.7s.** Live demo at https://jonathanabarnett.github.io/kingdomos/ — auto-deployed on every push to `main` via `.github/workflows/pages.yml`.
+> Status at last full pass: **293 tests passing across 29 files · TypeScript strict · production build ~2.7s.** Live demo at https://jonathanabarnett.github.io/kingdomos/ — auto-deployed on every push to `main` via `.github/workflows/pages.yml`.
 
 ## TL;DR
 
@@ -10,7 +10,7 @@ A 16-bit ambient fantasy kingdom that lives on the desktop. Runs autonomously; r
 npm install           # one-time
 npm run dev           # Vite-only frontend (works in browser; Tauri APIs stub)
 npm run tauri:dev     # Full desktop app (needs Rust + MSVC)
-npm test              # Vitest suite (292 tests across 29 files)
+npm test              # Vitest suite (293 tests across 29 files)
 npm run typecheck     # tsc -b strict
 npm run build         # Production bundle → dist/
 npm run release       # Tag + push → CI publishes to itch.io
@@ -286,7 +286,7 @@ Mouse: click NPC → camera follows; click structure → inspector → "Step ins
 | Quest arcs | 9 (`traveler`, `festival_prep`, `rival_banner`, `scholar_discovery`, `wandering_cat`, `river_flood`, `lost_child`, `old_friend_returns`, `village_well`) |
 | Decision archetypes | 10 (petition, merchant, festival, stranger, levy, pilgrim, boundary dispute, astronomer's portent, stray dog, anonymous gift) |
 | Narrative director branches | 9 (courier, research, forge, monster, festival, mining, airship, pilgrim, lone fisher) with ~40 label variants |
-| Court speech lines | 18 (6 per role × 3 roles), deterministic per seed |
+| Court speech lines | 30 (10 per role × 3 roles), deterministic per seed |
 | NPC backstory pools | 10,000 unique sentences (4 pools × 10 entries each) |
 | Holidays | 11 (New Year, Lovers' Festival, Equinox, Bloomfest, Midsummer, Harvest Moon, Hallowtide, Remembrance, Solstice, Yuletide, Year's End) |
 | Seasonal journal anchors | 4 (one per season rollover) |
@@ -359,7 +359,7 @@ npm run test:watch  # watch mode
 npm run typecheck   # tsc -b strict
 ```
 
-292 tests across 29 files. New systems should have at least 4–6 tests covering:
+293 tests across 29 files. New systems should have at least 4–6 tests covering:
 - Happy path
 - Adversarial / oversized / NaN input
 - Round-trip save/load (if persisted)

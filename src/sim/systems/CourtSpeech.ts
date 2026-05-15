@@ -21,6 +21,10 @@ const ADVISOR_LINES: readonly string[] = [
   "{name} settled a feud over a fence by drawing the new line themselves.",
   "{name} reminded the court that haste makes hungry winters.",
   "{name} kept a small fire in the council chamber all night, alone.",
+  "{name} listened — to a complaint, to a confession, to a long silence — and said only \"go on\" four times.",
+  "{name} returned an unsigned petition to its author with a brief note pinned to it: \"sign your name and I will sign mine.\"",
+  "{name} declined a gift of wine from a visiting merchant; the court took note, and so did the merchant.",
+  "{name} closed council a full hour early, citing that no one in the room could remember what the third item had been.",
 ];
 
 const CAPTAIN_LINES: readonly string[] = [
@@ -30,6 +34,10 @@ const CAPTAIN_LINES: readonly string[] = [
   "{name} drilled the new guards until their arms shook.",
   "{name} spent the afternoon teaching the children the storm bell.",
   "{name} reported a single set of tracks at the wood's edge — \"old, not fresh.\"",
+  "{name} stood at the eastern road from first light until noon, watching nothing in particular and seeing it well.",
+  "{name} refused to discipline a guard who had fallen asleep on duty; instead they walked the rest of the shift in her place.",
+  "{name} ordered new boots issued to every guard, paid out of their own ration of court silver.",
+  "{name} returned a recovered horse to a farmer who had not yet learned it was missing.",
 ];
 
 const SCHOLAR_LINES: readonly string[] = [
@@ -39,6 +47,10 @@ const SCHOLAR_LINES: readonly string[] = [
   "{name} took an apprentice. The apprentice looked terrified and pleased.",
   "{name} insisted a new word be entered into the kingdom's lexicon. The court agreed.",
   "{name} read aloud at the noon meal — a custom they have apparently invented.",
+  "{name} catalogued the library shelf by shelf and announced — with some satisfaction — that nothing was missing.",
+  "{name} wrote a letter to a scholar three kingdoms away and admitted afterward they did not expect a reply.",
+  "{name} found an error in a chronicle written before the founding, corrected it in margin ink, and signed it twice.",
+  "{name} sat with a child who could not yet read and named every animal on the page until the child fell asleep.",
 ];
 
 export interface CourtSpeechOptions {

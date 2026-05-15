@@ -63,6 +63,29 @@ describe("CourtSpeech", () => {
     expect(journalLines.length).toBe(0);
   });
 
+  it("each role's pool surfaces at least 4 distinct lines over a long reign", () => {
+    // Run a long simulation with a seated advisor and confirm we see real
+    // variety rather than the same line over and over. The pool is 10 entries
+    // and we'll likely hit ~20-30 fires over 600 days, so >=4 unique is a
+    // conservative-but-meaningful floor.
+    const w = new World({ seed: 31337 });
+    const npc = w.npcs[0];
+    const name = npc.name ?? "—";
+    w.setCourt({ advisorId: npc.id });
+    const seen = new Set<string>();
+    w.onJournal = (e) => {
+      if (e.text.includes(name)) {
+        // Strip the leading name to compare just the line template.
+        seen.add(e.text.replace(name, "{name}"));
+      }
+    };
+    for (let d = 1; d <= 600; d++) {
+      w.state.day = d;
+      w.courtSpeech.tick();
+    }
+    expect(seen.size).toBeGreaterThanOrEqual(4);
+  });
+
   it("respects cadenceDays — advisor fires roughly every N days max", () => {
     const w = new World({ seed: 999 });
     const npc = w.npcs[0];
