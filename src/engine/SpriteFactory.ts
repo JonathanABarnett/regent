@@ -102,10 +102,23 @@ export class SpriteFactory {
   }
 
   // ── manifest loaders ────────────────────────────────────────────────────
+  //
+  // Asset URLs honor the Vite base path so the same fetches work in three
+  // deployment shapes:
+  //   - Local dev / Tauri / itch.io HTML5 → base "/" → "/sprites/..."
+  //   - GitHub Pages (subpath deploy)     → base "/kingdomos/" → "/kingdomos/sprites/..."
+  //
+  // `import.meta.env.BASE_URL` is set at build time by vite.config.ts's
+  // `base` option (gated on the GITHUB_PAGES_BASE env var). It always ends
+  // with "/" so the concat is safe.
+
+  private get spritesBase(): string {
+    return `${import.meta.env.BASE_URL}sprites/`;
+  }
 
   private async loadManifest(): Promise<void> {
     try {
-      const res = await fetch("/sprites/manifest.json", { cache: "no-cache" });
+      const res = await fetch(`${this.spritesBase}manifest.json`, { cache: "no-cache" });
       if (!res.ok) return;
       this.manifest = (await res.json()) as SpriteManifest;
     } catch (err) {
@@ -114,15 +127,16 @@ export class SpriteFactory {
   }
 
   private async loadPng(path: string): Promise<Texture | null> {
+    const url = `${this.spritesBase}${path}`;
     try {
-      const tex = await Assets.load<Texture>(`/sprites/${path}`);
+      const tex = await Assets.load<Texture>(url);
       if (tex && tex.source) {
         // ensure nearest-neighbor sampling for pixel-art crispness
         tex.source.scaleMode = "nearest";
       }
       return tex ?? null;
     } catch (err) {
-      console.warn(`[SpriteFactory] failed to load /sprites/${path}`, err);
+      console.warn(`[SpriteFactory] failed to load ${url}`, err);
       return null;
     }
   }
