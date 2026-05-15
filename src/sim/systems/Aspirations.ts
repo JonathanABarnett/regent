@@ -132,6 +132,51 @@ const ALL_ASPIRATIONS: AspirationDef[] = [
       return n / 3;
     },
   },
+  {
+    id: "day_100",
+    title: "A Century of Days",
+    description: "Carry the kingdom to its one-hundredth day.",
+    progress: (w) => w.state.day / 100,
+  },
+  {
+    id: "diverse_roles",
+    title: "A Realm of Many Trades",
+    description: "Have five distinct roles present in the realm at once.",
+    progress: (w) => {
+      const distinct = new Set<string>();
+      for (const n of w.npcs) distinct.add(n.role);
+      return Math.min(distinct.size, 5) / 5;
+    },
+  },
+  {
+    id: "elder_70",
+    title: "An Elder of Seventy",
+    description: "See a villager grow to the age of seventy.",
+    progress: (w) => {
+      for (const n of w.npcs) {
+        if ((n.age ?? 0) >= 70) return 1;
+      }
+      return 0;
+    },
+  },
+  {
+    id: "landmarks_3",
+    title: "Three Wonders Found",
+    description: "Discover three spontaneous landmarks beyond the kingdom's walls.",
+    progress: (w) => w.discoveries.snapshot().length / 3,
+  },
+  {
+    id: "tomes_100",
+    title: "A Great Library",
+    description: "Shelve one hundred tomes.",
+    progress: (w) => w.economy.state.tomes / 100,
+  },
+  {
+    id: "gold_1500",
+    title: "A Wealthy Realm",
+    description: "Hold fifteen hundred gold in the treasury.",
+    progress: (w) => w.economy.state.gold / 1500,
+  },
 ];
 
 /** A snapshot used by the store + UI. */

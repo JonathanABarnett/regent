@@ -81,6 +81,82 @@ describe("Aspirations", () => {
     expect(a.active).not.toContain("vault_10");
   });
 
+  it("pool includes the new aspirations from pass 27", () => {
+    const ids = new Set(Aspirations.definitions().map((d) => d.id));
+    expect(ids.has("day_100")).toBe(true);
+    expect(ids.has("diverse_roles")).toBe(true);
+    expect(ids.has("elder_70")).toBe(true);
+    expect(ids.has("landmarks_3")).toBe(true);
+    expect(ids.has("tomes_100")).toBe(true);
+    expect(ids.has("gold_1500")).toBe(true);
+    // Pool size should now be 21 (was 15).
+    expect(Aspirations.definitions().length).toBe(21);
+  });
+
+  it("day_100 progress tracks the day counter linearly", () => {
+    const w = new World({ seed: 7 });
+    const def = Aspirations.definitions().find((d) => d.id === "day_100")!;
+    w.state.day = 0;
+    expect(def.progress(w)).toBe(0);
+    w.state.day = 50;
+    expect(def.progress(w)).toBeCloseTo(0.5);
+    w.state.day = 100;
+    expect(def.progress(w)).toBe(1);
+  });
+
+  it("diverse_roles counts distinct NPC roles capped at 5", () => {
+    const w = new World({ seed: 7 });
+    const def = Aspirations.definitions().find((d) => d.id === "diverse_roles")!;
+    // World seeds NPCs deterministically — just observe distinct count.
+    const p = def.progress(w);
+    expect(p).toBeGreaterThanOrEqual(0);
+    expect(p).toBeLessThanOrEqual(1);
+
+    // Force only one role → low progress.
+    w.npcs.forEach((n) => (n.role = "villager"));
+    expect(def.progress(w)).toBeCloseTo(0.2); // 1/5
+
+    // Force five distinct roles → complete.
+    const roles = ["villager", "blacksmith", "scholar", "miner", "monarch"] as const;
+    w.npcs.slice(0, 5).forEach((n, i) => (n.role = roles[i]));
+    expect(def.progress(w)).toBe(1);
+  });
+
+  it("elder_70 is binary — 0 until any NPC reaches age 70, then 1", () => {
+    const w = new World({ seed: 7 });
+    const def = Aspirations.definitions().find((d) => d.id === "elder_70")!;
+    w.npcs.forEach((n) => (n.age = 20));
+    expect(def.progress(w)).toBe(0);
+    w.npcs[0].age = 70;
+    expect(def.progress(w)).toBe(1);
+    w.npcs[0].age = 99;
+    expect(def.progress(w)).toBe(1);
+  });
+
+  it("landmarks_3 reflects discoveries.snapshot length / 3", () => {
+    const w = new World({ seed: 7 });
+    const def = Aspirations.definitions().find((d) => d.id === "landmarks_3")!;
+    // On a fresh world Discoveries hasn't fired yet — should be 0.
+    expect(def.progress(w)).toBe(0);
+    // Force the snapshot to return a length-3 array.
+    (w.discoveries as unknown as { snapshot(): unknown[] }).snapshot = () => [{}, {}, {}];
+    expect(def.progress(w)).toBe(1);
+  });
+
+  it("tomes_100 and gold_1500 read economy state directly", () => {
+    const w = new World({ seed: 7 });
+    const tomes = Aspirations.definitions().find((d) => d.id === "tomes_100")!;
+    const gold = Aspirations.definitions().find((d) => d.id === "gold_1500")!;
+    w.economy.state.tomes = 50;
+    w.economy.state.gold = 750;
+    expect(tomes.progress(w)).toBe(0.5);
+    expect(gold.progress(w)).toBe(0.5);
+    w.economy.state.tomes = 100;
+    w.economy.state.gold = 1500;
+    expect(tomes.progress(w)).toBe(1);
+    expect(gold.progress(w)).toBe(1);
+  });
+
   it("World.tick writes a milestone journal entry on aspiration completion", () => {
     const w = new World({ seed: 42 });
     const milestones: string[] = [];

@@ -2,7 +2,7 @@
 
 > A 16-bit fantasy kingdom that lives on your desktop. It runs on its own, reacts to what you're already doing, and tells you stories about a place that's now yours.
 
-[![Tests](https://img.shields.io/badge/tests-285%20passing-brightgreen)](./src) [![TypeScript](https://img.shields.io/badge/typescript-strict-blue)]() [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange)]()
+[![Tests](https://img.shields.io/badge/tests-291%20passing-brightgreen)](./src) [![TypeScript](https://img.shields.io/badge/typescript-strict-blue)]() [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange)]()
 
 **Play it now:** https://jonathanabarnett.github.io/kingdomos/ — no install required.
 
@@ -88,7 +88,7 @@ git push --follow-tags    # release.yml does the deploy
 - **Construction** — periodic offers to build watchtowers, mills, or shrines; they take days to complete and add real structures to the map
 - **9 multi-day quest arcs** — traveling scholars, distant banners, festivals, a flood, a cat that won't leave, a lost child found asleep under an oak, an old friend who returns with stories of foreign coastlines; each unfolds over 2–4 in-world days
 - **10 interactive decision archetypes** — petitions, merchant offers, festival approvals, suspicious strangers, tax levies, pilgrim escorts, boundary disputes, astronomer's portents, a stray dog at the kitchens, anonymous gifts at the keep door
-- **15 soft aspirations** — three player-facing goals at a time, rotating from a pool ("reach 25 villagers", "see 5 different monarchs", "collect 10 artifacts"). Ignore them if you want; check them off if that's your style
+- **21 soft aspirations** — three player-facing goals at a time, rotating from a pool ("reach 25 villagers", "see 5 different monarchs", "collect 10 artifacts", "discover three wonders", "an elder of seventy", "a realm of many trades"). Ignore them if you want; check them off if that's your style
 - **Court roles affect the world** — appoint a Royal Advisor (extends decision timers), Captain of the Guard (storms pass less often, threats less likely), or Court Scholar (50% faster tome production). Seats auto-vacate if the appointee dies, and the seated court speaks in the journal occasionally
 - **Rare threats with stakes** — wolves come down from the high pines; a bandit camp is spotted on the east road; villagers swear they see lights moving in the old quarry. Decide whether to send the guard (costs gold, may yield treasure), rouse the militia (free, costs no one's sleep), or let it pass (40% chance it worsens). Captain seated cuts threat chance by 60%.
 - **90-day history sparklines** — population, gold, and vault count are tracked per in-world day and rendered as tiny SVG line charts in the Stats panel. Watch your kingdom's arc.
@@ -180,7 +180,7 @@ npm run test:watch  # watch mode
 npm run typecheck   # tsc -b strict
 ```
 
-**285 tests across 29 files.** TypeScript strict mode. Hardened against:
+**291 tests across 29 files.** TypeScript strict mode. Hardened against:
 
 - Twitch raid floods (NPC + effect runtime caps)
 - Tampered save files (clamps NaN, drops unknown roles, caps roster, validates parent ids)
