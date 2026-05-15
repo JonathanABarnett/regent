@@ -227,8 +227,16 @@ export function App() {
       world,
       parent: containerRef.current,
       crtEnabled: crt,
-      // Read sim speed from the live store every frame so the HUD button works immediately
-      speedMultiplier: () => useGameStore.getState().settings.simSpeed,
+      // Read sim speed from the live store every frame so the HUD button works
+      // immediately. Returns 0 (paused) while no `identity` is set so the world
+      // doesn't tick during the title screen + onboarding + character creator
+      // flow — otherwise LifeEvents can marry off random NPCs and the journal
+      // accumulates beats from a kingdom that hasn't been founded yet.
+      speedMultiplier: () => {
+        const store = useGameStore.getState();
+        if (!store.identity) return 0;
+        return store.settings.simSpeed;
+      },
     });
     pixiRef.current = pixi;
     pixi.init().then(() => {
@@ -901,7 +909,10 @@ export function App() {
                   `${pending.petName} the ${pending.petKind} sat at the foot of the throne and refused to leave.`,
                   "life",
                 );
-                w.adoptPet(pending.petName, pending.petKind);
+                // silent: true — the founding chronicle just wrote a richer
+                // line ("Mochi sat at the foot of the throne and refused to
+                // leave"). Don't double-up with adoptPet's flat fallback.
+                w.adoptPet(pending.petName, pending.petKind, { silent: true });
                 // Pet starts by following the monarch — meaningful for the
                 // "this is MY character" moment.
                 w.setPetFollowing("npc_monarch");

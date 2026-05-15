@@ -26,6 +26,18 @@ export class LifeEvents {
 
   tick() {
     const day = this.world.state.day;
+    // First tick after construction: lastProcessedDay is the sentinel -1.
+    // Sync to the current day WITHOUT processing — otherwise a brand-new
+    // kingdom retroactively runs aging/marriages/births/deaths from day -1
+    // to day 1 (gap of 2), producing weddings between random villagers
+    // before the kingdom is even founded.
+    //
+    // applySave overrides lastProcessedDay to world.state.day on load, so
+    // this sentinel-handling only affects fresh worlds.
+    if (this.lastProcessedDay < 0) {
+      this.lastProcessedDay = day;
+      return;
+    }
     if (day === this.lastProcessedDay) return;
     // Catch up if the player came back after time away. Cap at 30 days to keep
     // a long absence from generating a wall of text.

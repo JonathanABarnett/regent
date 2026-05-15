@@ -319,7 +319,13 @@ export class World {
    * Create or replace the player's pet. Stored in `world.pets` and persisted.
    * Returns the new pet.
    */
-  adoptPet(name: string, kind: PetKind): Pet {
+  /**
+   * Adopt a new pet. Writes a "welcomed into the kingdom" journal line by
+   * default; pass `{ silent: true }` to suppress that line in flows where
+   * a richer founding-chronicle entry has already been written (e.g. the
+   * first-launch path that writes "Mochi sat at the foot of the throne").
+   */
+  adoptPet(name: string, kind: PetKind, opts: { silent?: boolean } = {}): Pet {
     // Remove any existing pet (single-pet kingdom for MVP)
     this.pets.length = 0;
     const castle = this.map.structures.find((s) => s.kind === "castle") ?? this.map.structures[0];
@@ -339,10 +345,12 @@ export class World {
       spriteKey: "pet_custom",
     };
     this.pets.push(pet);
-    this.journal.write(
-      `A ${kind} named ${name} was welcomed into the kingdom.`,
-      "life",
-    );
+    if (!opts.silent) {
+      this.journal.write(
+        `A ${kind} named ${name} was welcomed into the kingdom.`,
+        "life",
+      );
+    }
     return pet;
   }
 

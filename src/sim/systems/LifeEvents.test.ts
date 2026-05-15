@@ -94,6 +94,25 @@ describe("LifeEvents", () => {
     expect(() => w.lifeEvents.tick()).not.toThrow();
   });
 
+  it("first tick on a fresh world does NOT retroactively process days (regression)", () => {
+    // Before the lazy-init fix, lastProcessedDay started at -1. On the first
+    // tick with state.day=1 that produced gap=min(30, 2)=2 → two days of
+    // marriage/birth/death rolls fired retroactively, sometimes marrying
+    // off random villagers before the kingdom had even been founded.
+    const w = new World({ seed: 42 });
+    // Snapshot the journal — should stay empty after the first tick
+    const writes: string[] = [];
+    w.onJournal = (e) => writes.push(e.text);
+    const partnersBefore = w.npcs.filter((n) => n.partnerId).length;
+    const initialNpcs = w.npcs.length;
+    // First tick on the fresh world
+    w.lifeEvents.tick();
+    // Nothing should have been written, no marriages forged, no NPC age advanced
+    expect(writes.length).toBe(0);
+    expect(w.npcs.filter((n) => n.partnerId).length).toBe(partnersBefore);
+    expect(w.npcs.length).toBe(initialNpcs);
+  });
+
   it("every spawned NPC has a trait from the canonical list", () => {
     const w = new World({ seed: 42 });
     for (const npc of w.npcs) {
