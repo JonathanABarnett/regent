@@ -739,6 +739,7 @@ export function App() {
       <JournalPanel
         open={journalOpen && !streamerMode}
         onClose={() => setJournalOpen(false)}
+        eventLogOpen={logOpen && !streamerMode}
         onNavigateToStructure={(structureId) => {
           // Resolve the structure on the live map and snap the camera to its
           // center. Falls back to a noop if the structure was renamed/removed

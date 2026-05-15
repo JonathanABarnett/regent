@@ -50,10 +50,13 @@ export function JournalPanel({
   open,
   onClose,
   onNavigateToStructure,
+  eventLogOpen,
 }: {
   open: boolean;
   onClose: () => void;
   onNavigateToStructure?: (structureId: string) => void;
+  /** When the event log is also open, the journal slides left to make room. */
+  eventLogOpen?: boolean;
 }) {
   const journal = useGameStore((s) => s.journal);
   const clearJournal = useGameStore((s) => s.clearJournal);
@@ -69,7 +72,7 @@ export function JournalPanel({
   if (!open) return null;
   return (
     <aside
-      className="journal-panel"
+      className={`journal-panel${eventLogOpen ? " with-event-log" : ""}`}
       role="complementary"
       aria-label="Kingdom journal"
     >
