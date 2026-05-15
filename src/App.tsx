@@ -771,8 +771,20 @@ export function App() {
           hasSave={hasSaveRef.current}
           onContinue={() => setTitleOpen(false)}
           onNew={() => {
-            // Wipe the save and reload — fresh kingdom flow.
-            useGameStore.getState().resetKingdom();
+            // Two paths:
+            //   1. There's an existing save → user is abandoning a kingdom.
+            //      Run resetKingdom which archives + wipes + reloads.
+            //   2. No save yet → user is starting their first kingdom.
+            //      Just close the title; OnboardingModal renders next tick
+            //      (gated on !titleOpen && !identity). Calling resetKingdom
+            //      here would `location.reload()` and trap the user in a
+            //      title-screen loop because the post-reload state has no
+            //      save *either*, so they'd see the same title again.
+            if (hasSaveRef.current) {
+              useGameStore.getState().resetKingdom();
+            } else {
+              setTitleOpen(false);
+            }
           }}
           onSettings={() => {
             setTitleOpen(false);
