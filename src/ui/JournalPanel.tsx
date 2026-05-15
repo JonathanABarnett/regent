@@ -156,11 +156,11 @@ export function JournalPanel({
                       <button
                         type="button"
                         className="entry-pin"
-                        title={`Go to where this took place`}
+                        title={`Snap the camera to where this happened (${e.targetStructureId})`}
                         aria-label={`Go to ${e.targetStructureId}`}
                         onClick={() => onNavigateToStructure(e.targetStructureId!)}
                       >
-                        📍
+                        go to
                       </button>
                     )}
                   </li>

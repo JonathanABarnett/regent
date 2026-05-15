@@ -492,22 +492,29 @@ html, body, #root, .app-root {
 }
 .entry-icon { color: var(--accent); text-align: center; }
 .entry-pin {
-  background: transparent;
-  border: none;
-  color: var(--panel-muted);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--hud-border);
+  color: var(--panel-fg);
   cursor: pointer;
-  padding: 0 2px;
-  font-size: 12px;
-  line-height: 1;
-  opacity: 0.5;
+  padding: 2px 6px;
+  font-size: 14px;
+  line-height: 1.2;
   align-self: center;
-  transition: opacity 0.15s, color 0.15s;
+  border-radius: 3px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
 }
-.entry-pin:hover,
-.entry-pin:focus-visible {
-  opacity: 1;
+.entry-pin:hover {
+  background: rgba(252, 211, 77, 0.18);
+  border-color: var(--accent);
   color: var(--accent);
-  outline: none;
+}
+.entry-pin:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.entry-pin:active {
+  transform: translateY(1px);
 }
 .entry.kind-life { background: rgba(244, 114, 182, 0.05); }
 .entry.kind-life .entry-icon { color: #fb7185; }
