@@ -2,6 +2,9 @@ import { Container, Graphics, Sprite, Text, Texture } from "pixi.js";
 import type { World } from "../../sim/World";
 import type { SpriteFactory } from "../SpriteFactory";
 import { hoverState } from "../HoverState";
+import { stationFor } from "../../sim/Interiors";
+import { associatedBuildingId } from "../../sim/Associations";
+import type { CutawayLayer } from "./CutawayLayer";
 
 /**
  * Hash a 32-bit integer to a stable float in [0, 1). Pure / deterministic.
@@ -28,6 +31,9 @@ export class EntityLayer {
   private effectNodes = new Map<string, Container>();
   private speechNodes = new Map<string, Container>();
   private hoverRing = new Graphics();
+  /** Optionally set by PixiApp; lets us relocate NPCs to stations when the
+   *  cutaway dollhouse mode is active. */
+  cutawayLayer?: CutawayLayer;
 
   constructor(private world: World, private factory: SpriteFactory) {
     this.container.label = "entities";
@@ -38,6 +44,13 @@ export class EntityLayer {
 
   update(_dt: number, alpha: number, simTime: number) {
     const T = 32;
+    // Per-frame state used by the cutaway relocation pass.
+    // `takenStationsByBuilding[buildingId]` = set of station indices already
+    // assigned to NPCs for that building, so multiple NPCs at the same place
+    // get distributed across distinct stations.
+    const cutawayOn = !!this.cutawayLayer?.enabled;
+    const takenStations = new Map<string, Set<number>>();
+
     // ── NPCs ──────────────────────────────────────────────────────────────
     const seenNpc = new Set<string>();
     for (const npc of this.world.npcs) {
@@ -50,18 +63,48 @@ export class EntityLayer {
         this.container.addChild(sprite);
         this.npcSprites.set(npc.id, sprite);
       }
-      // interpolate between prevPos and pos
-      const ix = npc.prevPos.x + (npc.pos.x - npc.prevPos.x) * alpha;
-      const iy = npc.prevPos.y + (npc.pos.y - npc.prevPos.y) * alpha;
-      // Deterministic per-NPC sub-tile offset so multiple NPCs on the same
-      // tile spread out visually instead of stacking pixel-perfect on top of
-      // each other. Derived from npc.seed (already deterministic + persisted)
-      // so the offset is stable across reloads and saves.
-      const ox = (hash01(npc.seed) - 0.5) * 0.6;    // ±0.30 tiles horizontal
-      const oy = (hash01(npc.seed * 7919) - 0.5) * 0.35; // ±0.17 tiles vertical
-      sprite.x = (ix + ox) * T + T / 2;
-      sprite.y = (iy + oy + 1) * T;
-      sprite.zIndex = sprite.y;
+
+      // Cutaway: when active, relocate non-walking NPCs to their station
+      // inside their associated building. Walking NPCs stay on the
+      // overworld so the player can still see traffic between buildings.
+      let cutawayPlaced = false;
+      if (cutawayOn && this.cutawayLayer && npc.activity !== "walking") {
+        const buildingId = associatedBuildingId(npc);
+        const building = buildingId
+          ? this.world.map.structures.find((s) => s.id === buildingId)
+          : null;
+        if (building) {
+          let taken = takenStations.get(building.id);
+          if (!taken) {
+            taken = new Set();
+            takenStations.set(building.id, taken);
+          }
+          const { station, index } = stationFor(npc, building, taken);
+          if (station) {
+            taken.add(index);
+            const p = this.cutawayLayer.stationWorldPos(building, station);
+            sprite.x = p.x;
+            sprite.y = p.y + T / 2;       // anchor is (0.5, 1) — feet at p.y + T/2
+            sprite.zIndex = sprite.y;
+            cutawayPlaced = true;
+          }
+        }
+      }
+
+      if (!cutawayPlaced) {
+        // interpolate between prevPos and pos
+        const ix = npc.prevPos.x + (npc.pos.x - npc.prevPos.x) * alpha;
+        const iy = npc.prevPos.y + (npc.pos.y - npc.prevPos.y) * alpha;
+        // Deterministic per-NPC sub-tile offset so multiple NPCs on the same
+        // tile spread out visually instead of stacking pixel-perfect on top of
+        // each other. Derived from npc.seed (already deterministic + persisted)
+        // so the offset is stable across reloads and saves.
+        const ox = (hash01(npc.seed) - 0.5) * 0.6;    // ±0.30 tiles horizontal
+        const oy = (hash01(npc.seed * 7919) - 0.5) * 0.35; // ±0.17 tiles vertical
+        sprite.x = (ix + ox) * T + T / 2;
+        sprite.y = (iy + oy + 1) * T;
+        sprite.zIndex = sprite.y;
+      }
       // simple frame cycling when walking
       if (npc.activity === "walking") {
         const frames = this.factory.characters.get(npc.role) ?? [];

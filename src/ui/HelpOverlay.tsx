@@ -65,6 +65,7 @@ export function HelpOverlay() {
             <Kbd k="F" desc="Center on the castle" />
             <Kbd k="R" desc="Resume autopilot drift" />
             <Kbd k="P" desc="Photo mode — framed screenshot" />
+            <Kbd k="X" desc="Cutaway mode — see NPCs inside buildings" />
             <Kbd k=", / ." desc="Slow / speed up the sim" />
             <Kbd k="/" desc="Pause toggle" />
             <Kbd k="? / H" desc="This help screen" />

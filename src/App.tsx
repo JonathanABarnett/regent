@@ -455,6 +455,12 @@ export function App() {
     audioRef.current?.setPadEnabled(padEnabled);
   }, [padEnabled]);
 
+  // Live cutaway / dollhouse mode toggle → rendering pipeline
+  const cutawayMode = useGameStore((s) => s.settings.cutawayMode);
+  useEffect(() => {
+    pixiRef.current?.cutawayLayer?.setEnabled(cutawayMode);
+  }, [cutawayMode]);
+
   // Live monarch spec → SpriteFactory (re-renders the in-world sprite).
   useEffect(() => {
     const pixi = pixiRef.current;
@@ -697,6 +703,15 @@ export function App() {
         case "R":
           pixi.camera.enableAutopilot();
           break;
+        case "x":
+        case "X": {
+          // Toggle cutaway / dollhouse mode — see roofs fade and NPCs
+          // relocate to their stations inside their associated building.
+          const store = useGameStore.getState();
+          store.setCutawayMode(!store.settings.cutawayMode);
+          e.preventDefault();
+          break;
+        }
       }
     };
     window.addEventListener("keydown", onKey);

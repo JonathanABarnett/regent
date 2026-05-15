@@ -56,6 +56,7 @@ export function SettingsPanel({
   const setShowPerfHud = useGameStore((s) => s.setShowPerfHud);
   const setMusicEnabled = useGameStore((s) => s.setMusicEnabled);
   const setPadEnabled = useGameStore((s) => s.setPadEnabled);
+  const setCutawayMode = useGameStore((s) => s.setCutawayMode);
   const addWatchedPath = useGameStore((s) => s.addWatchedPath);
   const removeWatchedPath = useGameStore((s) => s.removeWatchedPath);
   const resetKingdom = useGameStore((s) => s.resetKingdom);
@@ -241,6 +242,14 @@ export function SettingsPanel({
               onChange={(e) => setMusicEnabled(e.target.checked)}
             />
             Ambient melody (sparse phrases over the pad)
+          </label>
+          <label className="row">
+            <input
+              type="checkbox"
+              checked={settings.cutawayMode}
+              onChange={(e) => setCutawayMode(e.target.checked)}
+            />
+            Cutaway / dollhouse mode (X key) — see NPCs inside their buildings
           </label>
           <label className="row">
             <span>audio volume: {(settings.audioVolume * 100).toFixed(0)}%</span>

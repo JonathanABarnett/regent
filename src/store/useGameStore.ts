@@ -39,6 +39,12 @@ export interface SettingsState {
   musicEnabled: boolean;
   /** Ambient drone pad (the low background hum). Toggleable independently. */
   padEnabled: boolean;
+  /**
+   * Cutaway / "dollhouse" mode: building sprites fade to translucent and
+   * NPCs at home/work render INSIDE their building at the appropriate
+   * station. Toggleable with the X key or in Settings.
+   */
+  cutawayMode: boolean;
 }
 
 export interface AchievementToast {
@@ -106,6 +112,7 @@ export interface GameState {
   setShowTutorial: (b: boolean) => void;
   setMusicEnabled: (b: boolean) => void;
   setPadEnabled: (b: boolean) => void;
+  setCutawayMode: (b: boolean) => void;
   markSeenJournal: () => void;
   markSeenEvents: () => void;
 }
@@ -133,6 +140,7 @@ function loadSettings(): SettingsState {
     showTutorial: true,
     musicEnabled: true,
     padEnabled: true,
+    cutawayMode: false,
   };
   if (typeof localStorage === "undefined") return fallback;
   try {
@@ -278,6 +286,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   setPadEnabled: (b) =>
     set((s) => {
       const next = { ...s.settings, padEnabled: b };
+      persistSettings(next);
+      return { settings: next };
+    }),
+  setCutawayMode: (b) =>
+    set((s) => {
+      const next = { ...s.settings, cutawayMode: b };
       persistSettings(next);
       return { settings: next };
     }),

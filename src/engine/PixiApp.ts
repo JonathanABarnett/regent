@@ -15,6 +15,7 @@ import { WeatherLayer } from "./layers/WeatherLayer";
 import { ParallaxBackground } from "./layers/ParallaxBackground";
 import { CrtOverlay } from "./layers/CrtOverlay";
 import { BorderLayer } from "./layers/BorderLayer";
+import { CutawayLayer } from "./layers/CutawayLayer";
 
 export interface PixiAppOptions {
   world: World;
@@ -33,6 +34,7 @@ export class PixiApp {
   entityLayer!: EntityLayer;
   structureLayer!: StructureLayer;
   borderLayer!: BorderLayer;
+  cutawayLayer!: CutawayLayer;
   weatherLayer!: WeatherLayer;
   parallax = new ParallaxBackground();
   worldStage = new Container();
@@ -90,14 +92,20 @@ export class PixiApp {
     this.tileRenderer = new TileRenderer(this.opts.world.map, this.factory);
     this.structureLayer = new StructureLayer(this.opts.world.map, this.factory);
     this.borderLayer = new BorderLayer(this.opts.world);
+    this.cutawayLayer = new CutawayLayer(this.opts.world);
     this.entityLayer = new EntityLayer(this.opts.world, this.factory);
     this.weatherLayer = new WeatherLayer(this.opts.world, this.factory);
+    // EntityLayer reads from the CutawayLayer to relocate "inside" NPCs to
+    // their stations within their associated building.
+    this.entityLayer.cutawayLayer = this.cutawayLayer;
 
     this.worldStage.addChild(this.tileRenderer.container);
     // Border sits between tiles and structures so structure sprites stamp
     // over it cleanly but the outline draws on top of the bare terrain.
     this.worldStage.addChild(this.borderLayer.container);
     this.worldStage.addChild(this.structureLayer.container);
+    // Cutaway sits OVER the (faded) structure sprite, UNDER the NPCs
+    this.worldStage.addChild(this.cutawayLayer.container);
     this.worldStage.addChild(this.entityLayer.container);
     this.worldStage.addChild(this.weatherLayer.container);
     this.worldStage.sortableChildren = false;
@@ -190,7 +198,11 @@ export class PixiApp {
     // Called every frame so newly-constructed buildings (mill, watchtower,
     // shrine) appear without restarting the renderer.
     this.structureLayer.reconcile();
+    // Apply cutaway sprite fade — structure sprites become translucent so
+    // the cutaway layer's interior overlay reads as "inside the building."
+    this.structureLayer.container.alpha = this.cutawayLayer.enabled ? 0.35 : 1;
     this.borderLayer.update();
+    this.cutawayLayer.update();
     this.entityLayer.update(dt, this.alpha, this.opts.world.state.time);
     this.weatherLayer.update(dt, { minX, minY, maxX, maxY });
 
