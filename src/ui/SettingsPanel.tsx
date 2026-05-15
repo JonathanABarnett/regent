@@ -55,6 +55,7 @@ export function SettingsPanel({
   const setTwitchChannel = useGameStore((s) => s.setTwitchChannel);
   const setShowPerfHud = useGameStore((s) => s.setShowPerfHud);
   const setMusicEnabled = useGameStore((s) => s.setMusicEnabled);
+  const setPadEnabled = useGameStore((s) => s.setPadEnabled);
   const addWatchedPath = useGameStore((s) => s.addWatchedPath);
   const removeWatchedPath = useGameStore((s) => s.removeWatchedPath);
   const resetKingdom = useGameStore((s) => s.resetKingdom);
@@ -228,10 +229,18 @@ export function SettingsPanel({
           <label className="row">
             <input
               type="checkbox"
+              checked={settings.padEnabled}
+              onChange={(e) => setPadEnabled(e.target.checked)}
+            />
+            Ambient drone pad (the quiet background hum)
+          </label>
+          <label className="row">
+            <input
+              type="checkbox"
               checked={settings.musicEnabled}
               onChange={(e) => setMusicEnabled(e.target.checked)}
             />
-            Ambient melody (on top of the drone pad)
+            Ambient melody (sparse phrases over the pad)
           </label>
           <label className="row">
             <span>audio volume: {(settings.audioVolume * 100).toFixed(0)}%</span>

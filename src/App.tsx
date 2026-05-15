@@ -441,6 +441,12 @@ export function App() {
     audioRef.current?.setMelodyEnabled(musicEnabled);
   }, [musicEnabled]);
 
+  // Live ambient drone-pad toggle → audio engine
+  const padEnabled = useGameStore((s) => s.settings.padEnabled);
+  useEffect(() => {
+    audioRef.current?.setPadEnabled(padEnabled);
+  }, [padEnabled]);
+
   // Live monarch spec → SpriteFactory (re-renders the in-world sprite).
   useEffect(() => {
     const pixi = pixiRef.current;

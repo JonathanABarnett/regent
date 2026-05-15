@@ -37,6 +37,8 @@ export interface SettingsState {
   showTutorial: boolean;
   /** Sparse melody layer on top of the ambient drone pad. */
   musicEnabled: boolean;
+  /** Ambient drone pad (the low background hum). Toggleable independently. */
+  padEnabled: boolean;
 }
 
 export interface AchievementToast {
@@ -103,6 +105,7 @@ export interface GameState {
   setShowPerfHud: (b: boolean) => void;
   setShowTutorial: (b: boolean) => void;
   setMusicEnabled: (b: boolean) => void;
+  setPadEnabled: (b: boolean) => void;
   markSeenJournal: () => void;
   markSeenEvents: () => void;
 }
@@ -129,6 +132,7 @@ function loadSettings(): SettingsState {
     showPerfHud: false,
     showTutorial: true,
     musicEnabled: true,
+    padEnabled: true,
   };
   if (typeof localStorage === "undefined") return fallback;
   try {
@@ -268,6 +272,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   setMusicEnabled: (b) =>
     set((s) => {
       const next = { ...s.settings, musicEnabled: b };
+      persistSettings(next);
+      return { settings: next };
+    }),
+  setPadEnabled: (b) =>
+    set((s) => {
+      const next = { ...s.settings, padEnabled: b };
       persistSettings(next);
       return { settings: next };
     }),

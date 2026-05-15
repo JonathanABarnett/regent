@@ -43,6 +43,8 @@ export class AudioEngine {
   /** Disabled separately from the pad so a player who likes the drone but
    *  not the melody can keep just the drone. Hooked up via setMelodyEnabled. */
   private melodyEnabled = true;
+  /** Ambient drone pad toggle — independent of melody and SFX. */
+  private padEnabled = true;
 
   attach(world: World) {
     // Subscribe early so we don't miss events even before unmute.
@@ -118,11 +120,18 @@ export class AudioEngine {
     this.master = this.ctx.createGain();
     this.master.gain.value = this.currentVolume;
     this.filter = this.ctx.createBiquadFilter();
+    // Lowpass to keep the pad airy. With sine voices we don't need an
+    // aggressive cutoff but a gentle one rounds off any aliasing artifacts.
+    // High-shelf-like setting (~2500Hz, Q=0.5) gives the pad presence without
+    // making the SFX feel filtered (they pass through the master, not here).
     this.filter.type = "lowpass";
-    this.filter.frequency.value = 1400;
-    this.filter.Q.value = 0.4;
+    this.filter.frequency.value = 2400;
+    this.filter.Q.value = 0.5;
     this.padGain = this.ctx.createGain();
-    this.padGain.gain.value = 0.35;
+    // Quiet enough that SFX always sit clearly on top. The drone is meant to
+    // be felt more than heard — players who want it louder can crank the
+    // master volume slider in Settings.
+    this.padGain.gain.value = 0.18;
     this.padGain.connect(this.filter);
     this.filter.connect(this.master);
     this.master.connect(this.ctx.destination);
@@ -142,24 +151,54 @@ export class AudioEngine {
     }
   }
 
+  /**
+   * Toggle the ambient drone pad (independent of melody and SFX).
+   * Achieved by ramping padGain to/from 0 over 0.4s rather than tearing
+   * down the oscillators — keeps the toggle instant and the start cheap.
+   */
+  setPadEnabled(on: boolean) {
+    this.padEnabled = on;
+    if (!this.ctx || !this.padGain) return;
+    const t = this.ctx.currentTime;
+    // 0.18 is the chosen "on" gain (see startPad comments)
+    this.padGain.gain.setTargetAtTime(on ? 0.18 : 0, t, 0.15);
+  }
+
   // ── Ambient pad ─────────────────────────────────────────────────────────
+  //
+  // The drone is intentionally subtle — it's "atmosphere," not "music." Three
+  // sine voices (root, fifth, octave) up an octave from the original A2 to
+  // avoid sub-bass hum. Each voice is detuned ±5-9 cents so the stack
+  // doesn't sound like a synth chord but like air moving through a hall.
+  // A very slow tremolo (≈0.1 Hz) keeps it from being flat. Master padGain
+  // is gentle (~0.18) so SFX and the melody layer always sit on top.
 
   private startPad() {
     if (!this.ctx || !this.padGain) return;
-    // 3-voice drone with slight detune for movement
-    const root = 110; // A2
+    const root = 220; // A3 — an octave above the old A2 to avoid bass hum
+    // Root + fifth + octave is the classic open-fifth ambient stack.
     const offsets = [0, 7, 12];
-    for (const off of offsets) {
+    // Per-voice cents detune (±7-9c) for warmth without being audibly out of tune.
+    const detuneCents = [-7, +4, +9];
+
+    for (let i = 0; i < offsets.length; i++) {
       const osc = this.ctx.createOscillator();
-      osc.type = "triangle";
-      osc.frequency.value = semitonesToFreq(root, off);
+      osc.type = "sine"; // sine is clean at low frequencies, triangles buzz
+      osc.frequency.value = semitonesToFreq(root, offsets[i]);
+      osc.detune.value = detuneCents[i];
+
+      // Lower-frequency voices get slightly less gain — flattens the spectrum
+      const baseGain = i === 0 ? 0.42 : i === 1 ? 0.38 : 0.32;
       const g = this.ctx.createGain();
-      g.gain.value = 0.5;
-      // very slow tremolo for organic movement
+      g.gain.value = baseGain;
+
+      // Slow tremolo — different phase per voice so they don't pulse in unison
       const lfo = this.ctx.createOscillator();
-      lfo.frequency.value = 0.08 + Math.random() * 0.05;
+      lfo.type = "sine";
+      lfo.frequency.value = 0.07 + Math.random() * 0.06;
       const lfoGain = this.ctx.createGain();
-      lfoGain.gain.value = 0.18;
+      lfoGain.gain.value = 0.08; // shallow depth — 0.18 was way too obvious
+
       lfo.connect(lfoGain);
       lfoGain.connect(g.gain);
       osc.connect(g);
