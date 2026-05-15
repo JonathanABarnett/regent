@@ -34,6 +34,23 @@ html, body, #root, .app-root {
   inset: 0;
   z-index: 0;
   image-rendering: pixelated;
+  /* Drag UX: grab cursor invites the gesture; .dragging flips to grabbing
+     so the cursor change confirms the action mid-drag. */
+  cursor: grab;
+  /* Disable browser-native handling that fights canvas drag:
+     - touch-action: none → no scroll/pinch hijack on touch devices
+     - user-select: none → no text-selection ghosting if pointer escapes
+     - -webkit-user-drag: none → suppresses the "ghost image" drag on Chrome */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+.pixi-host.dragging {
+  cursor: grabbing;
+}
+.pixi-host canvas {
+  -webkit-user-drag: none;
 }
 
 .pixi-host canvas {

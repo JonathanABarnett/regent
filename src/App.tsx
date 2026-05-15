@@ -524,30 +524,62 @@ export function App() {
     const canvasParent = containerRef.current;
     if (!canvasParent) return;
 
-    // Drag state
+    // Drag state. Pointer events instead of mouse events so this works for
+    // touch + pen + middle-click. We track the last few samples of recent
+    // pointer motion so we can compute a release velocity and apply
+    // momentum (camera glide) after the user lifts.
     let dragging = false;
+    let dragPointerId: number | null = null;
     let dragStartX = 0;
     let dragStartY = 0;
     let camStartX = 0;
     let camStartY = 0;
-    let dragMoved = false; // tracks whether mouse moved meaningfully during press
+    let dragMoved = false;
+    interface Sample { x: number; y: number; t: number }
+    let samples: Sample[] = [];
+    // Inertia animation handle (set on release, cleared if user grabs again)
+    let inertiaRaf: number | null = null;
 
-    const onMouseDown = (ev: MouseEvent) => {
+    const cancelInertia = () => {
+      if (inertiaRaf !== null) {
+        cancelAnimationFrame(inertiaRaf);
+        inertiaRaf = null;
+      }
+    };
+
+    const onPointerDown = (ev: PointerEvent) => {
       const canvas = canvasParent.querySelector("canvas");
       const pixi = pixiRef.current;
       if (!canvas || !pixi?.camera) return;
       if (ev.target !== canvas) return;
-      if (ev.button !== 0) return; // only LMB
+      // Accept LMB (button 0), middle (1), and touch / pen (button === 0 too).
+      // Right-click (2) we leave alone so the browser context menu still works.
+      if (ev.button === 2) return;
+      // Stop any in-flight inertia glide; the user is taking over.
+      cancelInertia();
+      // Stop autopilot + any active follow target so the drag isn't fought
+      // by the camera trying to glide elsewhere.
+      pixi.camera.stopFollowing();
       dragging = true;
+      dragPointerId = ev.pointerId;
       dragMoved = false;
       dragStartX = ev.clientX;
       dragStartY = ev.clientY;
       camStartX = pixi.camera.x;
       camStartY = pixi.camera.y;
+      samples = [{ x: ev.clientX, y: ev.clientY, t: performance.now() }];
+      // Capture so we still get move/up events if the pointer leaves the canvas.
+      try {
+        (ev.target as Element).setPointerCapture(ev.pointerId);
+      } catch {
+        /* ignore — older browsers without pointer capture */
+      }
+      canvasParent.classList.add("dragging");
+      ev.preventDefault();
     };
 
-    const onMouseMove = (ev: MouseEvent) => {
-      if (!dragging) return;
+    const onPointerMove = (ev: PointerEvent) => {
+      if (!dragging || ev.pointerId !== dragPointerId) return;
       const pixi = pixiRef.current;
       if (!pixi?.camera) return;
       const dx = ev.clientX - dragStartX;
@@ -558,10 +590,64 @@ export function App() {
         camStartX - dx / (T * pixi.camera.zoom),
         camStartY - dy / (T * pixi.camera.zoom),
       );
+      // Record sample for inertia velocity calculation. Trim to last ~100ms
+      // so a long drag with a pause at the end doesn't produce phantom
+      // momentum from the start of the gesture.
+      const now = performance.now();
+      samples.push({ x: ev.clientX, y: ev.clientY, t: now });
+      while (samples.length > 0 && now - samples[0].t > 100) samples.shift();
     };
 
-    const onMouseUp = () => {
+    const onPointerUp = (ev: PointerEvent) => {
+      if (!dragging || ev.pointerId !== dragPointerId) return;
       dragging = false;
+      dragPointerId = null;
+      canvasParent.classList.remove("dragging");
+      try {
+        (ev.target as Element).releasePointerCapture(ev.pointerId);
+      } catch {
+        /* ignore */
+      }
+      // Apply inertia if the user was still moving at release time. Compute
+      // velocity in screen-pixels-per-ms from the last 100ms of samples,
+      // convert to tiles-per-frame, then decay at ~0.92x per frame so the
+      // glide tapers over ~400ms (≈0.92^25 = 0.12 of starting velocity).
+      const pixi = pixiRef.current;
+      if (!pixi?.camera || samples.length < 2 || !dragMoved) return;
+      const first = samples[0];
+      const last = samples[samples.length - 1];
+      const dtMs = Math.max(1, last.t - first.t);
+      const vxPxPerMs = (last.x - first.x) / dtMs;
+      const vyPxPerMs = (last.y - first.y) / dtMs;
+      // Convert to tiles per render frame (≈16.7ms at 60fps)
+      const T = 32;
+      const zoom = pixi.camera.zoom;
+      let vx = -(vxPxPerMs * 16.7) / (T * zoom);
+      let vy = -(vyPxPerMs * 16.7) / (T * zoom);
+      // Skip if the gesture ended at a near-stop
+      if (Math.hypot(vx, vy) < 0.02) return;
+      const step = () => {
+        if (!pixi.camera) return;
+        pixi.camera.setManual(
+          pixi.camera.x + vx,
+          pixi.camera.y + vy,
+        );
+        vx *= 0.92;
+        vy *= 0.92;
+        if (Math.hypot(vx, vy) < 0.01) {
+          inertiaRaf = null;
+          return;
+        }
+        inertiaRaf = requestAnimationFrame(step);
+      };
+      inertiaRaf = requestAnimationFrame(step);
+    };
+
+    const onPointerCancel = (ev: PointerEvent) => {
+      if (ev.pointerId !== dragPointerId) return;
+      dragging = false;
+      dragPointerId = null;
+      canvasParent.classList.remove("dragging");
     };
 
     const onWheel = (ev: WheelEvent) => {
@@ -628,15 +714,18 @@ export function App() {
       pixi.camera.enableAutopilot();
     };
     canvasParent.addEventListener("click", handler);
-    canvasParent.addEventListener("mousedown", onMouseDown);
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    canvasParent.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerCancel);
     canvasParent.addEventListener("wheel", onWheel, { passive: false });
     return () => {
+      cancelInertia();
       canvasParent.removeEventListener("click", handler);
-      canvasParent.removeEventListener("mousedown", onMouseDown);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+      canvasParent.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerCancel);
       canvasParent.removeEventListener("wheel", onWheel);
     };
   }, []);
