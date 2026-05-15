@@ -541,6 +541,13 @@ export class World {
       if (npc.activity === "walking" && npc.path.length > 0) {
         this.advanceAlongPath(npc, dt);
       } else {
+        // Stationary NPCs must keep prevPos in lockstep with pos. The renderer
+        // interpolates between them using alpha 0→1 each sim tick; if prevPos
+        // is stale from the last walk frame, the sprite ping-pongs between
+        // two stale points 10×/sec ("bouncing"). This single line is the
+        // difference between a still villager and a vibrating one.
+        npc.prevPos.x = npc.pos.x;
+        npc.prevPos.y = npc.pos.y;
         npc.activityTimer -= dt;
         if (npc.activityTimer > 0) continue;
         // pick a new destination based on schedule

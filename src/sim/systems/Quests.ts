@@ -394,6 +394,12 @@ interface ActiveArc {
   arcId: string;
   startDay: number;
   flavor: string;
+  /**
+   * `onDay` values of phases that have already fired for this arc.
+   * Without this, `tick()` running at 10 Hz would write the same phase's
+   * journal line 10×/second, spamming the chronicle in seconds.
+   */
+  firedPhases: number[];
 }
 
 export class Quests {
@@ -416,18 +422,21 @@ export class Quests {
 
   tick() {
     const day = this.world.state.day;
-    // process active phases
+    // Process the active arc's current-day phase. Critical: only fire each
+    // phase ONCE per arc — `tick()` runs at 10 Hz so without this guard the
+    // same line spams the journal 10 times a second.
     if (this.active) {
       const def = ARCS.find((a) => a.id === this.active!.arcId);
       const elapsed = day - this.active.startDay;
       const phase = def?.phases.find((p) => p.onDay === elapsed);
-      if (phase) {
+      if (phase && !this.active.firedPhases.includes(elapsed)) {
         phase.write({
           world: this.world,
           journal: this.journal,
           flavor: this.active.flavor,
           rand: this.rand,
         });
+        this.active.firedPhases.push(elapsed);
       }
       const lastPhaseDay = Math.max(...(def?.phases.map((p) => p.onDay) ?? [0]));
       if (elapsed >= lastPhaseDay) {
@@ -440,8 +449,8 @@ export class Quests {
     if (!this.active && day > 0 && this.rand() < 0.35) {
       const def = ARCS[Math.floor(this.rand() * ARCS.length)];
       const flavor = FLAVOR_NAMES[Math.floor(this.rand() * FLAVOR_NAMES.length)];
-      this.active = { arcId: def.id, startDay: day, flavor };
-      // immediately run day-0 phase
+      // Start with phase 0 marked as fired since we run it right below.
+      this.active = { arcId: def.id, startDay: day, flavor, firedPhases: [0] };
       const phase = def.phases.find((p) => p.onDay === 0);
       phase?.write({
         world: this.world,
