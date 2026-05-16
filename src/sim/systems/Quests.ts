@@ -377,6 +377,95 @@ const ARCS: ArcDef[] = [
     ],
   },
   {
+    id: "fence_dispute",
+    title: "The fence dispute",
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world, rand }) => {
+          const town = pickTown(world, rand);
+          journal.write(
+            `Two neighbors in ${town.name} began a serious argument about where the fence between their gardens should run. Each cited the same dead grandfather as authority.`,
+            "event",
+            town.id,
+          );
+        },
+      },
+      {
+        onDay: 2,
+        write: ({ journal, world, rand }) => {
+          const town = pickTown(world, rand);
+          journal.write(
+            `A village elder visited both houses in ${town.name} in turn, carrying a loaf of warm bread. They listened, said little, and left the bread on each kitchen table.`,
+            "event",
+            town.id,
+          );
+        },
+      },
+      {
+        onDay: 4,
+        write: ({ journal, world, rand }) => {
+          const town = pickTown(world, rand);
+          journal.write(
+            `The fence in ${town.name} was redrawn straight down the middle by mutual consent. Both neighbors planted herbs along it the next morning, and now share rosemary.`,
+            "milestone",
+            town.id,
+          );
+        },
+      },
+    ],
+  },
+  {
+    id: "letter_from_afar",
+    title: "A letter from afar",
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          world.bus.publish(
+            makeEvent("courier", {
+              source: "narrative",
+              intensity: 0.45,
+              payload: {
+                from: "rivermouth",
+                to: castle?.id ?? "highkeep",
+                label: "a sealed letter",
+              },
+            }),
+          );
+          journal.write(
+            "A courier arrived at the keep carrying a heavy letter with three seals — none of them familiar to the chamberlain.",
+            "event",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 1,
+        write: ({ journal, world }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          journal.write(
+            "The court read the letter at noon. It described a fire in a city no one in the room could place on a map.",
+            "event",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 3,
+        write: ({ journal, world }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          journal.write(
+            "A reply was sealed and sent by the same courier, who refused payment and asked only for road bread and water.",
+            "milestone",
+            castle?.id,
+          );
+        },
+      },
+    ],
+  },
+  {
     id: "scholar_discovery",
     title: "A discovery at the scriptorium",
     phases: [

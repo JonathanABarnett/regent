@@ -87,6 +87,71 @@ describe("Quests — phase deduplication regression", () => {
     expect(new Set(phaseFires).size).toBe(3);
   });
 
+  it("fence_dispute arc fires its 3 phases pinned to a town across days 0/2/4", () => {
+    const w = new World({ seed: 42 });
+    const entries: Array<{ text: string; targetStructureId?: string }> = [];
+    w.onJournal = (e) =>
+      entries.push({ text: e.text, targetStructureId: e.targetStructureId });
+    const internal = w.quests as unknown as {
+      active: {
+        arcId: string;
+        startDay: number;
+        flavor: string;
+        firedPhases: number[];
+      } | null;
+      lastRolledDay: number;
+    };
+    internal.active = { arcId: "fence_dispute", startDay: 1, flavor: "—", firedPhases: [] };
+    for (let d = 1; d <= 6; d++) {
+      w.state.day = d;
+      internal.lastRolledDay = d;
+      w.quests.tick();
+    }
+    const phaseEntries = entries.filter((e) =>
+      /fence|elder visited|rosemary/.test(e.text),
+    );
+    expect(phaseEntries.length).toBe(3);
+    // All three phases pin to the same town.
+    expect(phaseEntries[0].targetStructureId).toBeTruthy();
+    expect(phaseEntries[0].targetStructureId).toBe(phaseEntries[1].targetStructureId);
+    expect(phaseEntries[1].targetStructureId).toBe(phaseEntries[2].targetStructureId);
+  });
+
+  it("letter_from_afar arc emits a courier event on day 0 and pins to the castle", () => {
+    const w = new World({ seed: 42 });
+    const journalEntries: Array<{ text: string; targetStructureId?: string }> = [];
+    w.onJournal = (e) =>
+      journalEntries.push({ text: e.text, targetStructureId: e.targetStructureId });
+    const courierLabels: string[] = [];
+    w.bus.subscribe((ev) => {
+      if (ev.kind === "courier" && ev.payload.label) {
+        courierLabels.push(ev.payload.label);
+      }
+    });
+    const internal = w.quests as unknown as {
+      active: {
+        arcId: string;
+        startDay: number;
+        flavor: string;
+        firedPhases: number[];
+      } | null;
+      lastRolledDay: number;
+    };
+    internal.active = { arcId: "letter_from_afar", startDay: 1, flavor: "—", firedPhases: [] };
+    for (let d = 1; d <= 5; d++) {
+      w.state.day = d;
+      internal.lastRolledDay = d;
+      w.quests.tick();
+    }
+    expect(courierLabels).toContain("a sealed letter");
+    const castle = w.map.structures.find((s) => s.kind === "castle");
+    const arcEntries = journalEntries.filter((e) =>
+      /three seals|letter at noon|reply was sealed/.test(e.text),
+    );
+    expect(arcEntries.length).toBe(3);
+    expect(arcEntries[0].targetStructureId).toBe(castle?.id);
+  });
+
   it("after the last phase fires, the active arc is cleared and stops re-firing", () => {
     const w = new World({ seed: 42 });
     const internal = w.quests as unknown as {
