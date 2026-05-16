@@ -25,6 +25,13 @@ export interface SaveData {
   kingdomName?: string;
   /** Player-chosen monarch name, fixed at founding. */
   monarchName?: string;
+  /**
+   * Optional one-line player-written kingdom motto. Persists across reigns
+   * (it belongs to the kingdom, not the monarch). Capped at 80 chars on the
+   * way in by the store's setIdentity; validateSave clamps again here as a
+   * defense-in-depth pass against tampered files.
+   */
+  kingdomMotto?: string;
   /** Player-designed monarch appearance (CharacterSpec). */
   monarchSpec?: unknown;
   /** Player-designed pet appearance (PetSpec). */
@@ -154,6 +161,7 @@ export function serialize(
     journal?: SavedJournalEntry[];
     kingdomName?: string;
     monarchName?: string;
+    kingdomMotto?: string;
     monarchSpec?: unknown;
     petSpec?: unknown;
     succession?: { generation: number; reignStartDay: number };
@@ -167,6 +175,7 @@ export function serialize(
     foundedAtMs: world.calendar.cfg.foundedAtMs,
     kingdomName: extras.kingdomName,
     monarchName: extras.monarchName,
+    kingdomMotto: extras.kingdomMotto,
     monarchSpec: extras.monarchSpec,
     petSpec: extras.petSpec,
     totalLifetimeSec: lifetimeSec,
@@ -361,6 +370,13 @@ export function validateSave(rawInput: unknown): SaveData | null {
     foundedAtMs,
     kingdomName: raw.kingdomName === undefined ? undefined : safeString(raw.kingdomName, 32),
     monarchName: raw.monarchName === undefined ? undefined : safeString(raw.monarchName, 32),
+    // Motto is capped at 80 (matches KINGDOM_MOTTO_MAX in the store), and
+    // empty-string is normalized to undefined so renderers can use a simple
+    // truthy check.
+    kingdomMotto:
+      raw.kingdomMotto === undefined
+        ? undefined
+        : (safeString(raw.kingdomMotto, 80) || undefined),
     monarchSpec: raw.monarchSpec, // re-validated by CharacterSpec consumers downstream
     petSpec: raw.petSpec,
     totalLifetimeSec: safeNumber(raw.totalLifetimeSec, 0),

@@ -204,6 +204,66 @@ describe("compactNumber", () => {
   });
 });
 
+describe("composeCardInput — motto", () => {
+  it("threads a motto through unchanged when it's already short and clean", () => {
+    const input = composeCardInput({
+      kingdomName: "K",
+      monarchName: "M",
+      bannerColor: "#000000",
+      day: 1,
+      year: 1,
+      generation: 1,
+      journal: [],
+      motto: "By bread and starlight",
+    });
+    expect(input.motto).toBe("By bread and starlight");
+  });
+
+  it("collapses internal whitespace + clamps to 80 chars", () => {
+    const long = "x".repeat(120);
+    const input = composeCardInput({
+      kingdomName: "K",
+      monarchName: "M",
+      bannerColor: "#000000",
+      day: 1,
+      year: 1,
+      generation: 1,
+      journal: [],
+      motto: `   hello\t\tworld   ${long}`,
+    });
+    expect(input.motto!.length).toBeLessThanOrEqual(80);
+    // Internal whitespace collapsed to single spaces.
+    expect(input.motto).toMatch(/^hello world /);
+  });
+
+  it("treats an empty or whitespace-only motto as undefined", () => {
+    const input = composeCardInput({
+      kingdomName: "K",
+      monarchName: "M",
+      bannerColor: "#000000",
+      day: 1,
+      year: 1,
+      generation: 1,
+      journal: [],
+      motto: "   ",
+    });
+    expect(input.motto).toBeUndefined();
+  });
+
+  it("omits motto when the caller didn't pass one", () => {
+    const input = composeCardInput({
+      kingdomName: "K",
+      monarchName: "M",
+      bannerColor: "#000000",
+      day: 1,
+      year: 1,
+      generation: 1,
+      journal: [],
+    });
+    expect(input.motto).toBeUndefined();
+  });
+});
+
 describe("cardFilename", () => {
   it("produces a URL-safe filename", () => {
     expect(cardFilename("Aurelia", 47, 2)).toBe("aurelia-y2d47-card.png");
@@ -454,6 +514,38 @@ describe("drawKingdomCard (smoke)", () => {
       expect(t.label.length).toBeGreaterThan(0);
       expect(t.blurb.length).toBeGreaterThan(0);
     }
+  });
+
+  it("renders the motto as a quoted italic line under the subtitle when present", () => {
+    const ctx = makeMockCtx();
+    drawKingdomCard(ctx, {
+      kingdomName: "Aurelia",
+      monarchName: "Elara",
+      bannerColor: "#b45309",
+      day: 1,
+      year: 1,
+      generation: 1,
+      milestones: [],
+      motto: "By bread and starlight",
+    });
+    const filled = ctx.calls.filter((c) => c.method === "fillText").map((c) => String(c.args[0]));
+    expect(filled.some((t) => t === `"By bread and starlight"`)).toBe(true);
+  });
+
+  it("does not render a quoted motto line when motto is undefined", () => {
+    const ctx = makeMockCtx();
+    drawKingdomCard(ctx, {
+      kingdomName: "Aurelia",
+      monarchName: "Elara",
+      bannerColor: "#b45309",
+      day: 1,
+      year: 1,
+      generation: 1,
+      milestones: [],
+    });
+    const filled = ctx.calls.filter((c) => c.method === "fillText").map((c) => String(c.args[0]));
+    // No fillText call should be a bare-quoted line.
+    expect(filled.some((t) => t.startsWith(`"`) && t.endsWith(`"`))).toBe(false);
   });
 
   it("renders all three templates without throwing", () => {

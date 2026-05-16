@@ -88,6 +88,7 @@ export function KingdomCard({
         day: world.state.day,
         year: world.state.year,
         generation: world.succession.state.generation,
+        motto: identity.kingdomMotto,
         journal,
         stats: {
           population: world.npcs.length,

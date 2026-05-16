@@ -381,9 +381,20 @@ function drawForeground(
   const subtitle = `under ${input.monarchName} · Generation ${input.generation}`;
   ctx.fillText(subtitle, CARD_WIDTH / 2, 215, CARD_WIDTH - 160);
 
-  // Divider
+  // Optional motto — small italic line wedged between the subtitle and the
+  // divider. The motto is the most personal thing on the card; rendering
+  // it in quotes makes it read as the kingdom's own voice rather than UI.
+  if (input.motto) {
+    ctx.fillStyle = theme.subtitle;
+    ctx.font = "italic 22px 'Georgia', 'Times New Roman', serif";
+    ctx.fillText(`"${input.motto}"`, CARD_WIDTH / 2, 244, CARD_WIDTH - 200);
+  }
+
+  // Divider — pushed slightly down when the motto is present so it doesn't
+  // crash into the italic line.
+  const dividerY = input.motto ? 268 : 255;
   ctx.fillStyle = theme.divider;
-  ctx.fillRect(CARD_WIDTH / 2 - 80, 255, 160, 2);
+  ctx.fillRect(CARD_WIDTH / 2 - 80, dividerY, 160, 2);
 
   // Stats row
   if (input.stats) {

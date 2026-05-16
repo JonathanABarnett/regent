@@ -48,6 +48,11 @@ export interface KingdomCardInput {
   milestones: string[];
   /** Optional stats; if absent, the stats row + sparkline are skipped. */
   stats?: KingdomCardStats;
+  /**
+   * Optional player-typed motto. When present, surfaces between the title
+   * and the subtitle on the card. Empty / undefined → motto line skipped.
+   */
+  motto?: string;
 }
 
 /**
@@ -161,9 +166,16 @@ export function composeCardInput(args: {
   maxLineChars?: number;
   /** Optional stats block; passed through to the renderer when present. */
   stats?: KingdomCardStats;
+  /** Optional motto; trimmed + passed through to the renderer. */
+  motto?: string;
 }): KingdomCardInput {
   const milestones = pickCardMilestones(args.journal, args.maxMilestones ?? 5)
     .map((m) => trimMilestoneLine(m, args.maxLineChars ?? 90));
+  // Motto cleaning: collapse internal whitespace and clamp character count.
+  // The store already sanitized on the way in; this is defense-in-depth.
+  const motto = args.motto
+    ? args.motto.replace(/\s+/g, " ").trim().slice(0, 80)
+    : undefined;
   return {
     kingdomName: args.kingdomName,
     monarchName: args.monarchName,
@@ -174,6 +186,7 @@ export function composeCardInput(args: {
     generation: args.generation,
     milestones,
     stats: args.stats,
+    motto: motto || undefined,
   };
 }
 

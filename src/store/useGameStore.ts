@@ -6,6 +6,10 @@ import type { CharacterSpec } from "../engine/CharacterSpec";
 import { DEFAULT_SPEC } from "../engine/CharacterSpec";
 import type { PetSpec } from "../engine/PetSpec";
 import { defaultPetSpec } from "../engine/PetSpec";
+import { sanitizeName } from "../lib/sanitize";
+
+/** Max characters retained for a kingdom motto. Exported so the UI can mirror. */
+export const KINGDOM_MOTTO_MAX = 80;
 
 export interface IntegrationToggles {
   narrative: boolean;
@@ -61,6 +65,12 @@ export interface KingdomIdentity {
   monarchName: string;
   /** Color of the castle's banner. Defaults to red on first founding. */
   bannerColor?: string;
+  /**
+   * A short player-written motto that appears on the Kingdom Card and in
+   * the title bar. Optional. Capped to ~80 characters and sanitized of
+   * control/bidi-override chars by the setter. Empty string means "none".
+   */
+  kingdomMotto?: string;
   /** Player-appointed NPCs filling specific court roles. NPC id → role. */
   court?: Partial<Record<CourtRole, string>>;
 }
@@ -250,7 +260,19 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ events: [], journal: [], achievements: {}, achievementToast: null, identity: null });
     location.reload();
   },
-  setIdentity: (i) => set({ identity: i }),
+  setIdentity: (i) =>
+    set({
+      identity: {
+        ...i,
+        // Sanitize the motto every time identity is written. Cheap, and it
+        // means callers (onboarding, settings, save migrations) never need
+        // to remember to strip control/bidi/HTML themselves.
+        kingdomMotto:
+          i.kingdomMotto !== undefined
+            ? sanitizeName(i.kingdomMotto, KINGDOM_MOTTO_MAX)
+            : undefined,
+      },
+    }),
   setMonarchSpec: (s) => set({ monarchSpec: s }),
   setPetSpec: (s) => set({ petSpec: s }),
   setStreamerMode: (b) =>

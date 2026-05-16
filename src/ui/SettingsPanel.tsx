@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useGameStore } from "../store/useGameStore";
+import { useGameStore, KINGDOM_MOTTO_MAX } from "../store/useGameStore";
 import { FABRIC_COLORS } from "../engine/CharacterSpec";
 import {
   exportSave,
@@ -97,6 +97,38 @@ export function SettingsPanel({
             />
             Follow real-world seasons
           </label>
+          <div style={{ marginTop: 12 }}>
+            <h3 style={{
+              margin: "0 0 6px",
+              fontSize: 11,
+              letterSpacing: "0.15em",
+              color: "var(--accent)",
+              textTransform: "uppercase",
+            }}>Kingdom motto</h3>
+            <input
+              type="text"
+              maxLength={KINGDOM_MOTTO_MAX}
+              value={identity?.kingdomMotto ?? ""}
+              placeholder="e.g. By bread and starlight"
+              onChange={(e) => {
+                if (!identity) return;
+                setIdentity({ ...identity, kingdomMotto: e.target.value });
+              }}
+              disabled={!identity}
+              style={{
+                width: "100%",
+                background: "transparent",
+                color: "var(--panel-fg)",
+                border: "1px solid var(--hud-border)",
+                padding: "6px 8px",
+                font: "inherit",
+                fontSize: 12,
+              }}
+            />
+            <div className="muted" style={{ fontSize: 10, marginTop: 4, fontStyle: "italic" }}>
+              A one-line saying, shown on the Kingdom Card. Up to {KINGDOM_MOTTO_MAX} characters. Persists across reigns.
+            </div>
+          </div>
           <div style={{ marginTop: 12 }}>
             <h3 style={{
               margin: "0 0 6px",

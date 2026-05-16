@@ -147,6 +147,7 @@ export function App() {
       setIdentity({
         kingdomName: existing.kingdomName,
         monarchName: existing.monarchName,
+        kingdomMotto: existing.kingdomMotto,
       });
     }
     // Monarch spec: hydrate from save (or keep default).
@@ -349,6 +350,7 @@ export function App() {
             journal: store.journal,
             kingdomName: store.identity?.kingdomName,
             monarchName: store.identity?.monarchName,
+            kingdomMotto: store.identity?.kingdomMotto,
             monarchSpec: store.monarchSpec,
             petSpec: store.petSpec,
             succession: {
@@ -1064,6 +1066,8 @@ export function App() {
                       journal: store.journal,
                       kingdomName: id.kingdomName,
                       monarchName: id.monarchName,
+                      // Motto is set later via Settings, not at founding —
+                      // pull from the store at autosave time instead.
                       monarchSpec: spec,
                     }),
                   );
