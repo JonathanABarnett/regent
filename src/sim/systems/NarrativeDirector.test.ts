@@ -132,15 +132,22 @@ describe("NarrativeDirector", () => {
   it("over many fires, surfaces a variety of label strings", () => {
     const w = new World({ seed: 42 });
     const labels = new Set<string>();
+    // Sample on every tick — the bus has a recent-cap so we can't rely on
+    // bus.recent() seeing every fire over 200 iterations.
+    let lastBusSize = 0;
     for (let i = 0; i < 200; i++) {
       forceTimer(w.director, 0, 100);
       w.director.tick(0.1);
+      const recent = w.bus.recent();
+      for (let j = lastBusSize; j < recent.length; j++) {
+        const ev = recent[j];
+        if (ev.source === "narrative" && ev.payload.label) {
+          labels.add(ev.payload.label);
+        }
+      }
+      lastBusSize = recent.length;
     }
-    for (const ev of w.bus.recent()) {
-      if (ev.source !== "narrative") continue;
-      if (ev.payload.label) labels.add(ev.payload.label);
-    }
-    // Expect meaningful variety — at least 5 distinct labels in 200 fires.
-    expect(labels.size).toBeGreaterThanOrEqual(5);
+    // Label pools expanded — variety bar moves with them.
+    expect(labels.size).toBeGreaterThanOrEqual(15);
   });
 });

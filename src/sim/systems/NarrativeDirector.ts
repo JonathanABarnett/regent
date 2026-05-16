@@ -226,6 +226,10 @@ const COURIER_LABELS: readonly string[] = [
   "an emissary from a far court",
   "a wagon of fresh bread",
   "the tax collector's clerk",
+  "two cousins driving a single mule",
+  "a tinker with a kettle full of spoons",
+  "a wool-merchant grumbling at the weather",
+  "a courier from the bishop, riding on borrowed time",
 ];
 
 const RESEARCH_LABELS: readonly string[] = [
@@ -234,6 +238,10 @@ const RESEARCH_LABELS: readonly string[] = [
   "the cataloguing of strange seeds",
   "a midnight comparison of star charts",
   "a quiet day of marginalia",
+  "a careful re-shelving by author, then by century",
+  "an argument with a margin from two hundred years ago",
+  "the loud silence of a room full of careful readers",
+  "the patient copying of a single chapter from a borrowed book",
 ];
 
 const FORGE_LABELS: readonly string[] = [
@@ -243,6 +251,10 @@ const FORGE_LABELS: readonly string[] = [
   "repairs from the watch",
   "a commissioned hinge",
   "nails — always nails",
+  "an order of pothooks for a new tavern",
+  "the iron rim for a wagon wheel that no one wanted to wait for",
+  "a length of chain whose links the smith counted twice",
+  "an old sword rehilted at no charge for a widow",
 ];
 
 const MONSTER_LABELS: readonly string[] = [
@@ -251,6 +263,10 @@ const MONSTER_LABELS: readonly string[] = [
   "a strange light in the deep forest",
   "a smell on the wind no one could name",
   "a deer found half-buried",
+  "a stone moved that should not have moved",
+  "a cattle gate left open with no cattle missing",
+  "a child's tale dismissed too quickly",
+  "an unpicked fruit tree picked overnight",
 ];
 
 const FESTIVAL_LABELS: readonly string[] = [
@@ -259,6 +275,10 @@ const FESTIVAL_LABELS: readonly string[] = [
   "a remembrance of an old harvest",
   "an impromptu fiddler",
   "a wedding spilling into the street",
+  "a name-day for a baby born under a comet",
+  "the brewer's first cask of the season, opened in the square",
+  "a procession with paper lanterns and no clear destination",
+  "an evening of riddles, with a wheel of cheese as prize",
 ];
 
 const MINING_LABELS: readonly string[] = [
@@ -266,6 +286,10 @@ const MINING_LABELS: readonly string[] = [
   "deep shift work",
   "iron for the next quarter",
   "tin and worry",
+  "a rib of ore the old miners said wouldn't be there",
+  "a slow day of dust and apologies",
+  "a small collapse, no one hurt, much paperwork",
+  "a discovery of nothing — exactly where the map said something would be",
 ];
 
 const AIRSHIP_LABELS: readonly string[] = [
@@ -273,6 +297,10 @@ const AIRSHIP_LABELS: readonly string[] = [
   "an unmarked silhouette",
   "the noon airship",
   "an airship listing in the wind",
+  "a balloon the color of nothing in particular",
+  "a courier-craft moving against the prevailing wind",
+  "an airship trailing a streamer that no one could read at this distance",
+  "a small craft that may or may not be in distress",
 ];
 
 const FISHER_LABELS: readonly string[] = [
@@ -281,6 +309,10 @@ const FISHER_LABELS: readonly string[] = [
   "a young angler whose only catch is a cracked clay pipe",
   "someone who insists they almost caught a riverpike",
   "a fisher with a wet dog and no fish at all",
+  "a woman who has fished this river since before the kingdom was named",
+  "a boy who fell in and is pretending he meant to",
+  "two fishers in heated disagreement about which bank is luckier",
+  "a fisher who has stopped fishing and is just watching the water",
 ];
 
 const PILGRIM_LABELS: readonly string[] = [
@@ -289,4 +321,8 @@ const PILGRIM_LABELS: readonly string[] = [
   "a child sent to make an offering",
   "a traveler reading from a small book",
   "a singer who promises to play once and leave",
+  "a barefoot walker who has not spoken in three towns",
+  "a pilgrim returning a borrowed cloak forty years late",
+  "a stonecutter on the way to leave a small carving at the shrine",
+  "an old woman with a bag of letters she means to burn",
 ];

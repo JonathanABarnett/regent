@@ -285,7 +285,7 @@ Mouse: click NPC → camera follows; click structure → inspector → "Step ins
 | Aspirations (player-facing goals) | 21 in pool, 3 active at a time |
 | Quest arcs | 9 (`traveler`, `festival_prep`, `rival_banner`, `scholar_discovery`, `wandering_cat`, `river_flood`, `lost_child`, `old_friend_returns`, `village_well`) |
 | Decision archetypes | 10 (petition, merchant, festival, stranger, levy, pilgrim, boundary dispute, astronomer's portent, stray dog, anonymous gift) |
-| Narrative director branches | 9 (courier, research, forge, monster, festival, mining, airship, pilgrim, lone fisher) with ~40 label variants |
+| Narrative director branches | 9 (courier, research, forge, monster, festival, mining, airship, pilgrim, lone fisher) with ~85 label variants |
 | Court speech lines | 30 (10 per role × 3 roles), deterministic per seed |
 | NPC backstory pools | 10,000 unique sentences (4 pools × 10 entries each) |
 | Holidays | 11 (New Year, Lovers' Festival, Equinox, Bloomfest, Midsummer, Harvest Moon, Hallowtide, Remembrance, Solstice, Yuletide, Year's End) |
