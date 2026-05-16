@@ -2,7 +2,7 @@
 
 A 16-bit ambient fantasy kingdom that lives on the desktop. Runs autonomously; reacts to real-world signals (git, system, Twitch) as flavor.
 
-> Status at last full pass: **301 tests passing across 29 files · TypeScript strict · production build ~2.7s.** Live demo at https://jonathanabarnett.github.io/kingdomos/ — auto-deployed on every push to `main` via `.github/workflows/pages.yml`.
+> Status at last full pass: **303 tests passing across 29 files · TypeScript strict · production build ~2.7s.** Live demo at https://jonathanabarnett.github.io/kingdomos/ — auto-deployed on every push to `main` via `.github/workflows/pages.yml`.
 
 ## TL;DR
 
@@ -10,7 +10,7 @@ A 16-bit ambient fantasy kingdom that lives on the desktop. Runs autonomously; r
 npm install           # one-time
 npm run dev           # Vite-only frontend (works in browser; Tauri APIs stub)
 npm run tauri:dev     # Full desktop app (needs Rust + MSVC)
-npm test              # Vitest suite (301 tests across 29 files)
+npm test              # Vitest suite (303 tests across 29 files)
 npm run typecheck     # tsc -b strict
 npm run build         # Production bundle → dist/
 npm run release       # Tag + push → CI publishes to itch.io
@@ -299,7 +299,7 @@ Mouse: click NPC → camera follows; click structure → inspector → "Step ins
 | Audio | procedural drone pad (toggleable) + sparse melody layer (toggleable) + 9 event SFX + 5 category chimes |
 | Threat flavors | 5 (wolves, bandits, beast, raiders, haunting) — captain seat reduces chance 60% |
 | Discovered landmarks | 5 kinds (standing stones, ruin, camp, wellspring, obelisk) × 3 opening sentences = 15 flavor variants |
-| Stats history retained | 90 in-world days (population, gold, vault as sparklines) |
+| Stats history retained | 90 in-world days (population, gold, vault, tomes as sparklines) |
 | Interior layouts | 13 (one per structure kind: castle, cottage/town, library, forge, mine, watchtower, mill, shrine + 5 landmarks) |
 | Furniture station tags | 29 distinct (anvil, throne, bookshelf, bed, loom, mill_wheel, telescope, altar, kneeler, well_mouth, …) |
 | Past kingdoms archived | up to 20 retained (oldest fall off); each preserves milestones + final census |
@@ -359,7 +359,7 @@ npm run test:watch  # watch mode
 npm run typecheck   # tsc -b strict
 ```
 
-301 tests across 29 files. New systems should have at least 4–6 tests covering:
+303 tests across 29 files. New systems should have at least 4–6 tests covering:
 - Happy path
 - Adversarial / oversized / NaN input
 - Round-trip save/load (if persisted)

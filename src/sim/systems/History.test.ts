@@ -21,9 +21,10 @@ describe("History", () => {
     expect(w.history.snapshots.length).toBe(1);
   });
 
-  it("captures population, gold, vault from the live world", () => {
+  it("captures population, gold, vault, tomes from the live world", () => {
     const w = new World({ seed: 42 });
     w.economy.state.gold = 123;
+    w.economy.state.tomes = 17;
     w.treasury.acquire("relic", "test");
     w.state.day = 7;
     w.history.capture(w);
@@ -31,6 +32,30 @@ describe("History", () => {
     expect(last.population).toBe(w.npcs.length);
     expect(last.gold).toBe(123);
     expect(last.vault).toBe(1);
+    expect(last.tomes).toBe(17);
+  });
+
+  it("series('tomes') returns the tomes column", () => {
+    const w = new World({ seed: 42 });
+    for (let d = 1; d <= 5; d++) {
+      w.state.day = d;
+      w.economy.state.tomes = d * 3;
+      w.history.capture(w);
+    }
+    const series = w.history.series("tomes");
+    expect(series).toEqual([3, 6, 9, 12, 15]);
+  });
+
+  it("hydrate defaults tomes=0 for entries written before the field existed", () => {
+    const h = new History();
+    // Old-shape entries (no tomes field) — back-compat path
+    h.hydrate([
+      { day: 1, year: 1, population: 5, gold: 10, vault: 0 },
+      { day: 2, year: 1, population: 6, gold: 12, vault: 1 },
+    ]);
+    expect(h.snapshots.length).toBe(2);
+    expect(h.snapshots[0].tomes).toBe(0);
+    expect(h.snapshots[1].tomes).toBe(0);
   });
 
   it("caps retained snapshots at HISTORY_MAX_DAYS", () => {

@@ -77,6 +77,8 @@ export interface SaveData {
     population: number;
     gold: number;
     vault: number;
+    /** Added later; back-compat default is 0 on validate. */
+    tomes: number;
   }>;
   /**
    * Spontaneous map landmarks discovered by the NarrativeDirector's
@@ -457,6 +459,9 @@ function validateHistory(raw: unknown): SaveData["history"] {
       population: safeInt(item.population, 0, 0, 10_000),
       gold: safeInt(item.gold, 0, 0, 999_999),
       vault: safeInt(item.vault, 0, 0, 1_000),
+      // tomes was added after the initial release; old saves without it
+      // default to 0 so the sparkline just flats for the pre-upgrade days.
+      tomes: safeInt(item.tomes, 0, 0, 999_999),
     });
   }
   return out;

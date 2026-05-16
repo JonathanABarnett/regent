@@ -2,7 +2,7 @@
 
 > A 16-bit fantasy kingdom that lives on your desktop. It runs on its own, reacts to what you're already doing, and tells you stories about a place that's now yours.
 
-[![Tests](https://img.shields.io/badge/tests-301%20passing-brightgreen)](./src) [![TypeScript](https://img.shields.io/badge/typescript-strict-blue)]() [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange)]()
+[![Tests](https://img.shields.io/badge/tests-303%20passing-brightgreen)](./src) [![TypeScript](https://img.shields.io/badge/typescript-strict-blue)]() [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange)]()
 
 **Play it now:** https://jonathanabarnett.github.io/kingdomos/ — no install required.
 
@@ -91,7 +91,7 @@ git push --follow-tags    # release.yml does the deploy
 - **21 soft aspirations** — three player-facing goals at a time, rotating from a pool ("reach 25 villagers", "see 5 different monarchs", "collect 10 artifacts", "discover three wonders", "an elder of seventy", "a realm of many trades"). Ignore them if you want; check them off if that's your style
 - **Court roles affect the world** — appoint a Royal Advisor (extends decision timers), Captain of the Guard (storms pass less often, threats less likely), or Court Scholar (50% faster tome production). Seats auto-vacate if the appointee dies, and the seated court speaks in the journal occasionally
 - **Rare threats with stakes** — wolves come down from the high pines; a bandit camp is spotted on the east road; villagers swear they see lights moving in the old quarry. Decide whether to send the guard (costs gold, may yield treasure), rouse the militia (free, costs no one's sleep), or let it pass (40% chance it worsens). Captain seated cuts threat chance by 60%.
-- **90-day history sparklines** — population, gold, and vault count are tracked per in-world day and rendered as tiny SVG line charts in the Stats panel. Watch your kingdom's arc.
+- **90-day history sparklines** — population, gold, vault count, and tomes are tracked per in-world day and rendered as tiny SVG line charts in the Stats panel. Watch your kingdom's arc.
 - **Kingdom Vault** — when you found a new kingdom, the previous one isn't lost: its name, last monarch, founding date, generations, final census, and the last 12 milestone journal entries are preserved in a read-only archive (up to 20 kingdoms kept). Browse them from the title screen. *Past kingdoms aren't resumable — they're artifacts, like photos in an album.*
 - **Real-world holidays** — 14 calendar-anchored festivals: solstices, Halloween, Yuletide, New Year, Lovers' Festival, the Greening (Apr), Bloomfest, the Long Walk (Jul), the First Sheaf (Aug), Harvest Moon, Day of Remembrance, Year's End all fire themed festivals when your local date matches
 - **Kingdom Anniversary** — when your in-world year rolls over, the chronicle marks it with a rotating flavor line and a low-key festival at the castle
@@ -180,7 +180,7 @@ npm run test:watch  # watch mode
 npm run typecheck   # tsc -b strict
 ```
 
-**301 tests across 29 files.** TypeScript strict mode. Hardened against:
+**303 tests across 29 files.** TypeScript strict mode. Hardened against:
 
 - Twitch raid floods (NPC + effect runtime caps)
 - Tampered save files (clamps NaN, drops unknown roles, caps roster, validates parent ids)
