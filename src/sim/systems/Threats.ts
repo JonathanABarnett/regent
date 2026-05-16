@@ -23,12 +23,68 @@ import type { World } from "../World";
 import type { Journal } from "./Journal";
 import { makeEvent } from "../events/EventSchema";
 
-const THREAT_LINES: ReadonlyArray<{ kind: string; opening: string }> = [
-  { kind: "wolves",    opening: "Wolves came down from the high pines tonight — three sheep are missing." },
-  { kind: "bandits",   opening: "A bandit camp was spotted on the eastern road. The merchants are spooked." },
-  { kind: "beast",     opening: "Something large left tracks at the wood's edge — too big for a wolf, too small for a bear." },
-  { kind: "raiders",   opening: "Riders in unmarked colors were seen testing the kingdom's borders." },
-  { kind: "haunting",  opening: "A few villagers swear they saw lights moving in the old quarry. No one will go near it." },
+/**
+ * Threat kinds, each with multiple opening flavor lines. One opening is
+ * picked at fire-time via the seeded RNG so the same threat kind reads
+ * differently across its repeat appearances.
+ */
+const THREAT_LINES: ReadonlyArray<{ kind: string; openings: readonly string[] }> = [
+  {
+    kind: "wolves",
+    openings: [
+      "Wolves came down from the high pines tonight — three sheep are missing.",
+      "A wolf-pack tracked the south flocks at dusk. The shepherds counted heads twice and were short.",
+      "Old hunters say the wolves are bolder this season. A pup was seen sitting on a fencepost in daylight.",
+    ],
+  },
+  {
+    kind: "bandits",
+    openings: [
+      "A bandit camp was spotted on the eastern road. The merchants are spooked.",
+      "A merchant arrived missing a wagon and one shoe, with a story that does not quite add up.",
+      "Smoke rose from a clearing where there shouldn't be a clearing. The watch sent two riders to confirm.",
+    ],
+  },
+  {
+    kind: "beast",
+    openings: [
+      "Something large left tracks at the wood's edge — too big for a wolf, too small for a bear.",
+      "A trapper returned with an empty bag and a face the color of cold ash.",
+      "Three separate witnesses described the same impossible shape moving along the ridge at dawn.",
+    ],
+  },
+  {
+    kind: "raiders",
+    openings: [
+      "Riders in unmarked colors were seen testing the kingdom's borders.",
+      "A scout returned with a count of fires — too many for any patrol the kingdom recognizes.",
+      "Hoofprints crossed the north road in a single column. The watch counted forty.",
+    ],
+  },
+  {
+    kind: "haunting",
+    openings: [
+      "A few villagers swear they saw lights moving in the old quarry. No one will go near it.",
+      "The chapel bell rang three times at midnight. No one was inside the chapel.",
+      "Two children came home with the same story about a figure in the orchard. Their parents were already not sleeping well.",
+    ],
+  },
+  {
+    kind: "smugglers",
+    openings: [
+      "Smugglers were seen unloading sealed crates at the south cove at midnight.",
+      "A fisher reported a boat with no flag and no lanterns running the coast on a moonless night.",
+      "An empty crate washed up at first light, branded with a sigil no one in the kingdom recognized.",
+    ],
+  },
+  {
+    kind: "wraith",
+    openings: [
+      "A pale figure was seen at the chapel gate three nights running. No one has seen it leave.",
+      "An old well, dry for forty years, was found wet at dawn. The water tasted of metal.",
+      "A grave-marker at the south burial ground was found facing the wrong way. The sexton swears she set it right.",
+    ],
+  },
 ];
 
 export class Threats {
@@ -58,8 +114,11 @@ export class Threats {
       : this.baseChance;
     if (this.rand() >= chance) return;
 
-    // Pick a flavor + target town
+    // Pick a flavor + target town. The flavor object now carries a small pool
+    // of opening sentences per kind, picked here so repeat encounters with the
+    // same threat type don't read identically.
     const flavor = THREAT_LINES[Math.floor(this.rand() * THREAT_LINES.length)];
+    const opening = flavor.openings[Math.floor(this.rand() * flavor.openings.length)];
     const towns = this.world.map.structures.filter((s) => s.kind === "town");
     if (!towns.length) return;
     const target = towns[Math.floor(this.rand() * towns.length)];
@@ -77,7 +136,7 @@ export class Threats {
         payload: { structure: target.id, label: flavor.kind },
       }),
     );
-    this.journal.write(flavor.opening, "weather", target.id);
+    this.journal.write(opening, "weather", target.id);
 
     // Decision
     const expiresAt = Date.now() +
@@ -87,7 +146,7 @@ export class Threats {
     this.world.decisions.propose({
       id: decId,
       title: `A threat near ${target.name}`,
-      body: `${flavor.opening} The court awaits your direction.`,
+      body: `${opening} The court awaits your direction.`,
       expiresAt,
       defaultOnExpire: true,
       options: [

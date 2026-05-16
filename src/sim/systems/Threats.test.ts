@@ -122,6 +122,50 @@ describe("Threats", () => {
     expect(w.economy.state.gold).toBe(goldBefore);
   });
 
+  it("surfaces at least 4 distinct opening lines over many fires", () => {
+    // 7 threat kinds × 3 openings = 21 unique. Drive ~80 fires; with the
+    // seeded RNG we should see at least 4 distinct openings.
+    const w = new World({ seed: 91 });
+    const rng = (w as unknown as { rand: () => number }).rand;
+    const t = new Threats(w, w.journal, rng, {
+      minDaysBetween: 0,
+      baseChance: 1.0,
+    });
+    const seen = new Set<string>();
+    w.onJournal = (e) => {
+      if (e.kind === "weather") seen.add(e.text);
+    };
+    for (let d = 1; d <= 80; d++) {
+      w.state.day = d;
+      const cur = w.decisions.current();
+      if (cur) w.decisions.resolve(cur.id, cur.options[0].id);
+      t.tick();
+    }
+    expect(seen.size).toBeGreaterThanOrEqual(4);
+  });
+
+  it("can fire the new threat kinds (smugglers, wraith) over many trials", () => {
+    const w = new World({ seed: 77 });
+    const rng = (w as unknown as { rand: () => number }).rand;
+    const t = new Threats(w, w.journal, rng, {
+      minDaysBetween: 0,
+      baseChance: 1.0,
+    });
+    const events: string[] = [];
+    w.bus.subscribe((ev) => {
+      if (ev.kind === "monster" && ev.payload.label) events.push(ev.payload.label);
+    });
+    for (let d = 1; d <= 200; d++) {
+      w.state.day = d;
+      const cur = w.decisions.current();
+      if (cur) w.decisions.resolve(cur.id, cur.options[0].id);
+      t.tick();
+    }
+    // Over 200 trials the seeded RNG should hit every kind at least once.
+    expect(events).toContain("smugglers");
+    expect(events).toContain("wraith");
+  });
+
   it("does nothing if no towns exist on the map", () => {
     const w = makeWorld();
     w.map.structures = w.map.structures.filter((s) => s.kind !== "town");
