@@ -861,8 +861,17 @@ export class Quests {
         ],
       });
     } else if (roll < 0.80) {
-      // Boundary dispute — two villagers, one quarrel.
-      const other = FLAVOR_NAMES[Math.floor(rand() * FLAVOR_NAMES.length)];
+      // Boundary dispute — two villagers, one quarrel. We MUST pick a second
+      // flavor name distinct from the first, otherwise the decision reads as
+      // "Tessa and Tessa argue over the line" with two identical "Side with
+      // Tessa" buttons. With a 9-name pool the naive pick collides ~11% of
+      // the time, which the live demo surfaced. Bounded retry; if the pool
+      // has only one viable name we fall back to a generic neighbor.
+      let other = FLAVOR_NAMES[Math.floor(rand() * FLAVOR_NAMES.length)];
+      for (let i = 0; i < 8 && other === flavor; i++) {
+        other = FLAVOR_NAMES[Math.floor(rand() * FLAVOR_NAMES.length)];
+      }
+      if (other === flavor) other = "their neighbor";
       this.world.decisions.propose({
         id: decId,
         title: "A boundary dispute",

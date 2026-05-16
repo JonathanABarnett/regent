@@ -152,6 +152,47 @@ describe("Quests — phase deduplication regression", () => {
     expect(arcEntries[0].targetStructureId).toBe(castle?.id);
   });
 
+  it("boundary dispute never names the same villager on both sides (live-demo regression)", () => {
+    // The naive pick of `other` from FLAVOR_NAMES collided ~11% of the time,
+    // producing decision text reading "Two villagers, Tessa and Tessa,
+    // argue over the line" with two identical "Side with Tessa" buttons.
+    // Drive a lot of boundary-dispute proposals and assert the antagonists
+    // are always distinct.
+    const w = new World({ seed: 42 });
+    const seen: Array<{ body: string; labels: string[] }> = [];
+    const origPropose = w.decisions.propose.bind(w.decisions);
+    w.decisions.propose = ((d) => {
+      if (d.title === "A boundary dispute") {
+        seen.push({ body: d.body, labels: d.options.map((o) => o.label) });
+      }
+      origPropose(d);
+    }) as typeof w.decisions.propose;
+
+    // Drive many days; the proposeRandomDecision branch fires ~25% per new
+    // day, and ~6% of those (roll in [0.75, 0.80)) are boundary disputes.
+    // Resolve each as it appears so the queue doesn't backlog.
+    for (let d = 1; d <= 800; d++) {
+      w.state.day = d;
+      const internal = w.quests as unknown as { lastRolledDay: number };
+      internal.lastRolledDay = d - 1;
+      w.quests.tick();
+      const cur = w.decisions.current();
+      if (cur) w.decisions.resolve(cur.id, cur.options[0].id);
+    }
+
+    // We should have seen plenty of disputes over 800 days.
+    expect(seen.length).toBeGreaterThan(5);
+    for (const s of seen) {
+      // Body never has "X and X"
+      expect(s.body).not.toMatch(/Two villagers, (\w+) and \1,/);
+      // Buttons "Side with X" / "Side with Y" / "Split the difference" — the
+      // two "Side with" labels must reference different names.
+      const sideWith = s.labels.filter((l) => l.startsWith("Side with "));
+      expect(sideWith.length).toBe(2);
+      expect(sideWith[0]).not.toBe(sideWith[1]);
+    }
+  });
+
   it("after the last phase fires, the active arc is cleared and stops re-firing", () => {
     const w = new World({ seed: 42 });
     const internal = w.quests as unknown as {
