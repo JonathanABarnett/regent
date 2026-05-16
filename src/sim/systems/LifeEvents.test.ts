@@ -156,4 +156,70 @@ describe("LifeEvents", () => {
     const b = new World({ seed: 999 });
     expect(a.npcs.map((n) => n.trait)).toEqual(b.npcs.map((n) => n.trait));
   });
+
+  it("marriage phrasing pool surfaces at least 4 distinct lines over many weddings", () => {
+    const w = new World({ seed: 2025 });
+    setLastProcessed(w, 0);
+    const seen = new Set<string>();
+    w.onJournal = (e) => {
+      if (e.kind === "life" && e.text.includes("wed")) seen.add(e.text);
+      else if (e.kind === "life" && (e.text.includes("vows") || e.text.includes("ceremony") || e.text.includes("hand at"))) {
+        seen.add(e.text);
+      }
+    };
+    // Drive ~500 days, periodically re-clearing partners so weddings keep firing.
+    for (let d = 1; d <= 500; d++) {
+      w.state.day = d;
+      setLastProcessed(w, d - 1);
+      for (const npc of w.npcs) {
+        npc.age = 25;
+        if (d % 7 === 0) npc.partnerId = undefined;
+      }
+      w.lifeEvents.tick();
+    }
+    expect(seen.size).toBeGreaterThanOrEqual(4);
+  });
+
+  it("death phrasing pool surfaces at least 4 distinct lines", () => {
+    const w = new World({ seed: 4242 });
+    setLastProcessed(w, 0);
+    const seen = new Set<string>();
+    w.onJournal = (e) => {
+      if (e.kind === "life" && /age|year|laid to rest|died|gone|tolled/i.test(e.text)) {
+        seen.add(e.text);
+      }
+    };
+    // Keep injecting elderly NPCs as deaths thin the roster.
+    for (let d = 1; d <= 1000; d++) {
+      w.state.day = d;
+      setLastProcessed(w, d - 1);
+      // Top up to keep deaths firing
+      if (w.npcs.length < 5) {
+        for (let i = 0; i < 8; i++) {
+          w.pushNpc({
+            id: `topup_${d}_${i}`,
+            role: "villager",
+            name: `Topup${d}_${i}`,
+            age: 95,
+            pos: { x: 0, y: 0 },
+            prevPos: { x: 0, y: 0 },
+            facing: "s",
+            homeId: "rivermouth",
+            workId: "rivermouth",
+            activity: "idle",
+            path: [],
+            activityTimer: 1,
+            seed: d * 1000 + i,
+            trait: "wise",
+          });
+        }
+      }
+      for (const n of w.npcs) {
+        n.age = 95;
+        n.partnerId = undefined;
+      }
+      w.lifeEvents.tick();
+    }
+    expect(seen.size).toBeGreaterThanOrEqual(4);
+  });
 });

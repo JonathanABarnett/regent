@@ -88,10 +88,10 @@ export class LifeEvents {
     const aName = describe(a);
     const bName = describe(b);
     const place = nice(a.homeId);
-    const r = this.rand();
-    if (r < 0.34) return `${aName} and ${bName} were wed at ${place}.`;
-    if (r < 0.67) return `A wedding at ${place}: ${aName} and ${bName} stood beneath the canopy.`;
-    return `${aName} took ${bName}'s hand at ${place} today. The whole town turned out.`;
+    return pickFrom(MARRIAGE_LINES, this.rand)
+      .replaceAll("{a}", aName)
+      .replaceAll("{b}", bName)
+      .replaceAll("{place}", place);
   }
 
   private tryBirth() {
@@ -140,10 +140,11 @@ export class LifeEvents {
 
   private birthLine(name: string, a: NPC, b: NPC): string {
     const place = nice(a.homeId);
-    const r = this.rand();
-    if (r < 0.34) return `A child, ${name}, was born to ${a.name} and ${b.name} in ${place}.`;
-    if (r < 0.67) return `${place} woke to a new cry — ${name}, child of ${a.name} and ${b.name}.`;
-    return `${a.name} and ${b.name} welcomed ${name} into the world today.`;
+    return pickFrom(BIRTH_LINES, this.rand)
+      .replaceAll("{name}", name)
+      .replaceAll("{a}", a.name ?? "the mother")
+      .replaceAll("{b}", b.name ?? "the father")
+      .replaceAll("{place}", place);
   }
 
   private tryDeath() {
@@ -164,12 +165,51 @@ export class LifeEvents {
   private deathLine(npc: NPC): string {
     const age = Math.floor(npc.age ?? 70);
     const desc = describe(npc);
-    const r = this.rand();
-    if (r < 0.25) return `${desc} passed peacefully at the age of ${age}. They will be remembered.`;
-    if (r < 0.5) return `${npc.name} — ${age} years old — was laid to rest today.`;
-    if (r < 0.75) return `${desc} closed their eyes for the last time. They were ${age}.`;
-    return `Bells tolled at dusk; ${desc} had passed in their ${age}th year.`;
+    const name = npc.name ?? "someone";
+    return pickFrom(DEATH_LINES, this.rand)
+      .replaceAll("{desc}", desc)
+      .replaceAll("{name}", name)
+      .replaceAll("{age}", String(age));
   }
+}
+
+// ── Phrasing pools ─────────────────────────────────────────────────────
+// Each pool is small but bigger than the player will remember between sessions.
+// `{a}` / `{b}` / `{name}` / `{place}` / `{desc}` / `{age}` are substituted at
+// write time. Adding entries here is the lowest-friction way to bump variety.
+
+const MARRIAGE_LINES: readonly string[] = [
+  "{a} and {b} were wed at {place}.",
+  "A wedding at {place}: {a} and {b} stood beneath the canopy.",
+  "{a} took {b}'s hand at {place} today. The whole town turned out.",
+  "{place} held a small ceremony: {a} and {b}, married at last.",
+  "After a year of small kindnesses, {a} and {b} were wed at {place} this morning.",
+  "{a} and {b} exchanged vows at {place} as the bells rang for noon.",
+  "{place} hosted a quiet wedding — {a} and {b}, by lamplight, with only family present.",
+];
+
+const BIRTH_LINES: readonly string[] = [
+  "A child, {name}, was born to {a} and {b} in {place}.",
+  "{place} woke to a new cry — {name}, child of {a} and {b}.",
+  "{a} and {b} welcomed {name} into the world today.",
+  "{name} was born at {place} just before dawn; {a} and {b} were both well.",
+  "A small celebration in {place}: {a} and {b} introduced their child, {name}.",
+  "{name} arrived in the late afternoon. {a} and {b} are home and resting.",
+  "The midwife of {place} announced a healthy birth — {name}, child of {a} and {b}.",
+];
+
+const DEATH_LINES: readonly string[] = [
+  "{desc} passed peacefully at the age of {age}. They will be remembered.",
+  "{name} — {age} years old — was laid to rest today.",
+  "{desc} closed their eyes for the last time. They were {age}.",
+  "Bells tolled at dusk; {desc} had passed in their {age}th year.",
+  "{desc} died in their sleep last night. The chronicle records {age} good years.",
+  "Word reached the keep at midday: {desc}, {age}, has gone. The family asks for quiet.",
+  "A small procession wound through the lanes for {desc}, who was {age}, and beloved.",
+];
+
+function pickFrom<T>(arr: readonly T[], rand: () => number): T {
+  return arr[Math.floor(rand() * arr.length)];
 }
 
 /** Returns "the ever-cheerful Berta" if the NPC has a trait, else just "Berta". */

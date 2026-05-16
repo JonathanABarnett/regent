@@ -2,7 +2,7 @@
 
 A 16-bit ambient fantasy kingdom that lives on the desktop. Runs autonomously; reacts to real-world signals (git, system, Twitch) as flavor.
 
-> Status at last full pass: **293 tests passing across 29 files · TypeScript strict · production build ~2.7s.** Live demo at https://jonathanabarnett.github.io/kingdomos/ — auto-deployed on every push to `main` via `.github/workflows/pages.yml`.
+> Status at last full pass: **295 tests passing across 29 files · TypeScript strict · production build ~2.7s.** Live demo at https://jonathanabarnett.github.io/kingdomos/ — auto-deployed on every push to `main` via `.github/workflows/pages.yml`.
 
 ## TL;DR
 
@@ -10,7 +10,7 @@ A 16-bit ambient fantasy kingdom that lives on the desktop. Runs autonomously; r
 npm install           # one-time
 npm run dev           # Vite-only frontend (works in browser; Tauri APIs stub)
 npm run tauri:dev     # Full desktop app (needs Rust + MSVC)
-npm test              # Vitest suite (293 tests across 29 files)
+npm test              # Vitest suite (295 tests across 29 files)
 npm run typecheck     # tsc -b strict
 npm run build         # Production bundle → dist/
 npm run release       # Tag + push → CI publishes to itch.io
@@ -71,7 +71,7 @@ src/
 │       ├── Traits.ts         # 8 deterministic personality traits + epithet table
 │       ├── Calendar.ts       # wall-clock anchored day/year/season
 │       ├── Journal.ts        # narrative entry writer (subscribes to bus, 5 entry kinds)
-│       ├── LifeEvents.ts     # aging, marriage, birth, death (trait-flavored, 3 phrasing variants each)
+│       ├── LifeEvents.ts     # aging, marriage, birth, death (trait-flavored, 7 phrasing variants each)
 │       ├── Quests.ts         # 9 multi-day arcs + 10 decision archetypes — all seeded
 │       ├── Decisions.ts      # interactive decision queue with timed expiry
 │       ├── Succession.ts     # monarch death + heir ascension
@@ -359,7 +359,7 @@ npm run test:watch  # watch mode
 npm run typecheck   # tsc -b strict
 ```
 
-293 tests across 29 files. New systems should have at least 4–6 tests covering:
+295 tests across 29 files. New systems should have at least 4–6 tests covering:
 - Happy path
 - Adversarial / oversized / NaN input
 - Round-trip save/load (if persisted)

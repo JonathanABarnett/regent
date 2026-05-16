@@ -2,7 +2,7 @@
 
 > A 16-bit fantasy kingdom that lives on your desktop. It runs on its own, reacts to what you're already doing, and tells you stories about a place that's now yours.
 
-[![Tests](https://img.shields.io/badge/tests-293%20passing-brightgreen)](./src) [![TypeScript](https://img.shields.io/badge/typescript-strict-blue)]() [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange)]()
+[![Tests](https://img.shields.io/badge/tests-295%20passing-brightgreen)](./src) [![TypeScript](https://img.shields.io/badge/typescript-strict-blue)]() [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange)]()
 
 **Play it now:** https://jonathanabarnett.github.io/kingdomos/ — no install required.
 
@@ -180,7 +180,7 @@ npm run test:watch  # watch mode
 npm run typecheck   # tsc -b strict
 ```
 
-**293 tests across 29 files.** TypeScript strict mode. Hardened against:
+**295 tests across 29 files.** TypeScript strict mode. Hardened against:
 
 - Twitch raid floods (NPC + effect runtime caps)
 - Tampered save files (clamps NaN, drops unknown roles, caps roster, validates parent ids)
