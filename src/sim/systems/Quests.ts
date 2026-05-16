@@ -577,6 +577,73 @@ const ARCS: ArcDef[] = [
     ],
   },
   {
+    id: "long_drought",
+    title: "The Long Drought",
+    // 4-phase weather/economy saga over 6 days. Pinned mostly to the castle
+    // (the crown's response is the focal point), with a stop at the mill.
+    // The crown spends 30 gold on grain stores in phase 2 — a real-but-mild
+    // mechanical cost that makes the saga feel like more than flavor text.
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          journal.write(
+            "The rains did not come this week. The shepherds watched the sky from the high pastures with a quiet they didn't want to name.",
+            "weather",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 1,
+        write: ({ journal, world }) => {
+          const mill = world.map.structures.find((s) => s.kind === "mill");
+          journal.write(
+            "Streams along the eastern road slackened to a thread. The miller halved her shifts and apologized to the bakers.",
+            "weather",
+            mill?.id,
+          );
+        },
+      },
+      {
+        onDay: 3,
+        write: ({ journal, world }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          const cost = 30;
+          const spent = Math.min(cost, world.economy.state.gold);
+          world.economy.state.gold = Math.max(0, world.economy.state.gold - cost);
+          journal.write(
+            `The crown released grain stores from the keep cellars. The treasury was lighter by ${spent} gold; no household went without bread.`,
+            "milestone",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 5,
+        write: ({ journal, world }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          if (castle) {
+            world.bus.publish(
+              makeEvent("festival", {
+                source: "narrative",
+                intensity: 0.55,
+                duration_ms: 25_000,
+                payload: { structure: castle.id, label: "the rains return" },
+              }),
+            );
+          }
+          journal.write(
+            "Rain came in the night, and was still falling at dawn. Children stood barefoot in the streets. The drought had broken.",
+            "milestone",
+            castle?.id,
+          );
+        },
+      },
+    ],
+  },
+  {
     id: "returning_bloodline",
     title: "The Returning Bloodline",
     // Closes the loop on the Past Kingdoms Vault: when an archived kingdom

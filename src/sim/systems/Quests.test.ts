@@ -272,6 +272,97 @@ describe("Quests — phase deduplication regression", () => {
     expect(runOnce()).toBe(runOnce());
   });
 
+  describe("long_drought arc", () => {
+    it("fires 4 phases over 6 days and spends gold on grain stores in phase 2", () => {
+      const w = new World({ seed: 31 });
+      w.economy.state.gold = 200;
+      const goldBefore = w.economy.state.gold;
+      const entries: Array<{ text: string; kind: string }> = [];
+      w.onJournal = (e) => entries.push({ text: e.text, kind: e.kind });
+      const internal = w.quests as unknown as {
+        active: {
+          arcId: string;
+          startDay: number;
+          flavor: string;
+          firedPhases: number[];
+        } | null;
+        lastRolledDay: number;
+      };
+      internal.active = {
+        arcId: "long_drought",
+        startDay: 1,
+        flavor: "—",
+        firedPhases: [],
+      };
+      for (let d = 1; d <= 7; d++) {
+        w.state.day = d;
+        internal.lastRolledDay = d;
+        w.quests.tick();
+      }
+      const arcLines = entries.filter((e) =>
+        /^The rains did not come|^Streams along the eastern road|^The crown released grain stores|^Rain came in the night/.test(e.text),
+      );
+      expect(arcLines.length).toBe(4);
+      // Phase 2 cost — exactly 30 gold drained (we set 200, drop to 170).
+      expect(w.economy.state.gold).toBe(goldBefore - 30);
+    });
+
+    it("clamps the grain-store cost when gold is insufficient (cozy: never goes negative)", () => {
+      const w = new World({ seed: 31 });
+      w.economy.state.gold = 10; // less than the 30 gold cost
+      const internal = w.quests as unknown as {
+        active: {
+          arcId: string;
+          startDay: number;
+          flavor: string;
+          firedPhases: number[];
+        } | null;
+        lastRolledDay: number;
+      };
+      internal.active = {
+        arcId: "long_drought",
+        startDay: 1,
+        flavor: "—",
+        firedPhases: [],
+      };
+      for (let d = 1; d <= 7; d++) {
+        w.state.day = d;
+        internal.lastRolledDay = d;
+        w.quests.tick();
+      }
+      expect(w.economy.state.gold).toBe(0);
+    });
+
+    it("final phase publishes a low-intensity festival event labeled 'the rains return'", () => {
+      const w = new World({ seed: 31 });
+      const events: Array<{ kind: string; label?: string }> = [];
+      w.bus.subscribe((ev) => {
+        if (ev.source === "narrative") events.push({ kind: ev.kind, label: ev.payload.label });
+      });
+      const internal = w.quests as unknown as {
+        active: {
+          arcId: string;
+          startDay: number;
+          flavor: string;
+          firedPhases: number[];
+        } | null;
+        lastRolledDay: number;
+      };
+      internal.active = {
+        arcId: "long_drought",
+        startDay: 1,
+        flavor: "—",
+        firedPhases: [],
+      };
+      for (let d = 1; d <= 7; d++) {
+        w.state.day = d;
+        internal.lastRolledDay = d;
+        w.quests.tick();
+      }
+      expect(events.some((e) => e.kind === "festival" && e.label === "the rains return")).toBe(true);
+    });
+  });
+
   describe("returning_bloodline arc", () => {
     beforeEach(() => {
       // Seed an archive with a known past kingdom so the arc's guard passes
