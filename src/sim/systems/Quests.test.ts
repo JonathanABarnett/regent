@@ -1,5 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeEach } from "vitest";
 import { World } from "../World";
+import { ARCHIVE_STORAGE_KEY } from "../KingdomArchive";
+
+// Tiny localStorage shim shared with these tests (the suite runs in node).
+class LocalStorageShim {
+  private store = new Map<string, string>();
+  get length() { return this.store.size; }
+  clear() { this.store.clear(); }
+  getItem(k: string) { return this.store.has(k) ? (this.store.get(k) as string) : null; }
+  setItem(k: string, v: string) { this.store.set(k, String(v)); }
+  removeItem(k: string) { this.store.delete(k); }
+  key(i: number): string | null { return Array.from(this.store.keys())[i] ?? null; }
+}
+if (typeof globalThis.localStorage === "undefined") {
+  (globalThis as unknown as { localStorage: LocalStorageShim }).localStorage =
+    new LocalStorageShim();
+}
 
 /**
  * The quest system processes the active arc's current-day phase on every
@@ -254,6 +270,113 @@ describe("Quests — phase deduplication regression", () => {
       return lines[0] ?? "";
     }
     expect(runOnce()).toBe(runOnce());
+  });
+
+  describe("returning_bloodline arc", () => {
+    beforeEach(() => {
+      // Seed an archive with a known past kingdom so the arc's guard passes
+      // and we can verify the spawned NPC inherits the monarch's surname.
+      const past = [
+        {
+          archivedAt: new Date().toISOString(),
+          kingdomName: "Eastmarch",
+          monarchName: "King Halford",
+          foundedAtMs: Date.now() - 1_000_000,
+          totalDays: 80,
+          yearsReigned: 1,
+          generations: 2,
+          population: 12,
+          vault: 4,
+          gold: 0,
+          milestones: [],
+        },
+      ];
+      localStorage.setItem(ARCHIVE_STORAGE_KEY, JSON.stringify(past));
+    });
+
+    it("spawns a new villager whose surname matches the past monarch's last name", () => {
+      const w = new World({ seed: 17 });
+      const npcsBefore = w.npcs.length;
+      const internal = w.quests as unknown as {
+        active: {
+          arcId: string;
+          startDay: number;
+          flavor: string;
+          firedPhases: number[];
+        } | null;
+        lastRolledDay: number;
+      };
+      // Pre-set the arc with its bloodline flavor packing (mirrors what
+      // pickFlavor() produces when invoked by the picker).
+      internal.active = {
+        arcId: "returning_bloodline",
+        startDay: 1,
+        flavor: "Eastmarch||King Halford",
+        firedPhases: [],
+      };
+      for (let d = 1; d <= 5; d++) {
+        w.state.day = d;
+        internal.lastRolledDay = d;
+        w.quests.tick();
+      }
+      expect(w.npcs.length).toBe(npcsBefore + 1);
+      const newcomer = w.npcs[w.npcs.length - 1];
+      expect(newcomer.name?.endsWith("Halford")).toBe(true);
+      expect(newcomer.role).toBe("villager");
+    });
+
+    it("guard skips the arc when the archive is empty", () => {
+      localStorage.removeItem(ARCHIVE_STORAGE_KEY);
+      const w = new World({ seed: 17 });
+      // Force the picker to roll deterministically and observe that the
+      // bloodline arc is never selected. (We can't pin it down exactly
+      // without instrumenting the picker, so we just confirm 300 drives
+      // produce no entry that mentions "of the line of".)
+      const seen: string[] = [];
+      w.onJournal = (e) => seen.push(e.text);
+      const internal = w.quests as unknown as { lastRolledDay: number };
+      for (let d = 1; d <= 300; d++) {
+        w.state.day = d;
+        internal.lastRolledDay = d - 1;
+        w.quests.tick();
+      }
+      expect(seen.some((t) => t.includes("of the line of"))).toBe(false);
+    });
+
+    it("phases 0 and 3 pin to the castle; phase 2 pins to the newcomer's town", () => {
+      const w = new World({ seed: 17 });
+      const journal: Array<{ text: string; targetStructureId?: string }> = [];
+      w.onJournal = (e) => journal.push({ text: e.text, targetStructureId: e.targetStructureId });
+      const internal = w.quests as unknown as {
+        active: {
+          arcId: string;
+          startDay: number;
+          flavor: string;
+          firedPhases: number[];
+        } | null;
+        lastRolledDay: number;
+      };
+      internal.active = {
+        arcId: "returning_bloodline",
+        startDay: 1,
+        flavor: "Eastmarch||King Halford",
+        firedPhases: [],
+      };
+      for (let d = 1; d <= 5; d++) {
+        w.state.day = d;
+        internal.lastRolledDay = d;
+        w.quests.tick();
+      }
+      const castle = w.map.structures.find((s) => s.kind === "castle");
+      const town =
+        w.map.structures.find((s) => s.kind === "town") ?? castle;
+      const opener = journal.find((e) => /carrying a battered seal/.test(e.text));
+      const settler = journal.find((e) => /took a room near the keep/.test(e.text));
+      const closer = journal.find((e) => /thread of the old kingdom/.test(e.text));
+      expect(opener?.targetStructureId).toBe(castle?.id);
+      expect(settler?.targetStructureId).toBe(town?.id);
+      expect(closer?.targetStructureId).toBe(castle?.id);
+    });
   });
 
   it("after the last phase fires, the active arc is cleared and stops re-firing", () => {

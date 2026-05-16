@@ -3,6 +3,7 @@ import type { Journal } from "./Journal";
 import { makeEvent } from "../events/EventSchema";
 import { traitFor } from "./Traits";
 import { backstoryFor } from "./Backstories";
+import { readArchive } from "../KingdomArchive";
 
 /**
  * Multi-day quest arcs. Each arc has a beginning, a middle (1-3 days), and
@@ -28,6 +29,19 @@ interface ArcDef {
     onDay: number;
     write: (ctx: ArcContext) => void;
   }>;
+  /**
+   * Optional guard: if present and returns false, the picker skips this arc
+   * and re-rolls. Used by arcs that depend on world state the kingdom may
+   * not have yet (e.g. The Returning Bloodline needs at least one past
+   * kingdom in the archive).
+   */
+  guard?: (world: World) => boolean;
+  /**
+   * Optional flavor picker. Defaults to a uniform pick from FLAVOR_NAMES.
+   * Arcs that need richer per-arc state (e.g. a specific past kingdom)
+   * encode that state into the returned string and unpack it in phases.
+   */
+  pickFlavor?: (world: World, rand: () => number) => string;
 }
 
 interface ArcContext {
@@ -563,6 +577,105 @@ const ARCS: ArcDef[] = [
     ],
   },
   {
+    id: "returning_bloodline",
+    title: "The Returning Bloodline",
+    // Closes the loop on the Past Kingdoms Vault: when an archived kingdom
+    // exists, a descendant of its last monarch occasionally arrives at
+    // the gates of the current kingdom. Three phases over four days.
+    //   Day 0  A stranger arrives bearing a battered old seal.
+    //   Day 2  They settle in; a new villager is added to the roster
+    //          whose name carries the past monarch's last word as
+    //          surname (so the bloodline is visibly in the journal).
+    //   Day 3  The kingdom recognizes them; small milestone entry.
+    guard: () => readArchive().length > 0,
+    pickFlavor: (_world, rand) => {
+      // Pack `<kingdomName>||<monarchName>` so every phase reads the same
+      // archived kingdom (rand state would diverge between phases).
+      const archive = readArchive();
+      const picked = archive[Math.floor(rand() * archive.length)];
+      return `${picked.kingdomName}||${picked.monarchName}`;
+    },
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world, flavor }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          const [kingdomName, monarchName] = flavor.split("||");
+          journal.write(
+            `A stranger arrived at the gates carrying a battered seal of the old kingdom of ${kingdomName}. They name themselves of the line of ${monarchName}.`,
+            "event",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 2,
+        write: ({ journal, world, flavor, rand }) => {
+          const [, monarchName] = flavor.split("||");
+          // Surname = last whitespace-separated word of the past monarch's
+          // name, stripped of leading title ("King Elden" → "Elden").
+          const surname =
+            monarchName?.split(/\s+/).filter(Boolean).slice(-1)[0] || "of-the-line";
+          // Pick a first name that ISN'T already in the kingdom (so the new
+          // arrival reads as a distinct person).
+          const taken = new Set(world.npcs.map((n) => n.name ?? "").map((s) => s.split(" ")[0]));
+          const FIRSTS = [
+            "Maren", "Theo", "Sable", "Wynn", "Iona", "Calla", "Roe", "Bek",
+          ];
+          const available = FIRSTS.filter((f) => !taken.has(f));
+          const first = available.length
+            ? available[Math.floor(rand() * available.length)]
+            : "Maren";
+          const fullName = `${first} ${surname}`;
+          // Spawn the NPC. The first town is the destination; if there
+          // isn't one, fall back to the castle.
+          const home =
+            world.map.structures.find((s) => s.kind === "town") ??
+            world.map.structures.find((s) => s.kind === "castle");
+          if (!home) return; // bizarre map; bail gracefully
+          const seed = Math.floor(rand() * 2 ** 31);
+          const pos = {
+            x: home.pos.x + Math.floor(home.size.x / 2),
+            y: home.pos.y + Math.floor(home.size.y / 2),
+          };
+          world.pushNpc({
+            id: `npc_bl_${world.state.day}_${seed}`,
+            role: "villager",
+            name: fullName,
+            age: 24,
+            pos: { ...pos },
+            prevPos: { ...pos },
+            facing: "s",
+            homeId: home.id,
+            workId: home.id,
+            activity: "idle",
+            path: [],
+            activityTimer: 4,
+            seed,
+            trait: traitFor(seed),
+          });
+          journal.write(
+            `${fullName} took a room near the keep; a backstory the elders are still piecing together. ${backstoryFor(fullName, seed)}`,
+            "life",
+            home.id,
+          );
+        },
+      },
+      {
+        onDay: 3,
+        write: ({ journal, world, flavor }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          const [kingdomName] = flavor.split("||");
+          journal.write(
+            `The chronicler set a small mark in the margin: a thread of the old kingdom of ${kingdomName}, now living among us again.`,
+            "milestone",
+            castle?.id,
+          );
+        },
+      },
+    ],
+  },
+  {
     id: "scholar_discovery",
     title: "A discovery at the scriptorium",
     phases: [
@@ -669,17 +782,27 @@ export class Quests {
     if (day === this.lastRolledDay) return;
     this.lastRolledDay = day;
     if (!this.active && day > 0 && this.rand() < 0.35) {
-      const def = ARCS[Math.floor(this.rand() * ARCS.length)];
-      const flavor = FLAVOR_NAMES[Math.floor(this.rand() * FLAVOR_NAMES.length)];
-      // Start with phase 0 marked as fired since we run it right below.
-      this.active = { arcId: def.id, startDay: day, flavor, firedPhases: [0] };
-      const phase = def.phases.find((p) => p.onDay === 0);
-      phase?.write({
-        world: this.world,
-        journal: this.journal,
-        flavor,
-        rand: this.rand,
-      });
+      // Filter against each arc's guard so we don't pick something that
+      // can't fire (e.g. The Returning Bloodline with an empty archive).
+      const eligible = ARCS.filter((a) => !a.guard || a.guard(this.world));
+      if (eligible.length) {
+        const def = eligible[Math.floor(this.rand() * eligible.length)];
+        // Per-arc flavor pickers let arcs encode richer state (e.g. a
+        // specific past kingdom) into the flavor string for unpacking
+        // across phases.
+        const flavor = def.pickFlavor
+          ? def.pickFlavor(this.world, this.rand)
+          : FLAVOR_NAMES[Math.floor(this.rand() * FLAVOR_NAMES.length)];
+        // Start with phase 0 marked as fired since we run it right below.
+        this.active = { arcId: def.id, startDay: day, flavor, firedPhases: [0] };
+        const phase = def.phases.find((p) => p.onDay === 0);
+        phase?.write({
+          world: this.world,
+          journal: this.journal,
+          flavor,
+          rand: this.rand,
+        });
+      }
     }
 
     // Decision proposals — 25% chance per new day, mutually exclusive with arc starts.

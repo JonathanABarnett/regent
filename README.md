@@ -2,7 +2,7 @@
 
 > A 16-bit fantasy kingdom that lives on your desktop. It runs on its own, reacts to what you're already doing, and tells you stories about a place that's now yours.
 
-[![Tests](https://img.shields.io/badge/tests-376%20passing-brightgreen)](./src) [![TypeScript](https://img.shields.io/badge/typescript-strict-blue)]() [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange)]()
+[![Tests](https://img.shields.io/badge/tests-379%20passing-brightgreen)](./src) [![TypeScript](https://img.shields.io/badge/typescript-strict-blue)]() [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange)]()
 
 **Play it now:** https://jonathanabarnett.github.io/kingdomos/ — no install required.
 
@@ -94,6 +94,7 @@ git push --follow-tags    # release.yml does the deploy
 - **Rare threats with stakes** — 7 flavors (wolves, bandits, beast, raiders, haunting, smugglers, wraith), each with 3 opening lines so repeat encounters never read the same. Decide whether to send the guard (costs gold, may yield treasure), rouse the militia (free, costs no one's sleep), or let it pass (40% chance it worsens). Captain seated cuts threat chance by 60%.
 - **90-day history sparklines** — population, gold, vault count, and tomes are tracked per in-world day and rendered as tiny SVG line charts in the Stats panel. Watch your kingdom's arc.
 - **Kingdom Vault** — when you found a new kingdom, the previous one isn't lost: its name, last monarch, founding date, generations, final census, and the last 12 milestone journal entries are preserved in a read-only archive (up to 20 kingdoms kept). Browse them from the title screen. *Past kingdoms aren't resumable — they're artifacts, like photos in an album.*
+- **The Returning Bloodline** — every so often a descendant of a past monarch arrives at the gates of your current kingdom, settles in, and joins the chronicle. Their surname matches the old monarch's, so the bloodline is visibly woven through the kingdom's journal entries. Closes the loop on the Past Kingdoms Vault — your previous reigns *are still here.*
 - **Real-world holidays** — 14 calendar-anchored festivals: solstices, Halloween, Yuletide, New Year, Lovers' Festival, the Greening (Apr), Bloomfest, the Long Walk (Jul), the First Sheaf (Aug), Harvest Moon, Day of Remembrance, Year's End all fire themed festivals when your local date matches
 - **Kingdom Anniversary** — when your in-world year rolls over, the chronicle marks it with a rotating flavor line and a low-key festival at the castle
 - **Seasonal anchors** — each season turn drops a one-line chronicle entry, picked from 4 variants per season ("Winter took the kingdom in the night. Hearths burned through every house." vs. "First snow fell at dusk and was still falling at dawn. The whole kingdom went quiet.")
@@ -181,7 +182,7 @@ npm run test:watch  # watch mode
 npm run typecheck   # tsc -b strict
 ```
 
-**376 tests across 32 files.** TypeScript strict mode. Hardened against:
+**379 tests across 32 files.** TypeScript strict mode. Hardened against:
 
 - Twitch raid floods (NPC + effect runtime caps)
 - Tampered save files (clamps NaN, drops unknown roles, caps roster, validates parent ids)
