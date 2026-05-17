@@ -32,6 +32,7 @@ import { History } from "./systems/History";
 import { Threats } from "./systems/Threats";
 import { Discoveries } from "./systems/Discoveries";
 import { Edicts } from "./systems/Edicts";
+import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
 import type { ExternalEvent } from "./events/EventSchema";
@@ -347,6 +348,10 @@ export class World {
       // Kingdom Anniversary — once per year roll, write a milestone entry
       // and fire a quiet festival to give the moment some visual weight.
       this.fireAnniversary(cal.year);
+      // Name a Star — one-shot annual decision unlocked by the
+      // Astronomer's Tower. Guard inside proposeNameAStar checks that the
+      // tower exists; if not, the call is a no-op.
+      proposeNameAStar(this, this.journal, this.rand);
     }
     this.weather.tick(dt, this.state.time);
     this.state.weather = this.weather.current;

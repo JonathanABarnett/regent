@@ -18,7 +18,7 @@ import type { World } from "../World";
 import type { Journal } from "./Journal";
 import type { Structure, Vec2 } from "../types";
 
-export type ConstructibleKind = "watchtower" | "mill" | "shrine";
+export type ConstructibleKind = "watchtower" | "mill" | "shrine" | "astronomers_tower";
 
 interface ConstructibleDef {
   kind: ConstructibleKind;
@@ -87,6 +87,23 @@ const DEFS: ConstructibleDef[] = [
       );
       // Reward: one rare tome artifact
       w.treasury.acquire("tome", "blessed at the new shrine");
+    },
+  },
+  {
+    kind: "astronomers_tower",
+    label: "Astronomer's Tower",
+    size: { x: 2, y: 3 },
+    buildDays: 8,
+    goldCost: 140,
+    tomeCost: 4,
+    pitch:
+      "A tall tower above the hills, with a copper dome that opens to the sky. The astronomers say the kingdom would learn the names of stars no one has named yet.",
+    onFinish: (w) => {
+      w.journal.write(
+        "The Astronomer's Tower stands finished, its dome turning to the sky. The first night was clear; the chronicler heard a soft 'oh' from the platform an hour past midnight.",
+        "milestone",
+      );
+      w.treasury.acquire("scroll", "the first star-chart drawn at the new tower");
     },
   },
 ];
@@ -170,9 +187,13 @@ export class Construction {
     if (def.tomeCost) costParts.push(`${def.tomeCost} tomes`);
     const expiresAt = Date.now() + 90_000;
 
+    // Pick the article — "Authorize an Astronomer's Tower?" reads better
+    // than "Authorize a Astronomer's Tower?". Cheap heuristic on the
+    // first letter of the label.
+    const article = /^[aeiouAEIOU]/.test(def.label) ? "an" : "a";
     this.world.decisions.propose({
       id: `build_${def.kind}_${this.world.state.day}`,
-      title: `Authorize a ${def.label}?`,
+      title: `Authorize ${article} ${def.label}?`,
       body: `${def.pitch} (Cost: ${costParts.join(", ")}; ${def.buildDays} days to build.)`,
       expiresAt,
       defaultOnExpire: true,

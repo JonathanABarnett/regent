@@ -199,6 +199,6 @@ describe("Integration — full session smoke", () => {
     // A construction decision should now be available
     const d = w.decisions.current();
     expect(d).not.toBeNull();
-    expect(d?.title.toLowerCase()).toMatch(/watchtower|mill|shrine/);
+    expect(d?.title.toLowerCase()).toMatch(/watchtower|mill|shrine|astronomer/);
   });
 });

@@ -2,7 +2,7 @@
 
 > A 16-bit fantasy kingdom that lives on your desktop. It runs on its own, reacts to what you're already doing, and tells you stories about a place that's now yours.
 
-[![Tests](https://img.shields.io/badge/tests-382%20passing-brightgreen)](./src) [![TypeScript](https://img.shields.io/badge/typescript-strict-blue)]() [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange)]()
+[![Tests](https://img.shields.io/badge/tests-389%20passing-brightgreen)](./src) [![TypeScript](https://img.shields.io/badge/typescript-strict-blue)]() [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange)]()
 
 **Play it now:** https://jonathanabarnett.github.io/kingdomos/ — no install required.
 
@@ -85,7 +85,7 @@ git push --follow-tags    # release.yml does the deploy
 - **7-section pet creator** — dog or cat, custom fur/belly/accent, collar/bandana/crown/bow
 - **Royal banner** color, applied live to the castle flag
 - **Treasury / vault** — artifacts accumulate across all monarchs and are visible in the castle inspector
-- **Construction** — periodic offers to build watchtowers, mills, or shrines; they take days to complete and add real structures to the map
+- **Construction** — periodic offers to build watchtowers, mills, shrines, or **the Astronomer's Tower** (which unlocks a once-per-year decision to *name a new star* — keep one for the kingdom, decline, or dedicate it to a past monarch); each takes days to complete and adds a real structure to the map
 - **12 multi-day quest arcs** — traveling scholars, distant banners, festivals, a flood, a cat that won't leave, a lost child found asleep under an oak, an old friend who returns with stories of foreign coastlines, a fence dispute between neighbors that resolves into a shared herb garden, a letter from afar bearing three unfamiliar seals, **a five-day tournament** where heralds proclaim, champions are named, the forge runs late, the lists open at noon, and the champion's cup goes to the vault; each unfolds over 2–5 in-world days
 - **10 interactive decision archetypes** — petitions, merchant offers, festival approvals, suspicious strangers, tax levies, pilgrim escorts, boundary disputes, astronomer's portents, a stray dog at the kitchens, anonymous gifts at the keep door
 - **21 soft aspirations** — three player-facing goals at a time, rotating from a pool ("reach 25 villagers", "see 5 different monarchs", "collect 10 artifacts", "discover three wonders", "an elder of seventy", "a realm of many trades"). Ignore them if you want; check them off if that's your style
@@ -182,7 +182,7 @@ npm run test:watch  # watch mode
 npm run typecheck   # tsc -b strict
 ```
 
-**382 tests across 32 files.** TypeScript strict mode. Hardened against:
+**389 tests across 33 files.** TypeScript strict mode. Hardened against:
 
 - Twitch raid floods (NPC + effect runtime caps)
 - Tampered save files (clamps NaN, drops unknown roles, caps roster, validates parent ids)

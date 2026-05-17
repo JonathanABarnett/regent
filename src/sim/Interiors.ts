@@ -40,7 +40,8 @@ export type StationTag =
   | "pickaxe_rack" // miner
   | "lantern"      // mine ambient
   | "watch_floor"  // guard at watchtower
-  | "telescope"    // watchtower ambient
+  | "telescope"    // watchtower ambient / astronomer's tower primary
+  | "star_chart"   // astronomer's tower work desk
   | "altar"        // shrine ambient
   | "kneeler"      // shrine visitor
   | "campfire"     // camp ambient
@@ -190,6 +191,22 @@ const MILL: Interior = {
   ],
 };
 
+const ASTRONOMERS_TOWER: Interior = {
+  width: 6,
+  height: 8,
+  // Stone floor, deep-blue wall (night-sky feel), brass accents.
+  floor: "#3f3f46",
+  floorAccent: "#27272a",
+  wall: "#1e293b",
+  mood: "still",
+  stations: [
+    { x: 3, y: 1, tag: "telescope", npcSlot: true },     // observer at the eyepiece
+    { x: 2, y: 4, tag: "star_chart", npcSlot: true },    // chart-keeper at the desk
+    { x: 5, y: 3, tag: "candle", npcSlot: false },
+    { x: 1, y: 6, tag: "bookshelf", npcSlot: false },
+  ],
+};
+
 const SHRINE: Interior = {
   width: 8,
   height: 6,
@@ -289,6 +306,7 @@ const INTERIORS: Record<StructureKind, Interior> = {
   camp: CAMP,
   wellspring: WELLSPRING,
   obelisk: OBELISK,
+  astronomers_tower: ASTRONOMERS_TOWER,
 };
 
 /** Public lookup. Returns the cottage layout for unknown kinds as a safety net. */
@@ -402,7 +420,8 @@ export function stationLabel(tag: StationTag): string {
     case "pickaxe_rack": return "the pickaxe rack";
     case "lantern": return "a lantern";
     case "watch_floor": return "at the lookout";
-    case "telescope": return "a far-glass";
+    case "telescope": return "the far-glass";
+    case "star_chart": return "a star chart";
     case "altar": return "the altar";
     case "kneeler": return "the kneeler";
     case "campfire": return "the campfire";

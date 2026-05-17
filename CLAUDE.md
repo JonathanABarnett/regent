@@ -2,7 +2,7 @@
 
 A 16-bit ambient fantasy kingdom that lives on the desktop. Runs autonomously; reacts to real-world signals (git, system, Twitch) as flavor.
 
-> Status at last full pass: **382 tests passing across 29 files · TypeScript strict · production build ~2.7s.** Live demo at https://jonathanabarnett.github.io/kingdomos/ — auto-deployed on every push to `main` via `.github/workflows/pages.yml`.
+> Status at last full pass: **389 tests passing across 29 files · TypeScript strict · production build ~2.7s.** Live demo at https://jonathanabarnett.github.io/kingdomos/ — auto-deployed on every push to `main` via `.github/workflows/pages.yml`.
 
 ## TL;DR
 
@@ -10,7 +10,7 @@ A 16-bit ambient fantasy kingdom that lives on the desktop. Runs autonomously; r
 npm install           # one-time
 npm run dev           # Vite-only frontend (works in browser; Tauri APIs stub)
 npm run tauri:dev     # Full desktop app (needs Rust + MSVC)
-npm test              # Vitest suite (382 tests across 29 files)
+npm test              # Vitest suite (389 tests across 29 files)
 npm run typecheck     # tsc -b strict
 npm run build         # Production bundle → dist/
 npm run release       # Tag + push → CI publishes to itch.io
@@ -86,6 +86,7 @@ src/
 │       ├── Threats.ts        # rare monster siege → decision; captain seat reduces chance
 │       ├── Discoveries.ts    # spontaneous map landmarks (standing_stones, ruin, camp, …)
 │       ├── Edicts.ts         # 4 player-issued 7-day royal decrees with real effects (stackable with court seats)
+│       ├── NameAStar.ts      # yearly Astronomer's-Tower-unlocked decision: name a new star or dedicate it to a past monarch
 │       └── Achievements.ts   # 27 milestone badges (17 visible + 10 hidden mysteries)
 ├── engine/                   # PIXI RENDERING — reads sim, never writes
 │   ├── PixiApp.ts            # bootstraps Pixi v8, runs sim/render ticks
@@ -361,7 +362,7 @@ npm run test:watch  # watch mode
 npm run typecheck   # tsc -b strict
 ```
 
-382 tests across 29 files. New systems should have at least 4–6 tests covering:
+389 tests across 29 files. New systems should have at least 4–6 tests covering:
 - Happy path
 - Adversarial / oversized / NaN input
 - Round-trip save/load (if persisted)
@@ -385,6 +386,18 @@ Required repo secrets for itch deploy: `BUTLER_API_KEY`, `ITCH_USER`, `ITCH_GAME
 Daily nightly check at 03:00 UTC (`.github/workflows/nightly.yml`) runs a fresh `npm ci` → audit → typecheck → tests → build, and auto-opens a GitHub issue on failure.
 
 See `docs/AUTOMATION.md` for the full chain.
+
+## Graphics upgrade paths
+
+The current art is **programmatic 32×32 pixel sprites** drawn from `Pixi.Graphics` primitives in `SpriteFactory`. That's deliberate — it ships fast and keeps the binary tiny — but every sprite is a "blocky silhouette" by physics, and the only way to read finer than 32×32 of detail is to upgrade the source data.
+
+Three upgrade tiers, ordered cheapest-to-richest:
+
+1. **Sub-pixel shading** *(shipped — present pass)*. Same 32×32 footprint, more shade/highlight bands per sprite (3-band drop shadows, left-edge highlights on outfits, hair sheen pixels). Tiles get denser noise + softer edges so the grid disappears.
+2. **48×48 or 64×64 sprite refactor** (~1–2 days of work). Bump `SpriteFactory.TILE_SIZE` and rewrite `CharacterRenderer.bodyMetrics` for the new pixel budget. Buys real facial features, fabric folds, hand details. Manifest already supports arbitrary PNG dimensions — the bottleneck is the procedural drawing code, not the renderer.
+3. **AI-piped real pixel art** (~1 week + Stable Diffusion + ComfyUI). Documented end-to-end in `docs/AI_SPRITES.md`. Drop PNGs into `public/sprites/<kind>/` and list them in `manifest.json`; `SpriteFactory.loadStructure` / `loadCharacterSheet` already prefer real art when present. The procedural draws then become a no-asset fallback.
+
+**Anti-pattern to avoid**: turning off `imageSmoothingEnabled = false`. PixiJS would happily bilinear-filter the existing 32×32 sprites and the result is *blurrier blocks*, not crisper art. Pixel art is always nearest-neighbor.
 
 ## Known issues / future work
 

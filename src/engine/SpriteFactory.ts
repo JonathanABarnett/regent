@@ -78,6 +78,7 @@ export class SpriteFactory {
     this.structures.set("camp", (await this.loadStructure("camp")) ?? this.buildCamp());
     this.structures.set("wellspring", (await this.loadStructure("wellspring")) ?? this.buildWellspring());
     this.structures.set("obelisk", (await this.loadStructure("obelisk")) ?? this.buildObelisk());
+    this.structures.set("astronomers_tower", (await this.loadStructure("astronomers_tower")) ?? this.buildAstronomersTower());
 
     const roles = ["villager", "courier", "scholar", "blacksmith", "miner", "guard"];
     for (const r of roles) {
@@ -1043,6 +1044,64 @@ export class SpriteFactory {
     // floor altar with flame
     g.rect(W / 2 - 2, H - 10, 4, 4).fill(shade);
     g.rect(W / 2 - 1, H - 12, 2, 2).fill("#f97316");
+    return this.rt(g, W, H);
+  }
+
+  /**
+   * Astronomer's Tower. Tall slim build (2×3 footprint, drawn at native
+   * pixel size) — stone shaft, narrow windows, copper dome with a small
+   * opening notch on top. Reads as "tower with a telescope dome" at
+   * tile-scale.
+   */
+  private buildAstronomersTower(): Texture {
+    const W = 32 * 2, H = 32 * 3;
+    const g = new Graphics();
+    g.rect(0, 0, W, H).fill({ alpha: 0 });
+    const stoneDark = "#52525b";
+    const stone = "#71717a";
+    const stoneLight = "#a1a1aa";
+    const copper = "#c2410c";
+    const copperShine = "#fb923c";
+    const star = "#fde68a";
+    // Ground plinth (base + shadow)
+    g.rect(14, H - 8, W - 28, 8).fill(stoneDark);
+    g.rect(16, H - 8, W - 32, 2).fill(stone);
+    // Main shaft — 18px wide, runs from H-8 up to dome base
+    const shaftX = (W - 18) / 2;
+    const shaftTop = 18;
+    g.rect(shaftX, shaftTop, 18, H - 8 - shaftTop).fill(stone);
+    // Left-edge lighter highlight column (implicit light source upper-left)
+    g.rect(shaftX, shaftTop, 2, H - 8 - shaftTop).fill(stoneLight);
+    // Right-edge shadow column
+    g.rect(shaftX + 16, shaftTop, 2, H - 8 - shaftTop).fill(stoneDark);
+    // Stone-course horizontal seams every 8px
+    for (let y = shaftTop + 8; y < H - 8; y += 8) {
+      g.rect(shaftX, y, 18, 1).fill(stoneDark);
+    }
+    // Three narrow arched windows up the shaft
+    const winY = [shaftTop + 14, shaftTop + 30, shaftTop + 46];
+    for (const wy of winY) {
+      if (wy + 5 > H - 10) break;
+      g.rect(shaftX + 8, wy, 2, 5).fill("#1c1917");
+      // window inner light glow
+      g.rect(shaftX + 8, wy + 1, 2, 1).fill({ color: "#fbbf24", alpha: 0.6 });
+    }
+    // Battlement ring at top of shaft — crenellations
+    g.rect(shaftX - 2, shaftTop - 2, 22, 4).fill(stone);
+    for (let x = shaftX - 2; x <= shaftX + 18; x += 4) {
+      g.rect(x, shaftTop - 4, 2, 2).fill(stone);
+    }
+    // Dome — copper, slightly wider than shaft
+    g.rect(shaftX - 2, shaftTop - 12, 22, 8).fill(copper);
+    // Dome highlight (top-left rim)
+    g.rect(shaftX - 1, shaftTop - 11, 6, 1).fill(copperShine);
+    g.rect(shaftX - 2, shaftTop - 9, 2, 4).fill(copperShine);
+    // Opening notch — the dome rolls back; a thin black slit in the top
+    g.rect(shaftX + 7, shaftTop - 12, 6, 2).fill("#000000");
+    // Star pip — implies what they're watching for
+    g.rect(shaftX + 9, shaftTop - 16, 2, 2).fill(star);
+    g.rect(shaftX + 8, shaftTop - 15, 4, 1).fill(star);
+    g.rect(shaftX + 10, shaftTop - 14, 1, 1).fill(star);
     return this.rt(g, W, H);
   }
 

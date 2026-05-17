@@ -137,7 +137,8 @@ function drawStationMarker(
     case "obelisk_face": base = 0x52525b; accent = 0xfde047; break;
     case "well_mouth": base = 0x3b82f6; accent = 0x93c5fd; break;
     case "watch_floor": base = 0x78350f; break;
-    case "telescope": base = 0x1c1917; accent = 0x92400e; break;
+    case "telescope": base = 0x1c1917; accent = 0xfde68a; break;  // black tube, gold pip
+    case "star_chart": base = 0x1e293b; accent = 0xfbbf24; break;  // navy paper, gold dots
     case "tools_rack": base = 0x52525b; accent = 0xa8a29e; break;
     case "bellows": base = 0x854d0e; break;
     case "ruin_arch": base = 0x78716c; break;

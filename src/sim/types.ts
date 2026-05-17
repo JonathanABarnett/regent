@@ -33,6 +33,7 @@ export type StructureKind =
   | "watchtower"
   | "mill"
   | "shrine"
+  | "astronomers_tower"
   // Spontaneous discoveries placed by the NarrativeDirector. Lower-stakes
   // than player-commissioned construction — no cost, no decision; the
   // chronicle just notes "an old shrine was found in the eastern woods."

@@ -59,14 +59,14 @@ export interface SaveData {
    *  seed so we also keep a stub list of "extra" structures to re-place). */
   construction?: {
     active: {
-      kind: "watchtower" | "mill" | "shrine";
+      kind: "watchtower" | "mill" | "shrine" | "astronomers_tower";
       startedDay: number;
       finishesOnDay: number;
       pos: { x: number; y: number };
     } | null;
     completed: Array<{
       id: string;
-      kind: "watchtower" | "mill" | "shrine";
+      kind: "watchtower" | "mill" | "shrine" | "astronomers_tower";
       name: string;
       pos: { x: number; y: number };
       size: { x: number; y: number };
@@ -529,7 +529,7 @@ function validateAspirations(raw: unknown): SaveData["aspirations"] {
   return { active, completed };
 }
 
-const VALID_BUILD_KINDS = new Set(["watchtower", "mill", "shrine"]);
+const VALID_BUILD_KINDS = new Set(["watchtower", "mill", "shrine", "astronomers_tower"]);
 
 function validateConstruction(raw: unknown): SaveData["construction"] {
   if (!isPlainObject(raw)) return undefined;
@@ -539,7 +539,7 @@ function validateConstruction(raw: unknown): SaveData["construction"] {
     const k = String(raw.active.kind);
     if (VALID_BUILD_KINDS.has(k)) {
       active = {
-        kind: k as "watchtower" | "mill" | "shrine",
+        kind: k as "watchtower" | "mill" | "shrine" | "astronomers_tower",
         startedDay: safeInt(raw.active.startedDay, 1, 0, 100_000),
         finishesOnDay: safeInt(raw.active.finishesOnDay, 1, 0, 100_000),
         pos: isPlainObject(raw.active.pos)
@@ -559,7 +559,7 @@ function validateConstruction(raw: unknown): SaveData["construction"] {
       if (!VALID_BUILD_KINDS.has(k)) continue;
       completed.push({
         id: safeString(item.id, 80) || `build_${completed.length}`,
-        kind: k as "watchtower" | "mill" | "shrine",
+        kind: k as "watchtower" | "mill" | "shrine" | "astronomers_tower",
         name: safeString(item.name, 64) || k,
         pos: isPlainObject(item.pos)
           ? {

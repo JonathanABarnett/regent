@@ -363,11 +363,14 @@ export function App() {
               completed: world.map.structures
                 .filter(
                   (s) =>
-                    s.kind === "watchtower" || s.kind === "mill" || s.kind === "shrine",
+                    s.kind === "watchtower" ||
+                    s.kind === "mill" ||
+                    s.kind === "shrine" ||
+                    s.kind === "astronomers_tower",
                 )
                 .map((s) => ({
                   id: s.id,
-                  kind: s.kind as "watchtower" | "mill" | "shrine",
+                  kind: s.kind as "watchtower" | "mill" | "shrine" | "astronomers_tower",
                   name: s.name,
                   pos: { x: s.pos.x, y: s.pos.y },
                   size: { x: s.size.x, y: s.size.y },

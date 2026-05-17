@@ -332,6 +332,20 @@ function drawByTag(
       ctx.fillRect(x + T / 2 - 2, y + 6, 4, T - 8);
       ctx.fillStyle = "#92400e";
       ctx.fillRect(x + 4, y + T / 2 - 4, 2, 8);
+      // tiny star pip — the thing being observed
+      ctx.fillStyle = `rgba(253, 230, 138, ${0.7 + glow * 0.3})`;
+      ctx.fillRect(x + T - 7, y + 4, 2, 2);
+      break;
+
+    case "star_chart":
+      // navy parchment with scattered gold "stars"
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(x + 3, y + 6, T - 6, T - 10);
+      ctx.fillStyle = "#fbbf24";
+      // 5 gold dots positioned deterministically
+      [[2, 2], [6, 4], [10, 3], [4, 8], [9, 9]].forEach(([dx, dy]) => {
+        ctx.fillRect(x + 3 + dx, y + 6 + dy, 1, 1);
+      });
       break;
 
     case "altar":
