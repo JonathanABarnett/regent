@@ -16,6 +16,8 @@ import { ParallaxBackground } from "./layers/ParallaxBackground";
 import { CrtOverlay } from "./layers/CrtOverlay";
 import { BorderLayer } from "./layers/BorderLayer";
 import { CutawayLayer } from "./layers/CutawayLayer";
+import { EdgeLayer } from "./layers/EdgeLayer";
+import { NightLightsLayer } from "./layers/NightLightsLayer";
 
 export interface PixiAppOptions {
   world: World;
@@ -35,6 +37,8 @@ export class PixiApp {
   structureLayer!: StructureLayer;
   borderLayer!: BorderLayer;
   cutawayLayer!: CutawayLayer;
+  edgeLayer!: EdgeLayer;
+  nightLightsLayer!: NightLightsLayer;
   weatherLayer!: WeatherLayer;
   parallax = new ParallaxBackground();
   worldStage = new Container();
@@ -90,7 +94,9 @@ export class PixiApp {
     });
 
     this.tileRenderer = new TileRenderer(this.opts.world.map, this.factory);
+    this.edgeLayer = new EdgeLayer(this.opts.world.map);
     this.structureLayer = new StructureLayer(this.opts.world.map, this.factory);
+    this.nightLightsLayer = new NightLightsLayer(this.opts.world);
     this.borderLayer = new BorderLayer(this.opts.world);
     this.cutawayLayer = new CutawayLayer(this.opts.world);
     this.entityLayer = new EntityLayer(this.opts.world, this.factory);
@@ -99,11 +105,15 @@ export class PixiApp {
     // their stations within their associated building.
     this.entityLayer.cutawayLayer = this.cutawayLayer;
 
+    // Layer order (bottom → top):
+    //   tiles → edge-transitions → border → structures → night-lights → cutaway → entities → weather
     this.worldStage.addChild(this.tileRenderer.container);
-    // Border sits between tiles and structures so structure sprites stamp
-    // over it cleanly but the outline draws on top of the bare terrain.
+    this.worldStage.addChild(this.edgeLayer.container);
     this.worldStage.addChild(this.borderLayer.container);
     this.worldStage.addChild(this.structureLayer.container);
+    // Night lights sit between structures and NPCs so the glow bleeds
+    // visually outward from the building face without covering NPCs.
+    this.worldStage.addChild(this.nightLightsLayer.container);
     // Cutaway sits OVER the (faded) structure sprite, UNDER the NPCs
     this.worldStage.addChild(this.cutawayLayer.container);
     this.worldStage.addChild(this.entityLayer.container);
@@ -115,8 +125,10 @@ export class PixiApp {
     // resize parallax + CRT overlay with the window
     const ro = new ResizeObserver(() => {
       if (!this.initialized || this.destroyed) return;
-      this.parallax.resize(this.app.renderer.width, this.app.renderer.height);
-      this.crtOverlay.resize(this.app.renderer.width, this.app.renderer.height);
+      const rw = this.app.renderer.width;
+      const rh = this.app.renderer.height;
+      this.parallax.resize(rw, rh);
+      this.crtOverlay.resize(rw, rh);
     });
     ro.observe(this.opts.parent);
 
@@ -193,7 +205,14 @@ export class PixiApp {
     const maxX = this.camera.x + visTilesX / 2;
     const maxY = this.camera.y + visTilesY / 2;
 
+    const simTime = this.opts.world.state.time;
+    const hour = this.opts.world.state.hour;
+
     this.tileRenderer.update(minX, minY, maxX, maxY);
+    // Animate water tiles: slow ripple cycle driven by sim time.
+    this.tileRenderer.animate(simTime);
+    // Edge-transition shadows between biomes — same viewport bounds as tiles.
+    this.edgeLayer.update(minX, minY, maxX, maxY);
     // Reconcile is cheap: it walks the structure list and adds any new ones.
     // Called every frame so newly-constructed buildings (mill, watchtower,
     // shrine) appear without restarting the renderer.
@@ -201,13 +220,15 @@ export class PixiApp {
     // Apply cutaway sprite fade — structure sprites become translucent so
     // the cutaway layer's interior overlay reads as "inside the building."
     this.structureLayer.container.alpha = this.cutawayLayer.enabled ? 0.35 : 1;
+    // Building window and forge glows — intensity follows in-world hour.
+    this.nightLightsLayer.update(hour);
     this.borderLayer.update();
     this.cutawayLayer.update();
-    this.entityLayer.update(dt, this.alpha, this.opts.world.state.time);
+    this.entityLayer.update(dt, this.alpha, simTime);
     this.weatherLayer.update(dt, { minX, minY, maxX, maxY });
 
     // day/night + season tint (multiplied)
-    const tod = dayNightTint(this.opts.world.state.hour);
+    const tod = dayNightTint(hour);
     const sea = seasonTint(this.opts.world.state.season);
     const m = this.tintFilter.matrix;
     m.fill(0);
@@ -217,7 +238,8 @@ export class PixiApp {
     m[18] = 1; // alpha
     this.tintFilter.matrix = m;
 
-    // parallax slow scroll
+    // Parallax: slow scroll + dynamic sky (stars, moon, horizon glow).
     this.parallax.container.x = -this.camera.x * 4;
+    this.parallax.update(hour, simTime);
   }
 }

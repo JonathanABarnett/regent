@@ -1,5 +1,6 @@
 import { Container, Sprite, Texture } from "pixi.js";
 import type { OverworldMap } from "../sim/Map";
+import type { TileKind } from "../sim/types";
 import type { SpriteFactory } from "./SpriteFactory";
 
 /**
@@ -10,6 +11,8 @@ import type { SpriteFactory } from "./SpriteFactory";
 export class TileRenderer {
   readonly container = new Container();
   private mounted = new Map<number, Sprite>();
+  /** Tracks sprites for water (ocean/river) tiles so animate() can swap frames. */
+  private animatedTiles = new Map<number, Sprite>();
   private pool: Sprite[] = [];
 
   constructor(private map: OverworldMap, private factory: SpriteFactory) {
@@ -39,6 +42,10 @@ export class TileRenderer {
           sprite.texture = variants ? variants[tile.variant] : Texture.EMPTY;
           sprite.x = x * T;
           sprite.y = y * T;
+          // register in animatedTiles if this is a water tile
+          if (this.getAnimatedKinds().has(tile.kind)) {
+            this.animatedTiles.set(key, sprite);
+          }
         }
       }
     }
@@ -47,7 +54,32 @@ export class TileRenderer {
       if (!visible.has(key)) {
         this.container.removeChild(sprite);
         this.mounted.delete(key);
+        this.animatedTiles.delete(key);
         this.pool.push(sprite);
+      }
+    }
+  }
+
+  /**
+   * Returns the set of tile kinds that have animated frames.
+   * Used by update() and animate() to quickly identify water tiles.
+   */
+  getAnimatedKinds(): Set<TileKind> {
+    return new Set(["ocean", "river"] as TileKind[]);
+  }
+
+  /**
+   * Swap water tile textures to the correct animation frame.
+   * Call once per render tick, passing the simulation time in seconds.
+   * Cycles at ~2 fps (slow ripple): frame = floor(simTime * 2) % 4.
+   */
+  animate(simTime: number): void {
+    const frame = Math.floor(simTime * 2) % 4;
+    for (const [key, sprite] of this.animatedTiles) {
+      const tile = this.map.tiles[key];
+      const frames = this.factory.waterFrames.get(tile.kind);
+      if (frames && frames.length > 0) {
+        sprite.texture = frames[frame % frames.length];
       }
     }
   }

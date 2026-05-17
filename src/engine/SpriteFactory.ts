@@ -42,6 +42,7 @@ interface SpriteManifest {
  */
 export class SpriteFactory {
   readonly tiles = new Map<TileKind, Texture[]>();
+  readonly waterFrames = new Map<TileKind, Texture[]>();
   readonly structures = new Map<string, Texture>();
   readonly characters = new Map<string, Texture[]>();
   readonly props = new Map<string, Texture>();
@@ -64,6 +65,7 @@ export class SpriteFactory {
       for (let v = 0; v < 4; v++) variants.push(this.buildTile(k, v));
       this.tiles.set(k, variants);
     }
+    this.buildWaterFrames();
     this.structures.set("castle", (await this.loadStructure("castle")) ?? this.buildCastle("#dc2626"));
     this.structures.set("town", (await this.loadStructure("town")) ?? this.buildTown());
     this.structures.set("library", (await this.loadStructure("library")) ?? this.buildLibrary());
@@ -189,6 +191,55 @@ export class SpriteFactory {
       frames.push(sub);
     }
     return frames;
+  }
+
+  private buildWaterFrames(): void {
+    const T = SpriteFactory.TILE_SIZE;
+    const waterKinds: TileKind[] = ["ocean", "river"];
+    for (const kind of waterKinds) {
+      const colors = TILE_COLORS[kind];
+      const [base, c1, c2] = colors;
+      const frames: Texture[] = [];
+      for (let frame = 0; frame < 4; frame++) {
+        const g = new Graphics();
+        // base fill
+        g.rect(0, 0, T, T).fill(base);
+
+        // seeded random for deterministic highlight placement
+        let s = (kind.length * 31 + frame * 7919) >>> 0;
+        const rand = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+
+        // 3 wave dash lines, y positions shift by frame * 2 (wrapping within tile)
+        const offset = frame * 2;
+        const waveRows = [6, 18, 24];
+        const waveColors = [c2, c1, c2];
+        const waveWidths = [6, 8, 10];
+        const waveXs = [4, 18, 10];
+        for (let i = 0; i < 3; i++) {
+          const wy = ((waveRows[i] + offset) % T) as number;
+          g.rect(waveXs[i], wy, waveWidths[i], 1).fill(waveColors[i]);
+        }
+
+        // small highlight pixels at random-but-seeded positions
+        for (let i = 0; i < 5; i++) {
+          const hx = Math.floor(rand() * T);
+          const hy = Math.floor(rand() * T);
+          g.rect(hx, hy, 1, 1).fill(c1);
+        }
+
+        // subtle shimmer: every other frame, lighten a few extra pixels by ~15%
+        if (frame % 2 === 0) {
+          for (let i = 0; i < 4; i++) {
+            const sx = Math.floor(rand() * T);
+            const sy = Math.floor(rand() * T);
+            g.rect(sx, sy, 1, 1).fill(lightenHex(base, 0.15));
+          }
+        }
+
+        frames.push(this.rt(g, T, T));
+      }
+      this.waterFrames.set(kind, frames);
+    }
   }
 
   private buildTile(kind: TileKind, variant: number): Texture {
