@@ -95,20 +95,28 @@ export function drawPet(
     surface.rect(4, 14 + bob, 2, 4, accent); // floppy ear
   }
 
-  // eye
+  // eye + catchlight — the single biggest face-making touch
   surface.rect(9, 17 + bob, 2, 2, spec.eyeColor);
-  // nose
+  surface.rectAlpha(9, 17 + bob, 1, 1, "#ffffff", 0.85);
+  // nose — black block with a 1px shine for that wet-dog/cat look
   surface.rect(5, 18 + bob, 2, 2, "#1c1917");
+  surface.rectAlpha(5, 18 + bob, 1, 1, "#ffffff", 0.6);
+  // small mouth line — single pixel below the nose, reads as a smile/snout
+  surface.rectAlpha(6, 20 + bob, 2, 1, "#000000", 0.45);
 
-  // legs
+  // legs + paw shadows (1px darker band at the bottom of each leg)
   surface.rect(10, 24 + bob, 2, 4, body);
   surface.rect(20, 24 + bob, 2, 4, body);
+  surface.rectAlpha(10, 27 + bob, 2, 1, "#000000", 0.35);
+  surface.rectAlpha(20, 27 + bob, 2, 1, "#000000", 0.35);
 
-  // tail
+  // tail — gains a small lighter tip pixel for fur definition
   if (spec.kind === "cat") {
     surface.rect(24, 14 + bob, 2, 8, body);
+    surface.rect(24, 14 + bob, 2, 1, "#ffffff"); // tail tip
   } else {
     surface.rect(24, 18 + bob, 4, 2, body);
+    surface.rect(27, 18 + bob, 1, 2, "#ffffff"); // tail tip
   }
 
   drawPetAccessory(surface, spec, bob);

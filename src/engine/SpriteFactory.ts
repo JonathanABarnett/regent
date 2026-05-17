@@ -361,10 +361,17 @@ export class SpriteFactory {
     g.rect(W / 2 - 12, 8, 24, 3).fill(stoneLight);
     g.rect(W / 2 - 12, 10, 2, H - 10).fill(stoneLight);
     g.rect(W / 2 + 10, 10, 2, H - 10).fill(stoneShadow);
-    // Central tower window — bigger, also lit
+    // Central tower window — bigger, also lit, with proper 4-pane mullion
     g.rect(W / 2 - 3, 30, 6, 8).fill(window);
     g.rect(W / 2 - 2, 31, 4, 6).fill(windowGlow);
     g.rect(W / 2, 33, 1, 1).fill("#fff7d6");
+    // 4-pane cross + arch curve hint
+    g.rect(W / 2, 31, 1, 6).fill(window);
+    g.rect(W / 2 - 2, 34, 4, 1).fill(window);
+    g.rect(W / 2 - 2, 31, 4, 1).fill(stoneShadow);
+    // Wall halo cast by the central window
+    g.rect(W / 2 - 5, 29, 10, 1).fill({ color: windowGlow, alpha: 0.2 });
+    g.rect(W / 2 - 5, 38, 10, 1).fill({ color: windowGlow, alpha: 0.15 });
     // Crenellations on the central tower
     for (let i = 0; i < 3; i++) {
       const x = W / 2 - 12 + i * 8 + 2;
@@ -509,6 +516,13 @@ export class SpriteFactory {
       g.rect(chimneyX, wallY - 18, 4, 16).fill(stoneChimney);
       g.rect(chimneyX, wallY - 18, 4, 2).fill(chimneyDark);
       g.rect(chimneyX, wallY - 19, 6, 1).fill(chimneyDark);     // chimney cap
+      // Chimney brick courses — 1px shadow lines every few rows
+      g.rect(chimneyX, wallY - 14, 4, 1).fill(chimneyDark);
+      g.rect(chimneyX, wallY - 9, 4, 1).fill(chimneyDark);
+      // Chimney left-edge highlight (light source up-left)
+      g.rect(chimneyX, wallY - 17, 1, 14).fill("#a8a29e");
+      // Warm glow inside the chimney opening
+      g.rect(chimneyX + 1, wallY - 18, 2, 1).fill({ color: "#fb923c", alpha: 0.6 });
       // Smoke wisps
       g.rect(chimneyX + 1, wallY - 22, 2, 2).fill(smokeA);
       g.rect(chimneyX, wallY - 24, 3, 1).fill(smokeB);
@@ -521,8 +535,15 @@ export class SpriteFactory {
       g.rect(x + 18, wallY + 16, 1, 16).fill(doorEdge);  // right edge
       g.rect(x + 15, wallY + 16, 1, 16).fill(doorEdge);  // plank seam
       g.rect(x + 17, wallY + 16, 1, 16).fill(doorEdge);  // plank seam
-      // Door knob
+      // Door knob — brass with a tiny highlight pip
       g.rect(x + 17, wallY + 23, 1, 1).fill("#fbbf24");
+      g.rect(x + 16, wallY + 23, 1, 1).fill({ color: "#ffffff", alpha: 0.6 });
+      // Door-frame stone lintel — slim arch shadow above the door
+      g.rect(x + 12, wallY + 14, 8, 2).fill(wallShadow);
+      g.rect(x + 13, wallY + 14, 6, 1).fill(wallShade);
+      // Door step — a thin stone slab at the threshold
+      g.rect(x + 11, wallY + 30, 10, 2).fill(stoneChimney);
+      g.rect(x + 11, wallY + 30, 10, 1).fill("#a8a29e");
 
       // ── Windows: shuttered, warm glow ──────────────────────────────────
       // Window frame (darker recess)
@@ -614,6 +635,18 @@ export class SpriteFactory {
     g.rect(W - 12, 25, 1, 1).fill(windowFrame);
     g.rect(W - 12, 30, 1, 1).fill(lanternLight);
 
+    // Wall halo cast by each window — warm glow bleeds onto the surrounding
+    // stone. Tiny detail, but the building feels lived-in instead of dark.
+    g.rect(7, 23, 8, 1).fill({ color: windowGlow, alpha: 0.25 });
+    g.rect(7, 36, 8, 1).fill({ color: windowGlow, alpha: 0.18 });
+    g.rect(W - 15, 23, 8, 1).fill({ color: windowGlow, alpha: 0.25 });
+    g.rect(W - 15, 36, 8, 1).fill({ color: windowGlow, alpha: 0.18 });
+    // Window mullion cross-bars — proper 4-pane lattice for both windows
+    g.rect(11, 26, 1, 10).fill(windowFrame);
+    g.rect(9, 30, 4, 1).fill(windowFrame);
+    g.rect(W - 11, 26, 1, 10).fill(windowFrame);
+    g.rect(W - 13, 30, 4, 1).fill(windowFrame);
+
     // ── Door (recessed archway) ───────────────────────────────────────
     g.rect(W / 2 - 6, H - 16, 12, 16).fill(wallShadow);   // archway shadow
     g.rect(W / 2 - 5, H - 14, 10, 14).fill(door);
@@ -694,9 +727,23 @@ export class SpriteFactory {
     g.rect(10, 32, 10, 10).fill(fireOrange);
     g.rect(12, 34, 6, 6).fill(fireYellow);
     g.rect(14, 36, 2, 2).fill(fireWhite);
-    // Flickering "embers" at the top
+    // Asymmetric flame tongues — break the symmetry of the nested rects
+    // so the fire reads as living flame instead of stacked rectangles.
+    g.rect(11, 32, 1, 4).fill(fireOrange);
+    g.rect(13, 31, 1, 2).fill(fireYellow);
+    g.rect(17, 33, 1, 5).fill(fireOrange);
+    g.rect(19, 34, 1, 3).fill(fireMid);
+    // Flickering "embers" at the top (more of them, varied colors)
     g.rect(11, 29, 1, 1).fill(fireYellow);
+    g.rect(13, 28, 1, 1).fill(fireOrange);
+    g.rect(15, 29, 1, 1).fill(fireWhite);
     g.rect(17, 29, 1, 1).fill(fireOrange);
+    g.rect(19, 28, 1, 1).fill(fireYellow);
+    // Warm glow leaking onto the wall just above the opening
+    g.rect(7, 27, 16, 1).fill({ color: fireOrange, alpha: 0.45 });
+    g.rect(8, 26, 14, 1).fill({ color: fireOrange, alpha: 0.22 });
+    // Wall-shadow underneath the fire — pools light downward
+    g.rect(4, 46, 22, 1).fill({ color: fireOrange, alpha: 0.3 });
 
     // ── Anvil to the right of the opening ──────────────────────────────
     // Base
@@ -782,13 +829,28 @@ export class SpriteFactory {
     for (let bx = W / 2 - 9; bx < W / 2 + 10; bx += 4) {
       g.rect(bx, H - 26, 1, 4).fill(beamShade);
     }
+    // Wood-grain knots on the support beams — tiny dark specks at semi-
+    // random spots. Reads as aged timber instead of painted lumber.
+    g.rect(W / 2 - 10, H - 31, 1, 1).fill(beamShade);
+    g.rect(W / 2 - 6, H - 28, 1, 1).fill(beamShade);
+    g.rect(W / 2 + 5, H - 30, 1, 1).fill(beamShade);
+    g.rect(W / 2 + 8, H - 26, 1, 1).fill(beamShade);
+    // Iron strap bracket where vertical beams meet the cross beam
+    g.rect(W / 2 - 11, H - 24, 1, 2).fill(trackMetal);
+    g.rect(W / 2 + 10, H - 24, 1, 2).fill(trackMetal);
 
     // ── Hanging lantern ────────────────────────────────────────────────
     g.rect(W / 2 - 1, H - 22, 2, 4).fill(lanternBracket);   // hanging chain
     g.rect(W / 2 - 2, H - 18, 4, 4).fill(lanternBody);
     g.rect(W / 2 - 1, H - 17, 2, 2).fill(lanternLight);
+    // Lantern frame highlight + glass-pane glints
+    g.rect(W / 2 - 2, H - 18, 1, 4).fill({ color: "#fde047", alpha: 0.5 });
+    g.rect(W / 2 - 1, H - 18, 1, 1).fill("#fff7d6");
     // Light bloom on the beams above the lantern
     g.rect(W / 2 - 4, H - 24, 8, 1).fill(beamLight);
+    // Lower glow halo — soft warm pool on the cave floor area
+    g.rect(W / 2 - 6, H - 13, 12, 1).fill({ color: lanternLight, alpha: 0.18 });
+    g.rect(W / 2 - 4, H - 14, 8, 1).fill({ color: lanternLight, alpha: 0.28 });
 
     // ── Mining cart tracks leading out ─────────────────────────────────
     g.rect(W / 2 - 8, H - 4, 16, 1).fill(trackMetal);
@@ -954,10 +1016,15 @@ export class SpriteFactory {
       const offset = ((y - 12) / 6) % 2 === 0 ? 0 : 4;
       g.rect(W / 2 - 4 + offset, y, 1, 5).fill(stoneShade);
     }
-    // Arrow-slit windows up the shaft (two of them)
+    // Arrow-slit windows up the shaft (two of them, both lit at dusk)
     g.rect(W / 2 - 1, 20, 2, 5).fill(window);
     g.rect(W / 2, 21, 1, 2).fill(windowGlow);
     g.rect(W / 2 - 1, 32, 2, 4).fill(window);
+    g.rect(W / 2, 33, 1, 2).fill(windowGlow);
+    // Faint wall halo around each slit
+    g.rect(W / 2 - 3, 20, 5, 1).fill({ color: windowGlow, alpha: 0.18 });
+    g.rect(W / 2 - 3, 25, 5, 1).fill({ color: windowGlow, alpha: 0.12 });
+    g.rect(W / 2 - 3, 32, 5, 1).fill({ color: windowGlow, alpha: 0.18 });
 
     // ── Wooden battlement balcony at the top ──────────────────────────
     // Floor that sticks out

@@ -157,17 +157,28 @@ export function drawCharacter(
 
 function drawLegs(surface: DrawSurface, spec: CharacterSpec, bob: number, body: BodyMetrics) {
   const bootColor = darken(spec.outfitColor, 0.35);
+  const bootShine = lighten(bootColor, 0.18);
   // robe and regal: long skirts hide the legs
   if (spec.outfit === "robe" || spec.outfit === "regal") {
     surface.rect(body.left + 1, 22, body.width - 2, 6, spec.outfitColor);
     surface.rect(body.left + 1, 26, body.width - 2, 2, spec.accentColor);
     surface.rect(body.left + 2, 28, 3, 1, bootColor);
     surface.rect(body.left + body.width - 5, 28, 3, 1, bootColor);
+    // Trim sheen — 1px of lighter accent along the hem makes the robe
+    // read as a fabric edge instead of a painted line.
+    surface.rectAlpha(body.left + 1, 26, body.width - 2, 1, "#ffffff", 0.12);
     return;
   }
   const cx = body.left + body.width / 2;
+  // Boots — base block, plus a 1px lighter "toe cap" on the leading edge
+  // of each boot. Boots had been single flat rects; the toe cap reads as
+  // a polished leather highlight.
   surface.rect(cx - 5, 22 + bob, 4, 6, bootColor);
   surface.rect(cx + 1, 22 - bob, 4, 6, bootColor);
+  surface.rect(cx - 5, 22 + bob, 1, 6, bootShine);   // L boot inner highlight
+  surface.rect(cx + 1, 22 - bob, 1, 6, bootShine);   // R boot inner highlight
+  surface.rectAlpha(cx - 5, 27 + bob, 4, 1, "#000000", 0.25);   // L boot sole shadow
+  surface.rectAlpha(cx + 1, 27 - bob, 4, 1, "#000000", 0.25);   // R boot sole shadow
 }
 
 function drawOutfit(surface: DrawSurface, spec: CharacterSpec, bob: number, body: BodyMetrics) {
@@ -183,6 +194,9 @@ function drawOutfit(surface: DrawSurface, spec: CharacterSpec, bob: number, body
       surface.rect(L, 14, W, 10, main);
       surface.rect(L, 14, W, 2, shade);
       surface.rect(L, 19, W, 1, accent); // belt
+      // Belt buckle — 1px brass pip dead-center. Tiny but reads as a
+      // metal fastener instead of an unbroken stripe.
+      surface.rect(cx - 1, 19, 2, 1, "#fde047");
       break;
     case "robe":
       surface.rect(L - 1, 14, W + 2, 10, main);
@@ -195,10 +209,23 @@ function drawOutfit(surface: DrawSurface, spec: CharacterSpec, bob: number, body
       surface.rect(L, 18, W, 1, accent);
       surface.rect(L - 1, 15, 2, 3, accent); // pauldron L
       surface.rect(L + W - 1, 15, 2, 3, accent); // pauldron R
+      // Pauldron rivets — single white pixel on each shoulder. Reads as
+      // hammered-metal armor.
+      surface.rect(L - 1, 15, 1, 1, "#fde68a");
+      surface.rect(L + W - 1, 15, 1, 1, "#fde68a");
+      // Chest gleam — small diagonal highlight on the top-left third.
+      surface.rectAlpha(L + 1, 16, 2, 1, "#ffffff", 0.45);
+      // Belt buckle on the accent stripe
+      surface.rect(cx - 1, 18, 2, 1, "#fde047");
       break;
     case "peasant":
       surface.rect(L, 14, W, 10, main);
       surface.rect(L, 20, W, 1, accent);
+      // Belt buckle for peasant
+      surface.rect(cx - 1, 20, 2, 1, "#92400e");
+      // Tunic ties — two 1px stitches at the collar
+      surface.rect(cx - 1, 14, 1, 2, darken(main, 0.4));
+      surface.rect(cx, 14, 1, 2, darken(main, 0.4));
       break;
     case "regal":
       surface.rect(L, 14, W, 10, main);
@@ -207,6 +234,9 @@ function drawOutfit(surface: DrawSurface, spec: CharacterSpec, bob: number, body
       surface.rect(L + W - 1, 14, 1, 10, accent); // R trim
       surface.rect(cx - 3, 13, 6, 2, accent);  // collar
       surface.rect(cx - 1, 17, 2, 4, accent);  // medallion stripe
+      // Medallion gem — single jewel pixel mid-chest
+      surface.rect(cx - 1, 18, 2, 2, "#dc2626");
+      surface.rect(cx - 1, 18, 1, 1, "#fecaca");
       break;
   }
   if (bob) surface.rectAlpha(L, 23, W, 1, "#000000", 0.15);
@@ -254,29 +284,35 @@ function drawHandItem(surface: DrawSurface, spec: CharacterSpec, body: BodyMetri
   const itemX = armX + 3;
   switch (spec.handItem) {
     case "sword": {
-      // grip
+      // grip + leather wrap
       surface.rect(itemX, handY, 2, 2, "#78350f");
-      // crossguard
+      surface.rect(itemX, handY + 1, 1, 1, "#fde047"); // pommel jewel
+      // crossguard with gold pip
       surface.rect(itemX - 1, handY - 1, 4, 1, dark);
-      // blade upward
+      surface.rect(itemX, handY - 1, 2, 1, "#fde047");
+      // blade — 2px wide with a 1px left-edge gleam + tip flash
       surface.rect(itemX, handY - 8, 2, 7, c);
       surface.rect(itemX + 1, handY - 8, 1, 7, dark);
+      surface.rectAlpha(itemX, handY - 7, 1, 5, "#ffffff", 0.55); // edge gleam
       surface.rect(itemX, handY - 9, 2, 1, "#ffffff"); // tip
       break;
     }
     case "staff": {
-      // shaft tall
+      // shaft with wood-grain shadow band
       surface.rect(itemX, handY - 10, 2, 12, "#78350f");
-      // orb
+      surface.rect(itemX + 1, handY - 10, 1, 12, "#451a03");
+      // orb — gem with a single white catchlight
       surface.rect(itemX - 1, handY - 12, 4, 3, c);
       surface.rect(itemX, handY - 13, 2, 1, c);
+      surface.rect(itemX, handY - 12, 1, 1, "#ffffff");
       break;
     }
     case "book": {
-      // hand-sized book
+      // hand-sized book — cover, spine shade, gilt edge, page block
       surface.rect(itemX, handY - 2, 4, 5, c);
       surface.rect(itemX, handY - 2, 4, 1, dark);
       surface.rect(itemX + 1, handY - 1, 2, 3, "#fde68a"); // pages
+      surface.rect(itemX + 3, handY - 1, 1, 3, "#fde047"); // gilt edge
       break;
     }
     case "scepter": {
@@ -400,15 +436,20 @@ function drawHair(surface: DrawSurface, spec: CharacterSpec, body: BodyMetrics) 
       surface.rect(HL + Math.floor(HW / 2) - 2, 4, 4, 1, shade);
       surface.rect(HL, 7, Math.floor(HW / 2) - 1, 2, darken(SKIN_PALETTE[spec.skinTone], 0.3));
       surface.rect(HL + Math.floor(HW / 2) + 1, 7, Math.floor(HW / 2) - 1, 2, darken(SKIN_PALETTE[spec.skinTone], 0.3));
+      // Mohawk sheen — 1px highlight along the crest
+      surface.rect(HL + Math.floor(HW / 2), 4, 1, 4, sheen);
       break;
     case "braid":
       surface.rect(HL, 6, HW, 3, c);
       surface.rect(HL, 6, HW, 1, shade);
-      // braid down one side
+      // braid down one side — alternating sheen/shade reads as woven plaits
       surface.rect(HL - 1, 9, 2, 2, c);
       surface.rect(HL - 1, 11, 2, 2, shade);
       surface.rect(HL - 1, 13, 2, 2, c);
       surface.rect(HL - 1, 15, 2, 1, shade);
+      // Plait highlights — single sheen pixel on each "weave bump"
+      surface.rect(HL - 1, 9, 1, 1, sheen);
+      surface.rect(HL - 1, 13, 1, 1, sheen);
       break;
     case "topknot":
       surface.rect(HL, 6, HW, 3, c);
@@ -418,6 +459,8 @@ function drawHair(surface: DrawSurface, spec: CharacterSpec, body: BodyMetrics) 
       surface.rectAlpha(HL + HW - 1, 9, 1, 3, "#000000", 0.15);
       // bun on top
       surface.rect(HL + Math.floor(HW / 2) - 2, 3, 4, 3, c);
+      // Bun sheen — single highlight pixel
+      surface.rect(HL + Math.floor(HW / 2) - 1, 3, 1, 1, sheen);
       surface.rect(HL + Math.floor(HW / 2) - 2, 3, 4, 1, shade);
       break;
   }
