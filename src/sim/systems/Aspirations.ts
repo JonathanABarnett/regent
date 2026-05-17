@@ -62,6 +62,18 @@ const ALL_ASPIRATIONS: AspirationDef[] = [
     progress: (w) => w.succession.state.generation / 5,
   },
   {
+    id: "dynasty_streak_3",
+    title: "An Unbroken Crown",
+    description: "Three consecutive natural heirs without a usurper breaking the line.",
+    progress: (w) => Math.min(1, w.succession.state.dynastyStreak / 3),
+  },
+  {
+    id: "repel_usurper",
+    title: "The Crown Defends Itself",
+    description: "Turn back a usurper challenge through exile, negotiation, or imprisonment.",
+    progress: (w) => Math.min(1, w.usurper.state.totalRepelled),
+  },
+  {
     id: "year_2",
     title: "Past the First Year",
     description: "Carry the kingdom into a second year.",

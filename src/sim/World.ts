@@ -32,6 +32,8 @@ import { History } from "./systems/History";
 import { Threats } from "./systems/Threats";
 import { Discoveries } from "./systems/Discoveries";
 import { Edicts } from "./systems/Edicts";
+import { Usurper } from "./systems/Usurper";
+import { Uprising } from "./systems/Uprising";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -191,6 +193,8 @@ export class World {
   readonly threats: Threats;
   readonly discoveries: Discoveries;
   readonly edicts: Edicts;
+  readonly usurper: Usurper;
+  readonly uprising: Uprising;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -271,6 +275,8 @@ export class World {
     this.threats = new Threats(this, this.journal, this.rand);
     this.discoveries = new Discoveries(this, this.journal, this.rand);
     this.edicts = new Edicts(this, this.journal);
+    this.usurper = new Usurper(this, this.journal, this.rand);
+    this.uprising = new Uprising(this, this.journal, this.rand);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -326,6 +332,9 @@ export class World {
       this.discoveries.tick();
       // Royal Edicts: auto-expire active edicts when their window elapses.
       this.edicts.tick();
+      // Political intrigue: usurper challenges and peasant uprisings.
+      this.usurper.tick();
+      this.uprising.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {

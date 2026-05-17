@@ -131,6 +131,31 @@ const DEFINITIONS: AchievementDef[] = [
         (s) => s.kind === "watchtower" || s.kind === "mill" || s.kind === "shrine",
       ),
   },
+  // ---- Usurper + Uprising achievements ------------------------------------
+  {
+    id: "usurper_faced",
+    title: "The Pretender",
+    description: "A court figure challenged your throne.",
+    check: (c) => c.world.usurper.state.totalChallenges >= 1,
+  },
+  {
+    id: "usurper_repelled",
+    title: "The Crown Holds",
+    description: "Successfully repelled a usurper challenge.",
+    check: (c) => c.world.usurper.state.totalRepelled >= 1,
+  },
+  {
+    id: "uprising_faced",
+    title: "The People Speak",
+    description: "A peasant uprising rose in your kingdom.",
+    check: (c) => c.world.uprising.state.totalUprisings >= 1,
+  },
+  {
+    id: "dynasty_3",
+    title: "Unbroken Line",
+    description: "Three consecutive natural heirs ruled without usurpation.",
+    check: (c) => c.world.succession.state.dynastyStreak >= 3,
+  },
   // ---- Hidden achievements (appear as "???" until unlocked) ----------------
   {
     id: "hidden_midnight_oil",
@@ -198,6 +223,29 @@ const DEFINITIONS: AchievementDef[] = [
     description: "Two thousand couriers — the post is now myth.",
     hidden: true,
     check: (c) => c.totalCouriers >= 2000,
+  },
+  {
+    id: "hidden_dynasty_5",
+    title: "A Dynasty Endures",
+    description: "Five consecutive natural heirs — no blood was spilled for the throne.",
+    hidden: true,
+    check: (c) => c.world.succession.state.dynastyStreak >= 5,
+  },
+  {
+    id: "hidden_usurper_exile",
+    title: "Cast Out",
+    description: "Repelled three separate usurper challenges.",
+    hidden: true,
+    check: (c) => c.world.usurper.state.totalRepelled >= 3,
+  },
+  {
+    id: "hidden_people_monarch",
+    title: "From the Crowd",
+    description: "A peasant took the throne — the first of their kind.",
+    hidden: true,
+    check: (c) =>
+      c.world.succession.state.dynastyStreak === 0 &&
+      c.world.uprising.state.totalUprisings >= 1,
   },
   {
     id: "hidden_thrice_blessed",

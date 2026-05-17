@@ -50,8 +50,30 @@ export interface SaveData {
   achievements?: Record<string, string>;
   /** journal entries chronologically */
   journal?: SavedJournalEntry[];
-  /** Royal succession: monarch generation + reign start day */
-  succession?: { generation: number; reignStartDay: number };
+  /** Royal succession: monarch generation + reign start day + unbroken dynasty streak */
+  succession?: { generation: number; reignStartDay: number; dynastyStreak?: number };
+  /** Usurper system snapshot (optional — absent in pre-usurper saves). */
+  usurper?: {
+    active: boolean;
+    claimantId?: string;
+    claimantName?: string;
+    claimantTitle?: string;
+    startedDay: number;
+    decisionExpiresAt: number;
+    lastCheckedDay: number;
+    totalChallenges: number;
+    totalRepelled: number;
+  };
+  /** Uprising system snapshot. */
+  uprising?: {
+    active: boolean;
+    agitatorId?: string;
+    agitatorName?: string;
+    startedDay: number;
+    decisionExpiresAt: number;
+    lastCheckedDay: number;
+    totalUprisings: number;
+  };
   /** Royal vault — artifacts accumulated across all monarchs. */
   artifacts?: SavedArtifact[];
   /** Active or constructed buildings (we persist the active build; finished
@@ -172,7 +194,7 @@ export function serialize(
     kingdomMotto?: string;
     monarchSpec?: unknown;
     petSpec?: unknown;
-    succession?: { generation: number; reignStartDay: number };
+    succession?: { generation: number; reignStartDay: number; dynastyStreak?: number };
     artifacts?: SavedArtifact[];
     construction?: SaveData["construction"];
   } = {},
@@ -224,6 +246,8 @@ export function serialize(
     history: world.history.snapshots,
     landmarks: world.discoveries.snapshot(),
     edicts: world.edicts.snapshot(),
+    usurper: world.usurper.snapshot(),
+    uprising: world.uprising.snapshot(),
   };
 }
 
@@ -406,6 +430,12 @@ export function validateSave(rawInput: unknown): SaveData | null {
             0,
             10_000_000,
           ),
+          dynastyStreak: safeInt(
+            (raw.succession as Record<string, unknown>).dynastyStreak,
+            0,
+            0,
+            10_000,
+          ),
         }
       : undefined,
     artifacts: Array.isArray(raw.artifacts)
@@ -431,6 +461,36 @@ export function validateSave(rawInput: unknown): SaveData | null {
     history: validateHistory(raw.history),
     landmarks: validateLandmarks(raw.landmarks),
     edicts: validateEdicts(raw.edicts),
+    usurper: validateUsurper(raw.usurper),
+    uprising: validateUprising(raw.uprising),
+  };
+}
+
+function validateUsurper(raw: unknown): SaveData["usurper"] {
+  if (!isPlainObject(raw)) return undefined;
+  return {
+    active: Boolean(raw.active),
+    claimantId: typeof raw.claimantId === "string" ? safeString(raw.claimantId, 80) : undefined,
+    claimantName: typeof raw.claimantName === "string" ? safeString(raw.claimantName, 64) : undefined,
+    claimantTitle: typeof raw.claimantTitle === "string" ? safeString(raw.claimantTitle, 32) : undefined,
+    startedDay: safeInt(raw.startedDay, 0, 0, 100_000),
+    decisionExpiresAt: safeNumber(raw.decisionExpiresAt, 0),
+    lastCheckedDay: safeInt(raw.lastCheckedDay, 0, 0, 100_000),
+    totalChallenges: safeInt(raw.totalChallenges, 0, 0, 10_000),
+    totalRepelled: safeInt(raw.totalRepelled, 0, 0, 10_000),
+  };
+}
+
+function validateUprising(raw: unknown): SaveData["uprising"] {
+  if (!isPlainObject(raw)) return undefined;
+  return {
+    active: Boolean(raw.active),
+    agitatorId: typeof raw.agitatorId === "string" ? safeString(raw.agitatorId, 80) : undefined,
+    agitatorName: typeof raw.agitatorName === "string" ? safeString(raw.agitatorName, 64) : undefined,
+    startedDay: safeInt(raw.startedDay, 0, 0, 100_000),
+    decisionExpiresAt: safeNumber(raw.decisionExpiresAt, 0),
+    lastCheckedDay: safeInt(raw.lastCheckedDay, 0, 0, 100_000),
+    totalUprisings: safeInt(raw.totalUprisings, 0, 0, 10_000),
   };
 }
 
@@ -651,6 +711,7 @@ export function applySave(world: World, save: SaveData): void {
   if (save.succession) {
     world.succession.state.generation = save.succession.generation;
     world.succession.state.reignStartDay = save.succession.reignStartDay;
+    world.succession.state.dynastyStreak = save.succession.dynastyStreak ?? 0;
   }
   // Restore vault contents
   if (save.artifacts) {
@@ -733,6 +794,10 @@ export function applySave(world: World, save: SaveData): void {
       }
     }
   }
+  // Restore usurper + uprising state.
+  if (save.usurper) world.usurper.hydrate(save.usurper);
+  if (save.uprising) world.uprising.hydrate(save.uprising);
+
   writeWelcomeBack(world, save);
 }
 

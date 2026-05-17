@@ -834,6 +834,265 @@ const ARCS: ArcDef[] = [
       },
     ],
   },
+  // ── Late-game political arcs (year-gated) ───────────────────────────────
+  {
+    id: "succession_crisis",
+    title: "The succession crisis",
+    // Year >= 3: a noble presents a "rival heir" claim. Plays out over 4 days
+    // as the court investigates, then resolves via the journal. The narrative
+    // never actually changes the monarch — that's the Usurper system's job —
+    // but it seeds tension and can drop a relic (the disputed charter).
+    guard: (world) => world.state.year >= 3,
+    pickFlavor: (world, rand) => {
+      // Pick a living noble-type NPC for the rival claimant role.
+      const candidates = world.npcs.filter(
+        (n) => n.role !== "monarch" && (n.age ?? 30) >= 18,
+      );
+      if (candidates.length) {
+        const c = candidates[Math.floor(rand() * candidates.length)];
+        return c.name ?? "a rival claimant";
+      }
+      return "a rival claimant";
+    },
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world, flavor }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          journal.write(
+            `A document appeared — sealed in three places — claiming that ${flavor} carries the blood of an older royal line than the current throne. The chamberlain locked it in the lower vault and told no one. By noon, everyone knew.`,
+            "milestone",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 1,
+        write: ({ journal, world }) => {
+          const lib = world.map.structures.find((s) => s.kind === "library");
+          journal.write(
+            "The scholars worked through the night comparing genealogies. The candles in the Scriptorium burned until dawn.",
+            "event",
+            lib?.id,
+          );
+          if (lib) {
+            world.bus.publish(
+              makeEvent("research", {
+                source: "narrative",
+                intensity: 0.5,
+                payload: { structure: lib.id, label: "the disputed succession" },
+              }),
+            );
+          }
+        },
+      },
+      {
+        onDay: 2,
+        write: ({ journal, world, flavor }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          journal.write(
+            `The scholars presented their findings: the claim has merit — older merit than anyone comfortable with the current arrangement would prefer. ${flavor} has not left the capital.`,
+            "event",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 3,
+        write: ({ journal, world, flavor }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          // Resolution: the claim is quietly absorbed.
+          journal.write(
+            `By the fourth day, ${flavor} accepted a formal title and a comfortable house — not the throne, but not nothing. The disputed charter was sealed in the vault. The court agreed, without quite saying so, to never open it again.`,
+            "milestone",
+            castle?.id,
+          );
+          world.treasury.acquire("scroll", "the disputed succession charter");
+        },
+      },
+    ],
+  },
+  {
+    id: "court_conspiracy",
+    title: "A conspiracy in the court",
+    guard: (world) => world.state.year >= 3,
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          journal.write(
+            "The castle's night steward found a coded message tucked behind a tapestry. It was addressed to no one in the castle, but three members of court have the same unusual ink on their fingers.",
+            "event",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 1,
+        write: ({ journal, world }) => {
+          const lib = world.map.structures.find((s) => s.kind === "library");
+          journal.write(
+            "The scholars decoded half the message. What they found was not treason, exactly — but it described a plan to quietly redirect tax revenue for three seasons. The other half of the message was missing.",
+            "event",
+            lib?.id,
+          );
+          if (lib) {
+            world.bus.publish(
+              makeEvent("research", {
+                source: "narrative",
+                intensity: 0.4,
+                payload: { structure: lib.id, label: "decoding the conspiracy" },
+              }),
+            );
+          }
+        },
+      },
+      {
+        onDay: 3,
+        write: ({ journal, world, rand }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          // 50/50: the conspiracy unravels with a reward, or is quietly buried.
+          if (rand() < 0.5) {
+            journal.write(
+              "The conspirators were identified and quietly removed from their posts. They did not resist. One of them left behind a small iron chest with a note that read: 'We were not wrong about the problem. Only about the method.'",
+              "milestone",
+              castle?.id,
+            );
+            world.treasury.acquire("gem", "from the conspirators' iron chest");
+          } else {
+            journal.write(
+              "The investigation stalled. The three ink-fingered courtiers resigned within the week for unrelated reasons. The kingdom filed the matter under 'unresolved' and moved on, which is what the conspirators had probably planned all along.",
+              "milestone",
+              castle?.id,
+            );
+          }
+        },
+      },
+    ],
+  },
+  {
+    id: "foreign_tribute",
+    title: "The foreign envoy",
+    guard: (world) => world.state.year >= 2,
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          world.bus.publish(
+            makeEvent("courier", {
+              source: "narrative",
+              intensity: 0.6,
+              payload: { from: "rivermouth", to: castle?.id ?? "highkeep", label: "foreign delegation" },
+            }),
+          );
+          journal.write(
+            "A delegation arrived from across the eastern passes — richly dressed, cautiously worded. They bring gifts and a message whose weight is felt more than read.",
+            "event",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 1,
+        write: ({ journal, world }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          journal.write(
+            "The envoy's true purpose emerged over supper: their sovereign claims a portion of the mountain passes and asks the crown to acknowledge it — in writing, with a seal.",
+            "event",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 3,
+        write: ({ journal, world, rand }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          const choice = rand();
+          if (choice < 0.4) {
+            // Kingdom pays tribute — gets diplomatic peace + relic.
+            const tribute = 30;
+            world.economy.state.gold = Math.max(0, world.economy.state.gold - tribute);
+            journal.write(
+              `The crown signed a letter of partial acknowledgment — not quite a concession, not quite not one. ${tribute} gold changed hands, and the delegation rode home satisfied. A sealed treaty now rests in the vault.`,
+              "milestone",
+              castle?.id,
+            );
+            world.treasury.acquire("scroll", "the eastern passage treaty");
+          } else if (choice < 0.75) {
+            // Kingdom refuses — envoy leaves, nothing happens yet.
+            journal.write(
+              "The crown declined to sign anything. The envoy was given a formal farewell and three days' provisions for the road. They bowed without warmth and left. The matter has not been resolved — only deferred.",
+              "event",
+              castle?.id,
+            );
+          } else {
+            // Kingdom counter-offers — earns gold + scroll.
+            world.economy.state.gold = Math.min(99999, world.economy.state.gold + 25);
+            journal.write(
+              "The crown proposed a counter-treaty: the passes in exchange for guaranteed trade access. After two days of revision, the envoy agreed. The kingdom's negotiators were quietly pleased with themselves.",
+              "milestone",
+              castle?.id,
+            );
+            world.treasury.acquire("scroll", "the mountain trade compact");
+          }
+        },
+      },
+    ],
+  },
+  {
+    id: "reform_movement",
+    title: "The reform movement",
+    guard: (world) => world.state.year >= 2,
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world, rand }) => {
+          const town = pickTown(world, rand);
+          journal.write(
+            `A pamphlet appeared in ${town.name} — short, clear, and evidently well-read given the number of copies circulating. It proposed three changes to how the crown manages the grain stores.`,
+            "event",
+            town.id,
+          );
+        },
+      },
+      {
+        onDay: 2,
+        write: ({ journal, world, rand }) => {
+          const town = pickTown(world, rand);
+          journal.write(
+            `The pamphlet's author was found: a retired miller in ${town.name} who had been keeping careful accounts for a decade. She presented her records to the town council without fanfare and then went home.`,
+            "event",
+            town.id,
+          );
+        },
+      },
+      {
+        onDay: 4,
+        write: ({ journal, world, rand }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          if (rand() < 0.6) {
+            // Reform adopted — small gold cost, goodwill gain.
+            const cost = 20;
+            world.economy.state.gold = Math.max(0, world.economy.state.gold - cost);
+            journal.write(
+              `The crown adopted two of the three proposed reforms. The miller was invited to advise on implementation. She declined a title but accepted a small stipend. ${cost} gold from the treasury — and something harder to count.`,
+              "milestone",
+              castle?.id,
+            );
+            world.treasury.acquire("scroll", "the grain reform charter");
+          } else {
+            journal.write(
+              "The crown thanked the miller and filed her records for future consideration. The pamphlet stopped circulating. The kingdom continued to manage the grain stores the old way, though the accountants now argued about it more.",
+              "event",
+              castle?.id,
+            );
+          }
+        },
+      },
+    ],
+  },
   {
     id: "scholar_discovery",
     title: "A discovery at the scriptorium",
@@ -967,6 +1226,11 @@ export class Quests {
     // Decision proposals — 25% chance per new day, mutually exclusive with arc starts.
     if (day > 0 && this.rand() < 0.25) {
       this.proposeRandomDecision();
+    }
+
+    // Late-game bonus decisions — only roll after year 2.
+    if (day > 0 && this.world.state.year >= 2 && this.rand() < 0.12) {
+      this.proposeLateGameDecision();
     }
   }
 
@@ -1397,6 +1661,159 @@ export class Quests {
                 `The parcel was burned in the courtyard. The smoke smelled briefly of cedar, then of nothing.`,
                 "event",
               ),
+          },
+        ],
+      });
+    }
+  }
+  private proposeLateGameDecision(): void {
+    const rand = this.rand;
+    const expiresAt = Date.now() +
+      (this.world.courtEffects.advisorSeated ? 180_000 : 90_000) +
+      (this.world.edictEffects.openCourt ? 60_000 : 0);
+    const roll = rand();
+    const decId = this.nextId("late");
+
+    if (roll < 0.35) {
+      // Royal pardon — a prisoner asks for release.
+      const flavorName = FLAVOR_NAMES[Math.floor(rand() * FLAVOR_NAMES.length)];
+      this.world.decisions.propose({
+        id: decId,
+        title: "A petition for royal pardon",
+        body: `${capitalize(flavorName)} has been held in the castle cells for two seasons on old charges. Their family petitions for release.`,
+        expiresAt,
+        defaultOnExpire: false,
+        options: [
+          {
+            id: "pardon",
+            label: "Grant the pardon",
+            onChoose: (w) => {
+              w.journal.write(
+                `${capitalize(flavorName)} was released under the royal seal. The family received them at the gate with a quiet that spoke more than celebration would have.`,
+                "milestone",
+              );
+              // Small chance they return the favor.
+              if (rand() < 0.45) {
+                w.treasury.acquire("gem", `a gift of thanks from ${flavorName}'s family`);
+              }
+            },
+          },
+          {
+            id: "deny",
+            label: "Deny the petition",
+            onChoose: (w) =>
+              w.journal.write(
+                `The petition was denied. ${capitalize(flavorName)} remains. The family did not return.`,
+                "event",
+              ),
+          },
+          {
+            id: "commute",
+            label: "Commute to exile",
+            onChoose: (w) => {
+              const cost = 15;
+              w.economy.state.gold = Math.max(0, w.economy.state.gold - cost);
+              w.journal.write(
+                `${capitalize(flavorName)} was released under condition of permanent exile — ${cost} gold for travel provisions and a guard escort. They crossed the border without looking back.`,
+                "event",
+              );
+            },
+          },
+        ],
+      });
+    } else if (roll < 0.65) {
+      // Spy report — intelligence delivered, requires a choice.
+      const kingdom = this.world.state.year >= 3
+        ? "the northern confederation"
+        : "a neighboring lord";
+      this.world.decisions.propose({
+        id: decId,
+        title: "A spy's report",
+        body: `Your intelligencer returns with a full report on ${kingdom}. Acting on it costs gold; ignoring it costs nothing for now.`,
+        expiresAt,
+        defaultOnExpire: false,
+        options: [
+          {
+            id: "act",
+            label: "Act on the intelligence",
+            onChoose: (w) => {
+              const cost = 25;
+              w.economy.state.gold = Math.max(0, w.economy.state.gold - cost);
+              w.journal.write(
+                `The crown spent ${cost} gold on a counter-measure. Three weeks later, a merchant road that would have been closed opened instead. The intelligencer asked for nothing further.`,
+                "milestone",
+              );
+              if (rand() < 0.5) {
+                w.treasury.acquire("scroll", "a copy of the spy's report, bound in oil-cloth");
+              }
+            },
+          },
+          {
+            id: "file",
+            label: "File it away",
+            onChoose: (w) =>
+              w.journal.write(
+                `The report was sealed and filed. Perhaps the knowledge will matter someday. Perhaps it already doesn't.`,
+                "event",
+              ),
+          },
+          {
+            id: "share",
+            label: "Send a copy to an ally",
+            onChoose: (w) => {
+              const castle = w.map.structures.find((s) => s.kind === "castle");
+              w.bus.publish(
+                makeEvent("courier", {
+                  source: "narrative",
+                  intensity: 0.5,
+                  payload: {
+                    from: castle?.id ?? "highkeep",
+                    to: "rivermouth",
+                    label: "intelligence packet",
+                  },
+                }),
+              );
+              w.economy.state.gold = Math.min(99999, w.economy.state.gold + 15);
+              w.journal.write(
+                `A copy of the report was dispatched to a friendly lord, who sent 15 gold in gratitude. Favors traded are better than favors promised.`,
+                "event",
+              );
+            },
+          },
+        ],
+      });
+    } else {
+      // A noble family requests a formal alliance.
+      const family = ["House Varenmark", "the Durnfield line", "the Ashbriar family", "House Colden"][
+        Math.floor(rand() * 4)
+      ];
+      this.world.decisions.propose({
+        id: decId,
+        title: `${family} requests an alliance`,
+        body: `A messenger from ${family} arrives with a formal proposal — shared resources in exchange for mutual recognition of borders.`,
+        expiresAt,
+        defaultOnExpire: true,
+        options: [
+          {
+            id: "decline",
+            label: "Decline politely",
+            onChoose: (w) =>
+              w.journal.write(
+                `The crown declined ${family}'s proposal with diplomatic warmth. The messenger left satisfied that they had been heard, which is the best kind of refusal.`,
+                "event",
+              ),
+          },
+          {
+            id: "accept",
+            label: "Form the alliance",
+            onChoose: (w) => {
+              w.economy.state.gold = Math.min(99999, w.economy.state.gold + 30);
+              w.journal.write(
+                `The crown accepted ${family}'s proposal. A treaty was drawn, witnessed, and sealed. 30 gold arrived within the week as the first transfer of shared resources.`,
+                "milestone",
+              );
+              w.treasury.acquire("scroll", `the compact with ${family}`);
+            },
           },
         ],
       });

@@ -30,6 +30,13 @@ export interface SuccessionState {
   reignStartDay: number;
   /** Last in-world day we ran the check. */
   lastCheckedDay: number;
+  /**
+   * Consecutive natural successions without a usurper or uprising break.
+   * Starts at 0 (founding monarch is the dynasty's root, not a successor).
+   * Increments each time a biological/standard heir ascends naturally.
+   * Resets to 0 when a usurper or uprising installs a new line.
+   */
+  dynastyStreak: number;
 }
 
 /** Picked-up by the player as a "monarchName" change broadcast. */
@@ -45,6 +52,7 @@ export class Succession {
     generation: 1,
     reignStartDay: 1,
     lastCheckedDay: 0,
+    dynastyStreak: 0,
   };
 
   /** Listeners — App.tsx subscribes to update identity/HUD/save. */
@@ -55,6 +63,22 @@ export class Succession {
   subscribe(fn: (ev: SuccessionEvent) => void): () => void {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
+  }
+
+  /**
+   * Broadcast a succession event to all subscribers. Called by the Usurper
+   * and Uprising systems when they install a new monarch, so the HUD and
+   * identity store update to the new name without coupling those systems
+   * directly to the store.
+   */
+  announceSuccession(ev: SuccessionEvent): void {
+    for (const fn of this.listeners) {
+      try {
+        fn(ev);
+      } catch (err) {
+        console.warn("[Succession] listener threw", err);
+      }
+    }
   }
 
   /** Called from World.tick once per sim tick — runs lazily on day change. */
@@ -140,6 +164,8 @@ export class Succession {
     const reignDuration = this.world.state.day - this.state.reignStartDay;
     this.state.generation += 1;
     this.state.reignStartDay = this.world.state.day;
+    // Natural succession extends the unbroken dynasty line.
+    this.state.dynastyStreak += 1;
 
     // Journal a multi-line milestone
     this.journal.write(
@@ -151,19 +177,13 @@ export class Succession {
       "milestone",
     );
 
-    // Notify listeners
-    for (const fn of this.listeners) {
-      try {
-        fn({
-          oldName,
-          newName: heirName,
-          generation: this.state.generation,
-          reignDurationDays: reignDuration,
-        });
-      } catch (err) {
-        console.warn("[Succession] listener threw", err);
-      }
-    }
+    // Notify listeners (HUD, identity store).
+    this.announceSuccession({
+      oldName,
+      newName: heirName,
+      generation: this.state.generation,
+      reignDurationDays: reignDuration,
+    });
   }
 
   private pickHeir(monarch: NPC): NPC | null {
