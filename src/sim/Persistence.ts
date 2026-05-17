@@ -54,6 +54,8 @@ export interface SaveData {
   succession?: { generation: number; reignStartDay: number; dynastyStreak?: number };
   /** Kingdom reputation score (-10..10). */
   reputation?: number;
+  /** Faction loyalty scores. */
+  factions?: { merchants: number; scholars: number; guard: number };
   /** LifeCycle system: which NPCs have come of age, retired, or formed bonds. */
   lifeCycle?: {
     cameOfAgeIds: string[];
@@ -259,6 +261,7 @@ export function serialize(
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
     lifeCycle: world.lifeCycle.snapshot(),
+    factions: world.factions.snapshot(),
   };
 }
 
@@ -474,11 +477,19 @@ export function validateSave(rawInput: unknown): SaveData | null {
     edicts: validateEdicts(raw.edicts),
     usurper: validateUsurper(raw.usurper),
     uprising: validateUprising(raw.uprising),
+    factions: validateFactions(raw.factions),
     reputation: typeof raw.reputation === "number" && Number.isFinite(raw.reputation)
       ? Math.max(-10, Math.min(10, Math.round(raw.reputation as number)))
       : undefined,
     lifeCycle: validateLifeCycle(raw.lifeCycle),
   };
+}
+
+function validateFactions(raw: unknown): SaveData["factions"] {
+  if (!isPlainObject(raw)) return undefined;
+  const c = (v: unknown) =>
+    typeof v === "number" && isFinite(v) ? Math.max(-10, Math.min(10, v)) : 0;
+  return { merchants: c(raw.merchants), scholars: c(raw.scholars), guard: c(raw.guard) };
 }
 
 function validateLifeCycle(raw: unknown): SaveData["lifeCycle"] {
@@ -829,6 +840,7 @@ export function applySave(world: World, save: SaveData): void {
   // Restore reputation and lifecycle progression.
   if (save.reputation !== undefined) world.reputation.hydrate(save.reputation);
   if (save.lifeCycle) world.lifeCycle.hydrate(save.lifeCycle);
+  if (save.factions) world.factions.hydrate(save.factions);
 
   writeWelcomeBack(world, save);
 }

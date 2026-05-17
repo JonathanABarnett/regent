@@ -36,6 +36,7 @@ import { Usurper } from "./systems/Usurper";
 import { Uprising } from "./systems/Uprising";
 import { LifeCycle } from "./systems/LifeCycle";
 import { Reputation } from "./systems/Reputation";
+import { Factions } from "./systems/Factions";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -199,6 +200,7 @@ export class World {
   readonly uprising: Uprising;
   readonly lifeCycle: LifeCycle;
   readonly reputation: Reputation;
+  readonly factions: Factions;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -246,6 +248,10 @@ export class World {
 
   /** rng dedicated to gameplay decisions */
   private rand: () => number;
+  /** Previous frame's weather — used to detect storm-end transitions. */
+  private _lastWeatherKind: import("./types").WeatherKind = "clear";
+  /** Last in-world day a storm consequence fired — enforces min gap. */
+  private _lastStormConsequenceDay = -99;
 
   /** sim ticks per second */
   readonly tickRate = 10;
@@ -283,6 +289,7 @@ export class World {
     this.uprising = new Uprising(this, this.journal, this.rand);
     this.reputation = new Reputation();
     this.lifeCycle = new LifeCycle(this, this.journal, this.rand);
+    this.factions = new Factions(this, this.journal);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -343,6 +350,8 @@ export class World {
       this.uprising.tick();
       // Generational progression: coming-of-age, retirement, bonds.
       this.lifeCycle.tick();
+      // Faction loyalty auto-adjustment and passive effects.
+      this.factions.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {
@@ -371,7 +380,12 @@ export class World {
       proposeNameAStar(this, this.journal, this.rand);
     }
     this.weather.tick(dt, this.state.time);
+    const prevWeather = this._lastWeatherKind;
     this.state.weather = this.weather.current;
+    this._lastWeatherKind = this.state.weather;
+    if (prevWeather === "storm" && this.state.weather !== "storm") {
+      this._onStormPassed();
+    }
     this.lifeEvents.tick();
     this.quests.tick();
     this.decisions.tick(Date.now());
@@ -670,6 +684,25 @@ export class World {
           if (path && path.length > 0) {
             npc.path = path;
             npc.activity = "walking";
+            // Couple walking: if this NPC has a partner who is idle and
+            // would head to the same destination, start them together.
+            if (npc.partnerId) {
+              const partner = this.npcs.find((p) => p.id === npc.partnerId);
+              if (
+                partner &&
+                partner.activity !== "walking" &&
+                partner.path.length === 0
+              ) {
+                const partnerDestId = preferredDestination(partner, band, this.map);
+                if (partnerDestId === destId) {
+                  // Give partner the same path; slight timer offset keeps
+                  // them from perfectly overlapping while still walking together.
+                  partner.path = path.map((p) => ({ ...p }));
+                  partner.activity = "walking";
+                  partner.activityTimer = 0;
+                }
+              }
+            }
           } else {
             // wander locally
             npc.activity = "idle";
@@ -823,6 +856,20 @@ export class World {
           durationMs: ev.duration_ms ?? 12_000,
           label: ev.payload.label,
         });
+        // 15% chance of a named weapon emerging from the forge.
+        if (this.rand() < 0.15) {
+          const forgeStructId = ev.payload.structure ?? "ironhearth";
+          const smith = this.npcs.find(
+            (n) => n.role === "blacksmith" && n.workId === forgeStructId,
+          ) ?? this.npcs.find((n) => n.role === "blacksmith");
+          const forgeName = this.map.structures.find((s) => s.id === forgeStructId)?.name
+            ?? "the forge";
+          const smithName = smith?.name ?? "the smith";
+          this.treasury.acquire(
+            "weapon",
+            `forged by ${smithName} at ${forgeName}`,
+          );
+        }
         break;
       case "research":
         this.spawnEffect({
@@ -1023,6 +1070,80 @@ export class World {
         }
         break;
       }
+    }
+  }
+
+  private _onStormPassed(): void {
+    const day = this.state.day;
+    if (day - this._lastStormConsequenceDay < 7) return;
+    if (this.rand() >= 0.35) return;
+    this._lastStormConsequenceDay = day;
+
+    const castle = this.map.structures.find((s) => s.kind === "castle");
+    const towns = this.map.structures.filter((s) => s.kind === "town");
+    const town = towns[Math.floor(this.rand() * Math.max(1, towns.length))];
+    const roll = this.rand();
+
+    if (roll < 0.33) {
+      // Flood damage — decision to repair or absorb loss.
+      const damage = 20;
+      this.economy.state.gold = Math.max(0, this.economy.state.gold - damage);
+      this.journal.write(
+        `The storm passed, but the lowlands flooded. ${damage} gold was lost from the treasury before the water receded.`,
+        "weather",
+        town?.id,
+      );
+      const expiresAt = Date.now() + 90_000;
+      this.decisions.propose({
+        id: `storm_flood_${day}`,
+        title: "Flood damage — assess and respond",
+        body: "The storm left flooding in its wake. Spend 15 gold on emergency repairs, or leave things to dry on their own.",
+        expiresAt,
+        defaultOnExpire: true,
+        options: [
+          {
+            id: "repair",
+            label: "Fund emergency repairs (15 gold)",
+            onChoose: (w) => {
+              w.economy.state.gold = Math.max(0, w.economy.state.gold - 15);
+              w.reputation.adjust(1);
+              w.journal.write(
+                `Repair crews were sent to the flooded streets. The work took three days, cost 15 gold, and left the town drier than before the storm.`,
+                "milestone",
+                town?.id,
+              );
+            },
+          },
+          {
+            id: "accept",
+            label: "Let it dry on its own",
+            onChoose: (w) => {
+              w.journal.write(
+                `The flood damage was left to resolve itself. It mostly did, over a week. The townspeople noted the crown's silence.`,
+                "event",
+                town?.id,
+              );
+            },
+          },
+        ],
+      });
+    } else if (roll < 0.66) {
+      // Road blocked — small immediate gold penalty.
+      const loss = 10;
+      this.economy.state.gold = Math.max(0, this.economy.state.gold - loss);
+      this.journal.write(
+        `The storm knocked down a section of the south road. Trade slowed while the crew cleared it. The treasury absorbed ${loss} gold in lost commerce.`,
+        "weather",
+        castle?.id,
+      );
+    } else {
+      // Windfall — something washed up.
+      this.journal.write(
+        `The storm left something behind. A sealed crate, unmarked, was found at the river bend where the water receded. No one came to claim it.`,
+        "milestone",
+        town?.id,
+      );
+      this.treasury.acquire("treasure", "found at the river bend after the storm");
     }
   }
 

@@ -20,6 +20,7 @@
 import type { World } from "../World";
 import type { Journal } from "./Journal";
 import { generateName } from "./Names";
+import { writeMonarchLegacy } from "./MonarchLegacy";
 
 export interface UsurperState {
   /** A challenge is in progress and waiting on the player (or lapsing). */
@@ -297,9 +298,14 @@ export class Usurper {
     // Usurper takeover breaks the dynasty streak.
     w.succession.state.dynastyStreak = 0;
 
+    // Write the legacy scroll for the outgoing monarch.
+    writeMonarchLegacy(
+      w, oldName, reignDuration,
+      w.state.year - Math.max(1, Math.floor(reignDuration / 56)),
+      "usurper",
+    );
     w.journal.write(
-      `${oldName} stepped down. ${title} ${claimantName} took the throne — ` +
-        `not by lineage, but by will. A new line begins.`,
+      `${title} ${claimantName} took the throne — not by lineage, but by will. A new line begins.`,
       "milestone",
       castleId,
     );

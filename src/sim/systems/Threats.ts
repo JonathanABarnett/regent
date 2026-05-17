@@ -108,10 +108,11 @@ export class Threats {
   tick(): void {
     const day = this.world.state.day;
     if (day - this.lastFiredDay < this.minDaysBetween) return;
-    // Captain seated → 60% reduction in threat chance
-    const chance = this.world.courtEffects.captainSeated
+    // Captain seated → 60% reduction; Guard faction pleased → 15% reduction
+    let chance = this.world.courtEffects.captainSeated
       ? this.baseChance * 0.4
       : this.baseChance;
+    if (this.world.factions.guardBonus) chance *= 0.85;
     if (this.rand() >= chance) return;
 
     // Pick a flavor + target town. The flavor object now carries a small pool

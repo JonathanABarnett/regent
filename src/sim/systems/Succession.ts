@@ -19,6 +19,7 @@ import type { World } from "../World";
 import type { Journal } from "./Journal";
 import type { NPC } from "../types";
 import { generateName } from "./Names";
+import { writeMonarchLegacy } from "./MonarchLegacy";
 
 const MONARCH_DEATH_AGE = 80;
 const SUCCESSION_CHECK_DAYS = 1; // check once per in-world day
@@ -167,11 +168,15 @@ export class Succession {
     // Natural succession extends the unbroken dynasty line.
     this.state.dynastyStreak += 1;
 
-    // Journal a multi-line milestone
-    this.journal.write(
-      `${oldName} passed peacefully at the age of ${Math.floor(monarch.age ?? 80)}. The kingdom mourns ${reignDuration} days of their reign.`,
-      "milestone",
+    // Legacy scroll — chronicles the full reign before announcing the successor.
+    writeMonarchLegacy(
+      this.world,
+      oldName,
+      reignDuration,
+      this.world.state.year - Math.max(1, Math.floor(reignDuration / 56)),
+      "natural",
     );
+
     this.journal.write(
       `${heirName} ascends the throne — the ${ordinal(this.state.generation)} of the line.`,
       "milestone",

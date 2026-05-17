@@ -40,12 +40,14 @@ export function SettingsPanel({
   onOpenCreator,
   onOpenPetCreator,
   onOpenKingdomCard,
+  onOpenChronicle,
 }: {
   open: boolean;
   onClose: () => void;
   onOpenCreator: () => void;
   onOpenPetCreator: () => void;
   onOpenKingdomCard: () => void;
+  onOpenChronicle: () => void;
 }) {
   const settings = useGameStore((s) => s.settings);
   const setCrt = useGameStore((s) => s.setCrt);
@@ -175,6 +177,14 @@ export function SettingsPanel({
             disabled={!identity}
           >
             Share kingdom (card)
+          </button>
+          <button
+            onClick={onOpenChronicle}
+            style={{ marginTop: 8, width: "100%" }}
+            title="View the auto-generated prose history of your kingdom"
+            disabled={!identity}
+          >
+            📜 Kingdom Chronicle
           </button>
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
             <button

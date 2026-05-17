@@ -31,6 +31,7 @@
 import type { World } from "../World";
 import type { Journal } from "./Journal";
 import { generateName } from "./Names";
+import { writeMonarchLegacy } from "./MonarchLegacy";
 
 export interface UprisingState {
   /** An uprising is in progress and awaiting player resolution. */
@@ -289,9 +290,13 @@ export class Uprising {
     // Uprising takeover breaks the dynasty streak.
     w.succession.state.dynastyStreak = 0;
 
+    writeMonarchLegacy(
+      w, oldName, reignDuration,
+      w.state.year - Math.max(1, Math.floor(reignDuration / 56)),
+      "uprising",
+    );
     w.journal.write(
-      `${oldName} stepped down as the crowd filled the courtyard. ` +
-        `${agitatorName}, of common stock and uncommon conviction, took the throne. ` +
+      `${agitatorName}, of common stock and uncommon conviction, took the throne as the crowd filled the courtyard. ` +
         `The kingdom's ${ordinal(w.succession.state.generation)} monarch — the first of the people's line.`,
       "milestone",
       castleId,

@@ -27,6 +27,7 @@ import {
 } from "./sim/events/EventMapper";
 import type { Structure } from "./sim/types";
 import { NPCProfilePanel } from "./ui/NPCProfilePanel";
+import { KingdomChronicle } from "./ui/KingdomChronicle";
 import { OnboardingModal } from "./ui/OnboardingModal";
 import { TitleScreen } from "./ui/TitleScreen";
 import { CharacterCreator } from "./ui/CharacterCreator";
@@ -86,6 +87,7 @@ export function App() {
   const [statsOpen, setStatsOpen] = useState(false);
   const [profileNpcId, setProfileNpcId] = useState<string | null>(null);
   const [kingdomCardOpen, setKingdomCardOpen] = useState(false);
+  const [chronicleOpen, setChronicleOpen] = useState(false);
   // Show the title screen on first paint. Dismissed by Continue / New / etc.
   const [titleOpen, setTitleOpen] = useState(true);
   // Detect "has a saved kingdom" once on mount.
@@ -728,6 +730,53 @@ export function App() {
       // 3) Empty click → resume autopilot drift
       pixi.camera.enableAutopilot();
     };
+    // ── Pinch-to-zoom (touch) ─────────────────────────────────────────────
+    // Tracks two active touch points; when both are down we compute pinch
+    // distance and map it to camera zoom, bypassing the single-finger drag.
+    const activeTouches = new Map<number, { x: number; y: number }>();
+    let pinchBaseDist = 0;
+    let pinchBaseZoom = 1;
+
+    const onTouchStart = (ev: TouchEvent) => {
+      for (const t of Array.from(ev.changedTouches)) {
+        activeTouches.set(t.identifier, { x: t.clientX, y: t.clientY });
+      }
+      if (activeTouches.size === 2) {
+        const [a, b] = [...activeTouches.values()];
+        pinchBaseDist = Math.hypot(b.x - a.x, b.y - a.y);
+        pinchBaseZoom = pixiRef.current?.camera.zoom ?? 2;
+        // Suppress pointer drag while pinching.
+        dragging = false;
+      }
+    };
+
+    const onTouchMove = (ev: TouchEvent) => {
+      for (const t of Array.from(ev.changedTouches)) {
+        activeTouches.set(t.identifier, { x: t.clientX, y: t.clientY });
+      }
+      if (activeTouches.size === 2) {
+        ev.preventDefault();
+        const [a, b] = [...activeTouches.values()];
+        const dist = Math.hypot(b.x - a.x, b.y - a.y);
+        const factor = dist / Math.max(1, pinchBaseDist);
+        const cam = pixiRef.current?.camera;
+        if (cam) {
+          cam.zoom = Math.max(cam.minZoom, Math.min(cam.maxZoom, pinchBaseZoom * factor));
+        }
+      }
+    };
+
+    const onTouchEnd = (ev: TouchEvent) => {
+      for (const t of Array.from(ev.changedTouches)) {
+        activeTouches.delete(t.identifier);
+      }
+    };
+
+    canvasParent.addEventListener("touchstart", onTouchStart, { passive: false });
+    canvasParent.addEventListener("touchmove", onTouchMove, { passive: false });
+    canvasParent.addEventListener("touchend", onTouchEnd);
+    canvasParent.addEventListener("touchcancel", onTouchEnd);
+
     canvasParent.addEventListener("click", handler);
     canvasParent.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointermove", onPointerMove);
@@ -736,6 +785,10 @@ export function App() {
     canvasParent.addEventListener("wheel", onWheel, { passive: false });
     return () => {
       cancelInertia();
+      canvasParent.removeEventListener("touchstart", onTouchStart);
+      canvasParent.removeEventListener("touchmove", onTouchMove);
+      canvasParent.removeEventListener("touchend", onTouchEnd);
+      canvasParent.removeEventListener("touchcancel", onTouchEnd);
       canvasParent.removeEventListener("click", handler);
       canvasParent.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);
@@ -858,11 +911,20 @@ export function App() {
           setSettingsOpen(false);
           setKingdomCardOpen(true);
         }}
+        onOpenChronicle={() => {
+          setSettingsOpen(false);
+          setChronicleOpen(true);
+        }}
       />
       <KingdomCard
         world={worldRef.current}
         open={kingdomCardOpen && !streamerMode}
         onClose={() => setKingdomCardOpen(false)}
+      />
+      <KingdomChronicle
+        open={chronicleOpen && !streamerMode}
+        onClose={() => setChronicleOpen(false)}
+        getWorld={() => worldRef.current}
       />
       <JournalPanel
         open={journalOpen && !streamerMode}
@@ -912,7 +974,7 @@ export function App() {
       <PerformanceHUD getWorld={() => worldRef.current} />
       {!streamerMode && <TutorialHints />}
       <StreamerOverlay />
-      <AchievementToast />
+      <AchievementToast onOpenJournal={() => setJournalOpen(true)} />
       {!streamerMode && (
         <NpcInspect
           getCanvas={() => containerRef.current?.querySelector("canvas") ?? null}

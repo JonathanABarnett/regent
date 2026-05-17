@@ -1,14 +1,24 @@
 import type { OverworldMap } from "../sim/Map";
 
+export interface CinematicPOI {
+  x: number;
+  y: number;
+  /** 0 = low-priority structure drift, 10 = urgent dramatic event */
+  priority: number;
+  label?: string;
+}
+
 /**
- * Smooth camera with autopilot that drifts between landmarks when idle.
+ * Smooth camera with priority-based cinematic autopilot that drifts to
+ * interesting points of interest when the user is idle.
+ *
  * The camera operates in tile-space; pixel scaling is applied by the renderer.
  */
 export class Camera {
   /** tile-space position of the camera center */
   x: number;
   y: number;
-  zoom = 2; // integer multiplier on top of TILE_SIZE — 2 means each 32px tile shows at 64 logical pixels
+  zoom = 2;
   minZoom = 1;
   maxZoom = 4;
   private targetX: number;
@@ -19,6 +29,8 @@ export class Camera {
   private currentTarget: { x: number; y: number } | null = null;
   /** When set, camera tracks this provider every tick instead of using a fixed target. */
   private follow: (() => { x: number; y: number } | null) | null = null;
+  /** Cinematic POI list supplied by PixiApp each frame. */
+  private pois: CinematicPOI[] = [];
 
   constructor(private map: OverworldMap, start: { x: number; y: number }) {
     this.x = start.x;
@@ -97,6 +109,14 @@ export class Camera {
     this.y += (this.targetY - this.y) * k;
   }
 
+  /**
+   * Supply the cinematic POI list for the autopilot to choose from.
+   * PixiApp calls this each frame with world-derived interesting spots.
+   */
+  setCinematicPOIs(pois: CinematicPOI[]): void {
+    this.pois = pois;
+  }
+
   private autopilotTick(dt: number) {
     if (this.autopilotPause > 0) {
       this.autopilotPause -= dt;
@@ -106,16 +126,41 @@ export class Camera {
       this.currentTarget &&
       Math.hypot(this.targetX - this.x, this.targetY - this.y) < 1;
     if (!this.currentTarget || reached) {
-      const structures = this.map.structures;
-      if (structures.length === 0) return;
-      const next = structures[Math.floor(Math.random() * structures.length)];
-      const cx = next.pos.x + Math.floor(next.size.x / 2);
-      const cy = next.pos.y + Math.floor(next.size.y / 2);
-      this.currentTarget = { x: cx, y: cy };
-      this.targetX = cx;
-      this.targetY = cy;
-      this.autopilotPause = 6 + Math.random() * 6;
+      // Choose next POI: prioritise highest-priority POIs but add a small
+      // random weight so the camera doesn't always loop through the same path.
+      const candidate = this._pickNextPOI();
+      if (!candidate) return;
+      this.currentTarget = { x: candidate.x, y: candidate.y };
+      this.targetX = candidate.x;
+      this.targetY = candidate.y;
+      // High-priority POIs get longer pauses (dramatic events deserve the stage).
+      const basePause = candidate.priority >= 7 ? 10 : candidate.priority >= 4 ? 7 : 5;
+      this.autopilotPause = basePause + Math.random() * 5;
     }
     this.autopilotIdle += dt;
   }
+
+  private _pickNextPOI(): CinematicPOI | null {
+    const pool = this.pois.length > 0 ? this.pois : this._defaultPOIs();
+    if (pool.length === 0) return null;
+
+    // Weighted random: weight = priority + 1 so even priority-0 items get picked.
+    const totalWeight = pool.reduce((s, p) => s + p.priority + 1, 0);
+    let r = Math.random() * totalWeight;
+    for (const poi of pool) {
+      r -= poi.priority + 1;
+      if (r <= 0) return poi;
+    }
+    return pool[pool.length - 1];
+  }
+
+  private _defaultPOIs(): CinematicPOI[] {
+    return this.map.structures.map((s) => ({
+      x: s.pos.x + Math.floor(s.size.x / 2),
+      y: s.pos.y + Math.floor(s.size.y / 2),
+      priority: s.kind === "castle" ? 3 : s.kind === "forge" ? 2 : 1,
+      label: s.name,
+    }));
+  }
 }
+

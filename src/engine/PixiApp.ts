@@ -4,6 +4,7 @@ import {
   ColorMatrixFilter,
 } from "pixi.js";
 import type { World } from "../sim/World";
+import type { CinematicPOI } from "./Camera";
 import { SpriteFactory } from "./SpriteFactory";
 import { TileRenderer } from "./TileRenderer";
 import { Camera } from "./Camera";
@@ -140,6 +141,60 @@ export class PixiApp {
     this.crtOverlay.setVisible(enabled);
   }
 
+  private _buildCinematicPOIs(): CinematicPOI[] {
+    const world = this.opts.world;
+    const pois: CinematicPOI[] = [];
+
+    // Active effects get highest priority — festivals, forge fire, etc.
+    for (const fx of world.effects) {
+      const struct = fx.structureId
+        ? world.map.structures.find((s) => s.id === fx.structureId)
+        : null;
+      if (struct) {
+        const priority =
+          fx.kind === "festival" ? 9 :
+          fx.kind === "celebration" ? 8 :
+          fx.kind === "forge" ? 6 :
+          fx.kind === "monster" ? 7 : 5;
+        pois.push({
+          x: struct.pos.x + struct.size.x / 2,
+          y: struct.pos.y + struct.size.y / 2,
+          priority,
+          label: fx.label ?? fx.kind,
+        });
+      }
+    }
+
+    // Monarch NPC — always worth watching.
+    const monarch = world.npcs.find((n) => n.role === "monarch");
+    if (monarch) {
+      pois.push({ x: monarch.pos.x, y: monarch.pos.y, priority: 4, label: monarch.name });
+    }
+
+    // Active couriers in transit.
+    for (const c of world.couriers) {
+      pois.push({ x: c.pos.x, y: c.pos.y, priority: 3, label: c.label });
+    }
+
+    // Fallback to structures if no active events.
+    if (pois.length === 0) {
+      for (const s of world.map.structures) {
+        const p =
+          s.kind === "castle" ? 3 :
+          s.kind === "forge"  ? 2 :
+          s.kind === "library" || s.kind === "mine" ? 2 : 1;
+        pois.push({
+          x: s.pos.x + Math.floor(s.size.x / 2),
+          y: s.pos.y + Math.floor(s.size.y / 2),
+          priority: p,
+          label: s.name,
+        });
+      }
+    }
+
+    return pois;
+  }
+
   destroy() {
     if (this.destroyed) return;
     this.destroyed = true;
@@ -241,5 +296,9 @@ export class PixiApp {
     // Parallax: slow scroll + dynamic sky (stars, moon, horizon glow).
     this.parallax.container.x = -this.camera.x * 4;
     this.parallax.update(hour, simTime);
+
+    // Feed cinematic POIs to the camera autopilot so it gravitates toward
+    // active effects (festivals, forge, weddings) rather than random structures.
+    this.camera.setCinematicPOIs(this._buildCinematicPOIs());
   }
 }

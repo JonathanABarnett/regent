@@ -1,17 +1,109 @@
+/**
+ * Achievement Toast — improved version.
+ *
+ * Upgrades from the original single-icon version:
+ *   - Kind-specific icon based on achievement id category
+ *   - Richer slide-in animation (from bottom-right)
+ *   - "View in journal" button that opens the journal panel
+ *   - Auto-dismiss after 6 seconds; click anywhere to dismiss early
+ *   - Hidden achievements show "???" title until revealed
+ */
+
+import { useEffect, useRef } from "react";
 import { useGameStore } from "../store/useGameStore";
 
-export function AchievementToast() {
+/** Map achievement id prefixes/keywords to a visual icon. */
+function achievementIcon(id: string): string {
+  if (id.startsWith("hidden_")) return "✧";
+  if (id.includes("dynasty") || id.includes("generation") || id.includes("succession")) return "♛";
+  if (id.includes("marriage") || id.includes("birth") || id.includes("life") || id.includes("couple")) return "❤";
+  if (id.includes("vault") || id.includes("artifact") || id.includes("relic")) return "◆";
+  if (id.includes("year") || id.includes("day")) return "⏳";
+  if (id.includes("pop") || id.includes("capital")) return "⚑";
+  if (id.includes("usurper") || id.includes("uprising") || id.includes("repel")) return "⚔";
+  if (id.includes("building") || id.includes("construct") || id.includes("tower")) return "⌂";
+  if (id.includes("forge") || id.includes("smith") || id.includes("iron")) return "🔥";
+  if (id.includes("scholar") || id.includes("library") || id.includes("tome")) return "📖";
+  if (id.includes("threat") || id.includes("guard") || id.includes("beast")) return "🛡";
+  if (id.includes("beloved") || id.includes("reputation")) return "☆";
+  if (id.includes("courier") || id.includes("message")) return "✉";
+  return "✦";
+}
+
+/** Category-keyed CSS class for the toast border/glow color. */
+function toastCategory(id: string): string {
+  if (id.startsWith("hidden_")) return "hidden";
+  if (id.includes("dynasty") || id.includes("succession")) return "dynasty";
+  if (id.includes("usurper") || id.includes("uprising") || id.includes("repel")) return "combat";
+  if (id.includes("marriage") || id.includes("birth") || id.includes("life")) return "life";
+  if (id.includes("vault") || id.includes("artifact")) return "vault";
+  if (id.includes("year") || id.includes("day")) return "time";
+  return "default";
+}
+
+export function AchievementToast({
+  onOpenJournal,
+}: {
+  onOpenJournal?: () => void;
+}) {
   const toast = useGameStore((s) => s.achievementToast);
   const dismiss = useGameStore((s) => s.dismissAchievementToast);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-dismiss after 6 seconds.
+  useEffect(() => {
+    if (!toast) return;
+    timerRef.current = setTimeout(dismiss, 6000);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [toast, dismiss]);
+
   if (!toast) return null;
+
+  const isHidden = toast.id.startsWith("hidden_");
+  const icon = achievementIcon(toast.id);
+  const category = toastCategory(toast.id);
+
+  const handleViewInJournal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    dismiss();
+    onOpenJournal?.();
+  };
+
   return (
-    <div className="achievement-toast" onClick={dismiss}>
-      <div className="ach-icon">✦</div>
+    <div
+      className={`achievement-toast ach-cat-${category}`}
+      onClick={dismiss}
+      role="status"
+      aria-live="polite"
+      aria-label={`Achievement unlocked: ${toast.title}`}
+    >
+      <div className="ach-icon" aria-hidden="true">{icon}</div>
       <div className="ach-body">
-        <div className="ach-title">Achievement unlocked</div>
-        <div className="ach-name">{toast.title}</div>
+        <div className="ach-label">
+          {isHidden ? "Secret achievement unlocked" : "Achievement unlocked"}
+        </div>
+        <div className="ach-title">{toast.title}</div>
         <div className="ach-desc">{toast.description}</div>
+        {onOpenJournal && (
+          <button
+            className="ach-journal-btn"
+            onClick={handleViewInJournal}
+            title="View this moment in the kingdom journal"
+          >
+            View in journal →
+          </button>
+        )}
       </div>
+      <button
+        className="ach-dismiss"
+        onClick={dismiss}
+        aria-label="Dismiss achievement"
+        tabIndex={-1}
+      >
+        ×
+      </button>
     </div>
   );
 }
