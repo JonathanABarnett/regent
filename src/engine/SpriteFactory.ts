@@ -1320,23 +1320,39 @@ export class SpriteFactory {
 
   private buildRainDrop(): Texture {
     const g = new Graphics();
-    g.rect(0, 0, 1, 4).fill("#93c5fd");
+    // Raindrop with a slight gradient — bright head, dimmer trail. Reads
+    // as motion-blurred rain instead of a uniform stripe.
+    g.rect(0, 0, 1, 1).fill({ color: "#dbeafe", alpha: 0.95 });
+    g.rect(0, 1, 1, 1).fill({ color: "#93c5fd", alpha: 0.85 });
+    g.rect(0, 2, 1, 1).fill({ color: "#60a5fa", alpha: 0.7 });
+    g.rect(0, 3, 1, 1).fill({ color: "#3b82f6", alpha: 0.5 });
     return this.rt(g, 1, 4);
   }
   private buildSnowflake(): Texture {
     const g = new Graphics();
-    g.rect(0, 0, 2, 2).fill("#ffffff");
-    return this.rt(g, 2, 2);
+    // Tiny crystal — center pixel + four arms, with a faint glow halo.
+    // At sprite-scale this reads as "snowflake" not "white block".
+    g.rect(1, 1, 1, 1).fill({ color: "#ffffff", alpha: 0.25 });
+    g.rect(0, 1, 3, 1).fill({ color: "#ffffff", alpha: 0.9 });
+    g.rect(1, 0, 1, 3).fill({ color: "#ffffff", alpha: 0.9 });
+    return this.rt(g, 3, 3);
   }
   private buildSpark(): Texture {
     const g = new Graphics();
-    g.rect(0, 0, 2, 2).fill("#fde047");
-    return this.rt(g, 2, 2);
+    // Cross-shaped spark with a hot core — reads as ember, not as a block
+    g.rect(1, 0, 1, 3).fill({ color: "#fde047", alpha: 0.95 });
+    g.rect(0, 1, 3, 1).fill({ color: "#fde047", alpha: 0.95 });
+    g.rect(1, 1, 1, 1).fill("#fff7ed");
+    return this.rt(g, 3, 3);
   }
   private buildSmoke(): Texture {
     const g = new Graphics();
-    g.circle(3, 3, 3).fill({ color: "#a8a29e", alpha: 0.7 });
-    return this.rt(g, 6, 6);
+    // 3-stop smoke puff — outer warm haze, mid grey, dark core. Reads as
+    // a volumetric puff instead of a flat circle as it scales up.
+    g.circle(4, 4, 4).fill({ color: "#d6d3d1", alpha: 0.18 });
+    g.circle(4, 4, 3).fill({ color: "#a8a29e", alpha: 0.55 });
+    g.circle(4, 4, 2).fill({ color: "#78716c", alpha: 0.7 });
+    return this.rt(g, 8, 8);
   }
   private buildFirework(): Texture {
     const g = new Graphics();
@@ -1347,9 +1363,16 @@ export class SpriteFactory {
   private buildCloud(): Texture {
     const W = 64, H = 24;
     const g = new Graphics();
-    g.ellipse(20, 14, 18, 8).fill({ color: "#ffffff", alpha: 0.55 });
-    g.ellipse(40, 12, 22, 10).fill({ color: "#ffffff", alpha: 0.55 });
-    g.ellipse(50, 16, 14, 6).fill({ color: "#ffffff", alpha: 0.55 });
+    // Layered cloud — back layer is a soft blue-grey shadow, mid layer is
+    // white, front edge is a thin bright highlight. Gives a 3-tone roundness
+    // a single flat ellipse can't carry.
+    g.ellipse(22, 16, 20, 9).fill({ color: "#94a3b8", alpha: 0.32 });
+    g.ellipse(42, 14, 22, 10).fill({ color: "#94a3b8", alpha: 0.32 });
+    g.ellipse(20, 14, 18, 8).fill({ color: "#ffffff", alpha: 0.6 });
+    g.ellipse(40, 12, 22, 10).fill({ color: "#ffffff", alpha: 0.6 });
+    g.ellipse(50, 16, 14, 6).fill({ color: "#ffffff", alpha: 0.6 });
+    // bright top edge — implicit sun
+    g.ellipse(40, 10, 18, 3).fill({ color: "#fef3c7", alpha: 0.32 });
     return this.rt(g, W, H);
   }
 }

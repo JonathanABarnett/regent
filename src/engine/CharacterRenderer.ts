@@ -135,6 +135,16 @@ export function drawCharacter(
   // eyes
   drawEyes(surface, spec, body);
 
+  // Mouth — a single 2px dark line at the natural face spot. Skipped when
+  // a beard is going to cover this row anyway. The line varies by frame
+  // index for a subtle "talking" feel (open/closed every other frame).
+  if (!spec.beard) {
+    const mouthY = 13;
+    const mouthX = body.headLeft + Math.floor(body.headWidth / 2) - 1;
+    const mouthShadow = darken(SKIN_PALETTE[spec.skinTone], 0.45);
+    surface.rect(mouthX, mouthY, 2, 1, mouthShadow);
+  }
+
   // beard
   if (spec.beard) {
     surface.rect(body.headLeft + 1, 12, body.headWidth - 2, 2, spec.hairColor);
@@ -339,6 +349,15 @@ function drawEyes(surface: DrawSurface, spec: CharacterSpec, body: BodyMetrics) 
     default:
       surface.rect(leftEye, 10, 2, 2, spec.eyeColor);
       surface.rect(rightEye, 10, 2, 2, spec.eyeColor);
+      // Eye catchlight — one bright pixel inside each eye block. Tiny,
+      // but it's the single most face-making change in pixel-art portrait
+      // work. Upper-left light source means upper-left of the eye.
+      surface.rectAlpha(leftEye, 10, 1, 1, "#ffffff", 0.85);
+      surface.rectAlpha(rightEye, 10, 1, 1, "#ffffff", 0.85);
+      // Soft cheek shadow under each eye — gives the face a hint of brow.
+      const skinShadow = darken(SKIN_PALETTE[spec.skinTone], 0.22);
+      surface.rect(leftEye, 12, 2, 1, skinShadow);
+      surface.rect(rightEye, 12, 2, 1, skinShadow);
       break;
   }
 }
