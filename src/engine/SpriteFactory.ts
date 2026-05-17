@@ -250,18 +250,41 @@ export class SpriteFactory {
       // tree
       const tx = 8 + variant * 4;
       const ty = 6;
-      // trunk
-      g.rect(tx + 6, ty + 12, 4, 8).fill(edge);
-      // crown
+      // trunk — darkened further so the silhouette survives night tint
+      const trunk = "#3c1f0a";
+      g.rect(tx + 6, ty + 12, 4, 8).fill(trunk);
+      // crown — main mass + side bushes + top crest. We push a bright
+      // accent pixel cluster so the green stays distinguishable from the
+      // trunk under heavy color-multiplier tinting.
       g.rect(tx + 2, ty, 12, 12).fill(c1);
       g.rect(tx + 4, ty - 2, 8, 4).fill(c2);
       g.rect(tx, ty + 2, 4, 8).fill(c2);
       g.rect(tx + 12, ty + 2, 4, 8).fill(c2);
+      // Crown highlight crescent (upper-left, lit by implicit sun)
+      g.rect(tx + 3, ty + 1, 4, 1).fill(lightenHex(c2, 0.35));
+      g.rect(tx + 3, ty + 2, 2, 2).fill(lightenHex(c2, 0.35));
+      // Trunk highlight + base shadow
+      g.rect(tx + 6, ty + 12, 1, 8).fill(lightenHex(trunk, 0.25));
+      g.rect(tx + 5, ty + 19, 6, 1).fill("#000000");
     } else if (kind === "hill") {
       g.rect(0, 0, T, T).fill(base);
-      // mound highlight
-      for (let y = 0; y < 6; y++) {
-        g.rect(8 + y, 4 + y, 16 - y * 2, 1).fill(c1);
+      // Mound highlight — bigger, with a brighter crest row so it still
+      // reads as a hill after the night-palette tint multiplies it down.
+      for (let y = 0; y < 8; y++) {
+        g.rect(6 + y, 4 + y, 20 - y * 2, 1).fill(c1);
+      }
+      // Crest row — single brighter line at the top of the mound
+      g.rect(13, 4, 6, 1).fill(c2);
+      // A second smaller mound to the right, offset by variant
+      const m2x = 18 + variant;
+      g.rect(m2x, 18, 8, 4).fill(c1);
+      g.rect(m2x + 2, 17, 4, 1).fill(c2);
+      // Some grass speckle on the slopes — keeps the tile from looking
+      // like a flat color block
+      for (let i = 0; i < 12; i++) {
+        const x = Math.floor(rand() * T);
+        const y = Math.floor(rand() * T);
+        g.rect(x, y, 1, 1).fill(darkenHex(base, 0.08));
       }
     } else if (kind === "mountain") {
       g.rect(0, 0, T, T).fill(base);
