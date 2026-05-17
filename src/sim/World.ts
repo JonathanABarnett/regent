@@ -34,6 +34,8 @@ import { Discoveries } from "./systems/Discoveries";
 import { Edicts } from "./systems/Edicts";
 import { Usurper } from "./systems/Usurper";
 import { Uprising } from "./systems/Uprising";
+import { LifeCycle } from "./systems/LifeCycle";
+import { Reputation } from "./systems/Reputation";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -195,6 +197,8 @@ export class World {
   readonly edicts: Edicts;
   readonly usurper: Usurper;
   readonly uprising: Uprising;
+  readonly lifeCycle: LifeCycle;
+  readonly reputation: Reputation;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -277,6 +281,8 @@ export class World {
     this.edicts = new Edicts(this, this.journal);
     this.usurper = new Usurper(this, this.journal, this.rand);
     this.uprising = new Uprising(this, this.journal, this.rand);
+    this.reputation = new Reputation();
+    this.lifeCycle = new LifeCycle(this, this.journal, this.rand);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -335,6 +341,8 @@ export class World {
       // Political intrigue: usurper challenges and peasant uprisings.
       this.usurper.tick();
       this.uprising.tick();
+      // Generational progression: coming-of-age, retirement, bonds.
+      this.lifeCycle.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {
@@ -490,22 +498,47 @@ export class World {
    */
   private fireAnniversary(year: number) {
     const ordinal = ordinalSuffix(year - 1); // year 2 = 1st anniversary
-    const flavor =
-      ANNIVERSARY_LINES[(year - 2) % ANNIVERSARY_LINES.length] ?? ANNIVERSARY_LINES[0];
     const castle = this.map.structures.find((s) => s.kind === "castle");
-    this.journal.write(
-      `The ${ordinal} anniversary of the kingdom — ${flavor}`,
-      "milestone",
-      castle?.id,
-    );
+    const repPhrase = this.reputation.monarchPhrase();
+
+    // ── Landmark years get their own special text ──────────────────────────
+    const LANDMARK: Record<number, string> = {
+      5:  `Five years. A generation has grown up knowing only this kingdom — the ${repPhrase} who shaped it, the seasons it endured, and the names already written into the chronicle. That is not nothing.`,
+      10: `Ten years. The founding monarch's name has become part of how people here remember dates. Even those who never met them say "the year of the founding" as casually as they say "last harvest."`,
+      20: `Twenty years. The oldest buildings are old enough to have their own history. The newest have never known anything else. The kingdom is no longer new. It is simply what this place is.`,
+      50: `Fifty years. The chronicle fills shelves now. Somewhere in those pages is everyone who has ever lived here, everyone who has ever mattered to anyone who lived here. The ${repPhrase} looks out at a kingdom older than most people's grandparents.`,
+    };
+
+    let text: string;
+    if (LANDMARK[year - 1]) {
+      // Exact landmark year (year 6 = 5th anniversary, etc.)
+      text = LANDMARK[year - 1];
+    } else {
+      const flavor =
+        ANNIVERSARY_LINES[(year - 2) % ANNIVERSARY_LINES.length] ?? ANNIVERSARY_LINES[0];
+      text = `The ${ordinal} anniversary of the kingdom — ${flavor}`;
+    }
+
+    this.journal.write(text, "milestone", castle?.id);
+
+    // Landmark years get a stronger festival; normal years get a lighter one.
+    const isLandmark = LANDMARK[year - 1] !== undefined;
     if (castle) {
       this.bus.publish(
         makeEvent("festival", {
           source: "narrative",
-          intensity: 0.75,
-          duration_ms: 40_000,
+          intensity: isLandmark ? 1.0 : 0.75,
+          duration_ms: isLandmark ? 60_000 : 40_000,
           payload: { structure: castle.id, label: `${ordinal} anniversary` },
         }),
+      );
+    }
+
+    // Landmark years drop a commemorative vault piece.
+    if (isLandmark) {
+      this.treasury.acquire(
+        "scroll",
+        `the ${ordinal} anniversary chronicle — ${this.state.season} of year ${year}`,
       );
     }
   }

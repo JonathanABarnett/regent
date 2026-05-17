@@ -464,10 +464,13 @@ describe("World — kingdom anniversary", () => {
       fakeYear = y;
       w.tick(0.1);
     }
-    expect(lines.length).toBe(10);
-    // 10 anniversaries should mod-cycle through 10 distinct flavor lines.
+    // Years 6 and 11 in the test loop (5th and 10th anniversary) fire landmark
+    // prose that doesn't include "anniversary of the kingdom", so the filter
+    // above captures 8 of the 10 years. The remaining 8 should all be distinct
+    // standard lines from the 10-entry mod-cycling pool.
+    expect(lines.length).toBe(8);
     const flavors = lines.map((l) => l.split(" — ").slice(1).join(" — "));
-    expect(new Set(flavors).size).toBe(10);
+    expect(new Set(flavors).size).toBe(8); // all 8 are distinct
   });
 });
 

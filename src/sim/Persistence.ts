@@ -52,6 +52,15 @@ export interface SaveData {
   journal?: SavedJournalEntry[];
   /** Royal succession: monarch generation + reign start day + unbroken dynasty streak */
   succession?: { generation: number; reignStartDay: number; dynastyStreak?: number };
+  /** Kingdom reputation score (-10..10). */
+  reputation?: number;
+  /** LifeCycle system: which NPCs have come of age, retired, or formed bonds. */
+  lifeCycle?: {
+    cameOfAgeIds: string[];
+    retiredIds: string[];
+    bondKeys: string[];
+    lastCheckedDay: number;
+  };
   /** Usurper system snapshot (optional — absent in pre-usurper saves). */
   usurper?: {
     active: boolean;
@@ -248,6 +257,8 @@ export function serialize(
     edicts: world.edicts.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
+    reputation: world.reputation.snapshot(),
+    lifeCycle: world.lifeCycle.snapshot(),
   };
 }
 
@@ -463,6 +474,24 @@ export function validateSave(rawInput: unknown): SaveData | null {
     edicts: validateEdicts(raw.edicts),
     usurper: validateUsurper(raw.usurper),
     uprising: validateUprising(raw.uprising),
+    reputation: typeof raw.reputation === "number" && Number.isFinite(raw.reputation)
+      ? Math.max(-10, Math.min(10, Math.round(raw.reputation as number)))
+      : undefined,
+    lifeCycle: validateLifeCycle(raw.lifeCycle),
+  };
+}
+
+function validateLifeCycle(raw: unknown): SaveData["lifeCycle"] {
+  if (!isPlainObject(raw)) return undefined;
+  const toStrArr = (v: unknown, cap: number): string[] => {
+    if (!Array.isArray(v)) return [];
+    return (v as unknown[]).slice(0, cap).filter((x): x is string => typeof x === "string");
+  };
+  return {
+    cameOfAgeIds: toStrArr(raw.cameOfAgeIds, 500),
+    retiredIds: toStrArr(raw.retiredIds, 200),
+    bondKeys: toStrArr(raw.bondKeys, 500),
+    lastCheckedDay: safeInt(raw.lastCheckedDay, -1, -1, 100_000),
   };
 }
 
@@ -797,6 +826,9 @@ export function applySave(world: World, save: SaveData): void {
   // Restore usurper + uprising state.
   if (save.usurper) world.usurper.hydrate(save.usurper);
   if (save.uprising) world.uprising.hydrate(save.uprising);
+  // Restore reputation and lifecycle progression.
+  if (save.reputation !== undefined) world.reputation.hydrate(save.reputation);
+  if (save.lifeCycle) world.lifeCycle.hydrate(save.lifeCycle);
 
   writeWelcomeBack(world, save);
 }

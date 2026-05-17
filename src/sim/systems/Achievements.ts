@@ -131,6 +131,19 @@ const DEFINITIONS: AchievementDef[] = [
         (s) => s.kind === "watchtower" || s.kind === "mill" || s.kind === "shrine",
       ),
   },
+  // ---- LifeCycle achievements ----------------------------------------------
+  {
+    id: "first_coming_of_age",
+    title: "A New Generation",
+    description: "The first child born to the kingdom came of age and found their calling.",
+    check: (c) => c.world.lifeCycle.snapshot().cameOfAgeIds.length >= 1,
+  },
+  {
+    id: "first_retirement",
+    title: "A Life Well Worked",
+    description: "A veteran worker retired and became an elder of the realm.",
+    check: (c) => c.world.lifeCycle.snapshot().retiredIds.length >= 1,
+  },
   // ---- Usurper + Uprising achievements ------------------------------------
   {
     id: "usurper_faced",
@@ -246,6 +259,44 @@ const DEFINITIONS: AchievementDef[] = [
     check: (c) =>
       c.world.succession.state.dynastyStreak === 0 &&
       c.world.uprising.state.totalUprisings >= 1,
+  },
+  {
+    id: "hidden_year_5",
+    title: "Five Years Standing",
+    description: "The kingdom survived into its fifth year.",
+    hidden: true,
+    check: (c) => c.world.state.year >= 5,
+  },
+  {
+    id: "hidden_year_10",
+    title: "A Decade of Rule",
+    description: "Ten years. The kingdom is now part of the landscape.",
+    hidden: true,
+    check: (c) => c.world.state.year >= 10,
+  },
+  {
+    id: "hidden_beloved",
+    title: "The Beloved Crown",
+    description: "Earned a reputation score of +8 — the people call the monarch beloved.",
+    hidden: true,
+    check: (c) => c.world.reputation.score >= 8,
+  },
+  {
+    id: "hidden_three_generations",
+    title: "Three Generations",
+    description: "A child born to the kingdom grew up, had children, and lived to see grandchildren.",
+    hidden: true,
+    check: (c) => {
+      // Find an NPC who has parentIds AND has children who also have children
+      for (const npc of c.world.npcs) {
+        if (!npc.parentIds?.length) continue;
+        const children = c.world.npcs.filter((n) => n.parentIds?.includes(npc.id));
+        if (children.some((ch) => c.world.npcs.some((n) => n.parentIds?.includes(ch.id)))) {
+          return true;
+        }
+      }
+      return false;
+    },
   },
   {
     id: "hidden_thrice_blessed",

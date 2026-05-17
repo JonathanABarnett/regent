@@ -14,7 +14,8 @@ describe("Treasury", () => {
     expect(w.treasury.count()).toBe(1);
     expect(a.kind).toBe("relic");
     expect(a.name.length).toBeGreaterThan(0);
-    expect(a.origin).toBe("test origin");
+    // Origin is now auto-enriched with world context ("..., spring of year 1")
+    expect(a.origin).toMatch(/^test origin/);
     // bus shouldn't be polluted with a journal write (journal is separate),
     // but the artifact record carries day/year
     expect(a.obtainedOnDay).toBeGreaterThanOrEqual(1);

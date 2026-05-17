@@ -74,6 +74,24 @@ const ALL_ASPIRATIONS: AspirationDef[] = [
     progress: (w) => Math.min(1, w.usurper.state.totalRepelled),
   },
   {
+    id: "reputation_beloved",
+    title: "A Kingdom That Loves Its Crown",
+    description: "Earn a reputation of +5 through generous and just decisions.",
+    progress: (w) => Math.min(1, (w.reputation.score + 10) / 15), // 0 at score -10, 1 at score +5
+  },
+  {
+    id: "coming_of_age",
+    title: "The Next Generation",
+    description: "See a child born to the kingdom grow up and find their calling.",
+    progress: (w) => Math.min(1, w.lifeCycle.snapshot().cameOfAgeIds.length),
+  },
+  {
+    id: "year_3",
+    title: "A Kingdom Established",
+    description: "Carry the kingdom into its third year.",
+    progress: (w) => w.state.year / 3,
+  },
+  {
     id: "year_2",
     title: "Past the First Year",
     description: "Carry the kingdom into a second year.",

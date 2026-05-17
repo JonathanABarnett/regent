@@ -1093,6 +1093,561 @@ const ARCS: ArcDef[] = [
       },
     ],
   },
+  // ── Generational + ecological arcs ──────────────────────────────────────
+  {
+    id: "plague_scare",
+    title: "The fever in the south quarter",
+    guard: (world) => world.state.year >= 2,
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world, rand }) => {
+          const town = pickTown(world, rand);
+          journal.write(
+            `Fever came to ${town.name} overnight — a handful of households, children and elders alike, kept inside by morning. The healer is already at work.`,
+            "weather",
+            town.id,
+          );
+        },
+      },
+      {
+        onDay: 2,
+        write: ({ journal, world, rand }) => {
+          const town = pickTown(world, rand);
+          journal.write(
+            `The fever moved to a second street in ${town.name}. The healer is sleeping in intervals. People are leaving food on doorsteps without knocking.`,
+            "event",
+            town.id,
+          );
+        },
+      },
+      {
+        onDay: 4,
+        write: ({ journal, world, rand }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          const expiresAt = Date.now() +
+            (world.courtEffects.advisorSeated ? 180_000 : 90_000);
+          const decId = `plague_${world.state.day}`;
+          journal.write(
+            `The crown must decide: quarantine the affected streets — costly but clean — or let the illness run its own course.`,
+            "milestone",
+            castle?.id,
+          );
+          world.decisions.propose({
+            id: decId,
+            title: "The fever is spreading",
+            body: "Quarantine costs gold but ends the scare quickly. Letting it pass is cheaper — but not without risk.",
+            expiresAt,
+            defaultOnExpire: true,
+            options: [
+              {
+                id: "quarantine",
+                label: "Quarantine the streets",
+                onChoose: (w) => {
+                  const cost = 25;
+                  w.economy.state.gold = Math.max(0, w.economy.state.gold - cost);
+                  w.reputation.adjust(1);
+                  w.journal.write(
+                    `The crown sealed the affected streets and sent food through the gaps under the doors. It cost ${cost} gold and two weeks of tension, but no one else fell ill. The healer slept properly for the first time in days.`,
+                    "milestone",
+                    castle?.id,
+                  );
+                },
+              },
+              {
+                id: "let_pass",
+                label: "Let it run its course",
+                onChoose: (w) => {
+                  w.reputation.adjust(-1);
+                  if (rand() < 0.4) {
+                    // One elderly NPC dies from it
+                    const elderly = w.npcs.filter((n) => (n.age ?? 0) > 50 && n.role !== "monarch");
+                    if (elderly.length) {
+                      const victim = elderly[Math.floor(rand() * elderly.length)];
+                      const idx = w.npcs.indexOf(victim);
+                      if (idx >= 0) w.npcs.splice(idx, 1);
+                      w.journal.write(
+                        `The fever passed on its own — but not before it took ${victim.name ?? "an elder"}. The town buried them quietly and did not say what they were thinking about the crown's silence.`,
+                        "life",
+                        victim.homeId,
+                      );
+                    } else {
+                      w.journal.write(
+                        `The fever passed on its own, but the town is quieter than it was. Some things are not forgotten quickly.`,
+                        "event",
+                      );
+                    }
+                  } else {
+                    w.journal.write(
+                      `The fever broke on its own after a tense week. No one died. The crown called it a natural recovery. The town called it luck.`,
+                      "event",
+                    );
+                  }
+                },
+              },
+            ],
+          });
+        },
+      },
+    ],
+  },
+  {
+    id: "trade_caravan",
+    title: "The merchant consortium arrives",
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          world.bus.publish(
+            makeEvent("courier", {
+              source: "narrative",
+              intensity: 0.5,
+              payload: { from: "rivermouth", to: castle?.id ?? "highkeep", label: "trade delegation" },
+            }),
+          );
+          journal.write(
+            "Three wagons arrived at the gate bearing the colors of a merchant consortium from the south. They want to establish a regular trade route — and they want the crown's blessing first.",
+            "event",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 1,
+        write: ({ journal, world }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          const expiresAt = Date.now() +
+            (world.courtEffects.advisorSeated ? 180_000 : 90_000);
+          const decId = `trade_${world.state.day}`;
+          world.decisions.propose({
+            id: decId,
+            title: "The trade route proposal",
+            body: "The consortium offers regular commerce in exchange for 40 gold to establish the route. The payback is steady over several seasons.",
+            expiresAt,
+            defaultOnExpire: true,
+            options: [
+              {
+                id: "accept",
+                label: "Fund the route (40 gold)",
+                onChoose: (w) => {
+                  w.economy.state.gold = Math.max(0, w.economy.state.gold - 40);
+                  w.reputation.adjust(1);
+                  // Pay back 60 gold over next 3 seasons via economy boost
+                  w.economy.state.gold += 20; // immediate first shipment
+                  w.journal.write(
+                    `The crown funded the southern trade route. The first wagons returned within the season carrying 20 gold and a manifest of goods. The consortium's factor left a copy of the route map for the vault.`,
+                    "milestone",
+                    castle?.id,
+                  );
+                  w.treasury.acquire("scroll", `the southern trade compact of year ${w.state.year}`);
+                },
+              },
+              {
+                id: "decline",
+                label: "Decline the offer",
+                onChoose: (w) => {
+                  w.journal.write(
+                    `The consortium was thanked and sent on their way. They accepted the refusal with professional warmth and the unspoken implication that they would find another gate.`,
+                    "event",
+                    castle?.id,
+                  );
+                },
+              },
+            ],
+          });
+        },
+      },
+      {
+        onDay: 3,
+        write: ({ journal, world }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          journal.write(
+            "A rider from the consortium confirmed the route is running. The road south is a little busier and a little safer than it was last season.",
+            "event",
+            castle?.id,
+          );
+          world.economy.state.gold += 10; // second trickle payment
+        },
+      },
+    ],
+  },
+  {
+    id: "legendary_beast",
+    title: "The thing in the eastern wood",
+    guard: (world) => world.state.year >= 3,
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world, rand }) => {
+          const town = pickTown(world, rand);
+          journal.write(
+            `A trapper returned from the eastern wood white-faced and short on words. Something large — larger than anything in the kingdom's records — left tracks in the mud and then vanished. The children are already naming it.`,
+            "weather",
+            town.id,
+          );
+        },
+      },
+      {
+        onDay: 1,
+        write: ({ journal, world }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          world.bus.publish(
+            makeEvent("monster", {
+              source: "narrative",
+              intensity: 0.7,
+              duration_ms: 30_000,
+              payload: { structure: castle?.id ?? "highkeep", label: "the eastern beast" },
+            }),
+          );
+          journal.write(
+            `Three more sightings. A farmer swears it looked at her directly for a full minute before turning back into the trees. The scholars have started a new page in the bestiary and admit they have nothing to put on it.`,
+            "event",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 2,
+        write: ({ journal, world, rand }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          const expiresAt = Date.now() +
+            (world.courtEffects.advisorSeated ? 180_000 : 90_000);
+          const decId = `beast_${world.state.day}`;
+          world.decisions.propose({
+            id: decId,
+            title: "The thing in the eastern wood awaits a decision",
+            body: "Send hunters to deal with it — costly but definitive. Or leave it alone and let the legend grow.",
+            expiresAt,
+            defaultOnExpire: false,
+            options: [
+              {
+                id: "hunt",
+                label: "Send hunters (20 gold)",
+                onChoose: (w) => {
+                  const cost = 20;
+                  w.economy.state.gold = Math.max(0, w.economy.state.gold - cost);
+                  w.reputation.adjust(-1);
+                  if (rand() < 0.65) {
+                    w.journal.write(
+                      `The hunters returned after three days. They said very little about what they found. The ${cost} gold was well spent. A trophy — a single enormous claw — was placed in the vault as proof.`,
+                      "milestone",
+                      castle?.id,
+                    );
+                    w.treasury.acquire("relic", `claw of the eastern beast, year ${w.state.year}`);
+                  } else {
+                    w.journal.write(
+                      `The hunters returned after three days, empty-handed and quieter than they left. Whatever it was, it is not gone. It just wasn't where they looked.`,
+                      "event",
+                      castle?.id,
+                    );
+                  }
+                },
+              },
+              {
+                id: "leave",
+                label: "Leave it alone",
+                onChoose: (w) => {
+                  w.reputation.adjust(1);
+                  w.journal.write(
+                    `The crown elected to leave it be. The sightings stopped within the week. The children kept the name they had given it. The scholars published a careful, three-page account that concluded with "further observation required." The legend was placed in the vault.`,
+                    "milestone",
+                    castle?.id,
+                  );
+                  w.treasury.acquire("scroll", `the bestiary account of the eastern creature, year ${w.state.year}`);
+                },
+              },
+              {
+                id: "watch",
+                label: "Post scouts and observe",
+                onChoose: (w) => {
+                  w.journal.write(
+                    `Scouts were posted at the wood's edge for a fortnight. They filled six pages with careful notes and saw the creature twice more. On the final morning it walked past their camp without pausing and didn't return. The scouts described it as "deliberate."`,
+                    "milestone",
+                    castle?.id,
+                  );
+                  w.treasury.acquire("scroll", `the scout reports on the eastern creature, year ${w.state.year}`);
+                },
+              },
+            ],
+          });
+        },
+      },
+    ],
+  },
+  {
+    id: "diplomatic_marriage",
+    title: "The emissary from the east",
+    guard: (world) => world.state.year >= 2,
+    pickFlavor: (_world, rand) => {
+      const NAMES = [
+        "House Valderin", "the Ashcroft line", "Clan Mourne",
+        "the Silversea principality", "House Orren of the Coast",
+      ];
+      return NAMES[Math.floor(rand() * NAMES.length)];
+    },
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world, flavor }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          world.bus.publish(
+            makeEvent("courier", {
+              source: "narrative",
+              intensity: 0.6,
+              payload: { from: "rivermouth", to: castle?.id ?? "highkeep", label: `emissary from ${flavor}` },
+            }),
+          );
+          journal.write(
+            `An emissary from ${flavor} arrived under a white banner. They carry a formal proposal of marriage alliance — sealed, witnessed, and very carefully worded. The court is reading it slowly.`,
+            "event",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 1,
+        write: ({ journal, world, flavor }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          journal.write(
+            `The court has been debating the proposal from ${flavor} since dawn. Three factions have formed: those who see opportunity, those who see obligation, and those who see a trap. The emissary is reading quietly in the guest wing.`,
+            "event",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 2,
+        write: ({ journal, world, flavor, rand }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          const expiresAt = Date.now() +
+            (world.courtEffects.advisorSeated ? 240_000 : 120_000);
+          const decId = `marriage_${world.state.day}`;
+          world.decisions.propose({
+            id: decId,
+            title: `The proposal from ${flavor}`,
+            body: `The emissary waits. Three choices: accept and gain an ally; decline warmly and preserve relations; or refuse coldly and make a point.`,
+            expiresAt,
+            defaultOnExpire: false,
+            options: [
+              {
+                id: "accept",
+                label: "Accept the alliance",
+                onChoose: (w) => {
+                  w.reputation.adjust(1);
+                  // Spawn a new high-status NPC representing the allied family.
+                  const homes = w.map.structures.filter((s) => s.kind === "town" || s.kind === "castle");
+                  const home = homes[Math.floor(rand() * homes.length)];
+                  if (home) {
+                    const seed = Math.floor(rand() * 2 ** 31);
+                    const allyName = `${flavor.split(" ").pop() ?? "Ally"}`;
+                    const center = { x: home.pos.x + Math.floor(home.size.x / 2), y: home.pos.y + Math.floor(home.size.y / 2) };
+                    w.pushNpc({
+                      id: `npc_ally_${w.state.day}_${seed}`,
+                      role: "scholar",
+                      name: allyName,
+                      age: 24,
+                      pos: { ...center }, prevPos: { ...center }, facing: "s",
+                      homeId: home.id, workId: home.id, activity: "idle",
+                      path: [], activityTimer: 4, seed,
+                    });
+                    w.economy.state.gold = Math.min(99999, w.economy.state.gold + 30);
+                    w.journal.write(
+                      `The crown accepted the proposal from ${flavor}. ${allyName} arrived within the week bearing gifts and thirty gold as a gesture of good faith. The alliance was sealed before the end of the season.`,
+                      "milestone",
+                      castle?.id,
+                    );
+                    w.treasury.acquire("scroll", `the treaty with ${flavor}, year ${w.state.year}`);
+                  }
+                },
+              },
+              {
+                id: "decline_warm",
+                label: "Decline with honors",
+                onChoose: (w) => {
+                  w.journal.write(
+                    `The crown declined the proposal with warm words and a parting gift. The emissary departed satisfied that they had been treated well. ${flavor} will remember this kindness, when they choose to.`,
+                    "event",
+                    castle?.id,
+                  );
+                },
+              },
+              {
+                id: "decline_cold",
+                label: "Refuse outright",
+                onChoose: (w) => {
+                  w.reputation.adjust(-1);
+                  const cost = 20;
+                  w.economy.state.gold = Math.max(0, w.economy.state.gold - cost);
+                  w.journal.write(
+                    `The crown refused ${flavor}'s proposal without ceremony. The emissary left before nightfall. A subsequent trade disruption cost the kingdom ${cost} gold. The court has begun quietly regretting the wording of the refusal.`,
+                    "event",
+                    castle?.id,
+                  );
+                },
+              },
+            ],
+          });
+        },
+      },
+    ],
+  },
+  {
+    id: "comet_sighting",
+    title: "The comet over the kingdom",
+    guard: (world) =>
+      world.state.year >= 3 &&
+      world.map.structures.some((s) => s.kind === "astronomers_tower"),
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world }) => {
+          const tower = world.map.structures.find((s) => s.kind === "astronomers_tower");
+          journal.write(
+            `The astronomers called the court to the tower roof before dawn. A bright object is moving through the sky — not a star, not a planet. A comet, they say, returning on a cycle longer than any record the tower holds.`,
+            "milestone",
+            tower?.id,
+          );
+          world.bus.publish(
+            makeEvent("research", {
+              source: "narrative",
+              intensity: 0.8,
+              duration_ms: 30_000,
+              payload: { structure: tower?.id ?? "highkeep", label: "the comet observed" },
+            }),
+          );
+        },
+      },
+      {
+        onDay: 1,
+        write: ({ journal, world, rand }) => {
+          const tower = world.map.structures.find((s) => s.kind === "astronomers_tower");
+          const expiresAt = Date.now() +
+            (world.courtEffects.advisorSeated ? 180_000 : 90_000);
+          const decId = `comet_${world.state.day}`;
+          const repDesc = world.reputation.descriptor();
+          world.decisions.propose({
+            id: decId,
+            title: "How should the crown record the comet?",
+            body: `The astronomers have calculated its next appearance. How the court names and interprets it will be in the chronicle forever.`,
+            expiresAt,
+            defaultOnExpire: false,
+            options: [
+              {
+                id: "good_omen",
+                label: "Call it a blessing",
+                onChoose: (w) => {
+                  w.reputation.adjust(1);
+                  const namePart = w.state.year > 5 ? "the Long-Returning" : "the New";
+                  const cometName = `${namePart} Light of Year ${w.state.year}`;
+                  w.journal.write(
+                    `The crown declared the comet a sign of good fortune. It was named "${cometName}" and recorded in the tower's star ledger. The people slept better that night.`,
+                    "milestone",
+                    tower?.id,
+                  );
+                  w.treasury.acquire("scroll", `the astronomical record of "${cometName}"`);
+                },
+              },
+              {
+                id: "scientific",
+                label: "Record it without interpretation",
+                onChoose: (w) => {
+                  const cometName = `Comet of ${w.state.season.charAt(0).toUpperCase() + w.state.season.slice(1)}, Y${w.state.year}`;
+                  w.journal.write(
+                    `The astronomers named the comet "${cometName}" and recorded its path without embellishment. The ${repDesc} crown signed the star ledger and noted that the calculations showed it would return in 74 years. Several people who heard this quietly did the arithmetic and said nothing.`,
+                    "milestone",
+                    tower?.id,
+                  );
+                  w.treasury.acquire("scroll", `the precise record of "${cometName}" — path, angle, and return date`);
+                },
+              },
+              {
+                id: "name_it",
+                label: "Name it for the kingdom",
+                onChoose: (w) => {
+                  const ident = w.map.structures.find((s) => s.kind === "castle")?.name ?? "the kingdom";
+                  const cometName = `The Comet of ${ident}`;
+                  w.journal.write(
+                    `The crown named the comet for the kingdom itself: "${cometName}." The astronomers carved it into the tower stone. It will be there when the comet returns in 74 years, for whoever stands in the same spot.`,
+                    "milestone",
+                    tower?.id,
+                  );
+                  w.treasury.acquire("scroll", `the naming charter of "${cometName}"`);
+                },
+              },
+            ],
+          });
+        },
+      },
+      {
+        onDay: 3,
+        write: ({ journal, world }) => {
+          const tower = world.map.structures.find((s) => s.kind === "astronomers_tower");
+          journal.write(
+            `The comet is no longer visible to the naked eye. The astronomers say it will be back in 74 years. The page in the star ledger is already waiting for the note about its next appearance.`,
+            "event",
+            tower?.id,
+          );
+        },
+      },
+    ],
+  },
+  {
+    id: "elder_council",
+    title: "The elders convene",
+    guard: (world) =>
+      world.state.year >= 3 &&
+      world.npcs.filter((n) => (n.age ?? 0) >= 60).length >= 3,
+    pickFlavor: (world, rand) => {
+      // Pack 3 elder names into the flavor string.
+      const elders = world.npcs.filter((n) => (n.age ?? 0) >= 60 && n.name);
+      const picked = elders.slice(0, 3).map((e) => e.name ?? "an elder");
+      // Fill to 3 if needed.
+      while (picked.length < 3) picked.push("an elder of the realm");
+      return picked.join("||");
+    },
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world, flavor }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          const [a, b, c] = flavor.split("||");
+          journal.write(
+            `${a}, ${b}, and ${c} — three of the kingdom's oldest living residents — sent a request to the crown for a formal audience. They called it "a matter of record and counsel." The crown granted the hour.`,
+            "milestone",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 1,
+        write: ({ journal, world, flavor, rand }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          const [a] = flavor.split("||");
+          const ELDER_WISDOMS = [
+            `${a} spoke for the group: "We have watched three droughts, two floods, and one monarch we'd rather not name. We are not here to give orders. We are here to say: the kingdom has lasted. That is harder than it sounds."`,
+            `${a} laid three sealed letters on the table — one for each decade they had collectively watched. "Open them if things get bad," they said. "Preferably not all at once."`,
+            `${a} stood and said only: "The young inherit the shape of the place. We wanted to confirm the shape was still good." Then they sat back down and waited for someone to offer tea.`,
+            `${a} said the council had one piece of advice: "Do not confuse what has always been done with what should be done." Then they asked if the kitchens were still as good as they remembered.`,
+          ];
+          const wisdom = ELDER_WISDOMS[Math.floor(rand() * ELDER_WISDOMS.length)];
+          // Small mechanical benefit — their counsel has real value
+          const goldBonus = 15 + Math.floor(rand() * 20);
+          world.economy.state.gold = Math.min(99999, world.economy.state.gold + goldBonus);
+          world.reputation.adjust(1);
+          journal.write(
+            `The elders were received in the great hall. ${wisdom} The treasury recorded a bequest of ${goldBonus} gold from the council — "for the running of things," they said. The written counsel was placed in the vault.`,
+            "milestone",
+            castle?.id,
+          );
+          world.treasury.acquire(
+            "scroll",
+            `the elder council's written counsel, year ${world.state.year}`,
+          );
+        },
+      },
+    ],
+  },
   {
     id: "scholar_discovery",
     title: "A discovery at the scriptorium",
