@@ -37,6 +37,7 @@ import { Uprising } from "./systems/Uprising";
 import { LifeCycle } from "./systems/LifeCycle";
 import { Reputation } from "./systems/Reputation";
 import { Factions } from "./systems/Factions";
+import { TreasuryPressure } from "./systems/TreasuryPressure";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -201,6 +202,7 @@ export class World {
   readonly lifeCycle: LifeCycle;
   readonly reputation: Reputation;
   readonly factions: Factions;
+  readonly treasuryPressure: TreasuryPressure;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -290,6 +292,7 @@ export class World {
     this.reputation = new Reputation();
     this.lifeCycle = new LifeCycle(this, this.journal, this.rand);
     this.factions = new Factions(this, this.journal);
+    this.treasuryPressure = new TreasuryPressure(this, this.journal);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -352,6 +355,8 @@ export class World {
       this.lifeCycle.tick();
       // Faction loyalty auto-adjustment and passive effects.
       this.factions.tick();
+      // Treasury pressure: bankruptcy warnings and prosperity celebrations.
+      this.treasuryPressure.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {

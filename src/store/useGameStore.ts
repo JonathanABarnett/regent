@@ -97,6 +97,8 @@ export interface GameState {
     seed: number;
     /** name → NPC id map; refreshed each stats update so JournalPanel can linkify names */
     npcNames: Record<string, string>;
+    /** Faction loyalty snapshot — pushed each stats update */
+    factions: { merchants: number; scholars: number; guard: number };
   };
   pushEvent: (e: ExternalEvent) => void;
   clearEvents: () => void;
@@ -193,6 +195,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     npcCount: 0,
     seed: 0,
     npcNames: {},
+    factions: { merchants: 0, scholars: 0, guard: 0 },
   },
   pushEvent: (e) => {
     set((s) => {

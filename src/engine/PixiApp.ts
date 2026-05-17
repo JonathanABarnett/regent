@@ -263,6 +263,8 @@ export class PixiApp {
     const simTime = this.opts.world.state.time;
     const hour = this.opts.world.state.hour;
 
+    // Switch seasonal tile textures when the in-world season changes.
+    this.tileRenderer.setSeason(this.opts.world.state.season);
     this.tileRenderer.update(minX, minY, maxX, maxY);
     // Animate water tiles: slow ripple cycle driven by sim time.
     this.tileRenderer.animate(simTime);

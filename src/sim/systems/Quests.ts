@@ -834,6 +834,209 @@ const ARCS: ArcDef[] = [
       },
     ],
   },
+  // ── Rare world events (year 5+) — fire very infrequently ────────────────
+  {
+    id: "legendary_hero",
+    title: "A hero among the people",
+    guard: (world) =>
+      world.state.year >= 5 &&
+      world.npcs.some((n) => n.parentIds && n.parentIds.length > 0 && (n.age ?? 0) >= 18),
+    pickFlavor: (world, rand) => {
+      // Pick one of the kingdom's born-children who have come of age.
+      const candidates = world.npcs.filter(
+        (n) => n.parentIds && n.parentIds.length > 0 && (n.age ?? 0) >= 18 && n.name,
+      );
+      if (candidates.length) {
+        const c = candidates[Math.floor(rand() * candidates.length)];
+        return c.name ?? "a young soul";
+      }
+      return "a young soul";
+    },
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world, flavor }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          journal.write(
+            `Stories have been spreading about ${flavor} — born in this kingdom, but described in terms that usually apply to older, more storied people. Something about the way they handle things.`,
+            "event",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 2,
+        write: ({ journal, world, flavor }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          journal.write(
+            `The scholars have been watching ${flavor}. One of them quietly wrote three pages about a chance encounter by the millstream. The document is not finished. It might not need to be.`,
+            "event",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 4,
+        write: ({ journal, world, flavor }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          journal.write(
+            `The kingdom has produced something rare: a person who will be remembered long after the circumstances that shaped them are forgotten. The chronicle sets aside a page for ${flavor}. The page is currently blank. It won't be for long.`,
+            "milestone",
+            castle?.id,
+          );
+          world.treasury.acquire("scroll", `the chronicle of ${flavor}, first page`);
+          // Boost the hero NPC's role to guard (protector of the realm).
+          const hero = world.npcs.find((n) => n.name === flavor);
+          if (hero && hero.role === "villager") {
+            hero.role = "guard";
+            const castle2 = world.map.structures.find((s) => s.kind === "castle");
+            if (castle2) hero.workId = castle2.id;
+          }
+        },
+      },
+    ],
+  },
+  {
+    id: "wandering_prophet",
+    title: "The wandering prophet",
+    guard: (world) => world.state.year >= 5,
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world }) => {
+          const town = world.map.structures.find((s) => s.kind === "town")
+            ?? world.map.structures[0];
+          journal.write(
+            `A figure arrived at the edge of ${town?.name ?? "the town"} at dusk — no cart, no companions, no explanation of where they came from. They asked only for water and a place to sit. No one asked their name. They didn't offer it.`,
+            "event",
+            town?.id,
+          );
+        },
+      },
+      {
+        onDay: 1,
+        write: ({ journal, world }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          journal.write(
+            `The stranger spoke in the market square for two hours. The crowd was small at first, then larger, then the entire town. No one recorded what was said. Several people cried. One man laughed and couldn't explain why.`,
+            "event",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 3,
+        write: ({ journal, world, rand }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          const PROPHECY_LINES = [
+            "They left a sealed scroll on the keep's doorstep. On it, three sentences in a script no one could read — except for the last word, which everyone agreed was the kingdom's name.",
+            "They left before dawn, but not before placing a single object — old, worn, and warm to the touch — at the gate. The scholars have been arguing about it ever since.",
+            "They said goodbye to no one specifically and everyone generally. The town felt different for a week. It's hard to say exactly how.",
+          ];
+          journal.write(
+            PROPHECY_LINES[Math.floor(rand() * PROPHECY_LINES.length)],
+            "milestone",
+            castle?.id,
+          );
+          world.treasury.acquire("relic", `left by the wandering prophet of year ${world.state.year}`);
+        },
+      },
+    ],
+  },
+  {
+    id: "underground_cavern",
+    title: "The cavern beneath the mine",
+    guard: (world) =>
+      world.state.year >= 5 &&
+      world.map.structures.some((s) => s.kind === "mine"),
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world }) => {
+          const mine = world.map.structures.find((s) => s.kind === "mine");
+          journal.write(
+            `The miners broke through to an unexpected chamber deep in the shaft — not ore, not rock, but an open space the size of a hall. The foreman brought a torch inside. The torch wasn't enough.`,
+            "event",
+            mine?.id,
+          );
+          if (mine) {
+            world.bus.publish(
+              makeEvent("mining", {
+                source: "narrative",
+                intensity: 0.7,
+                payload: { structure: mine.id, label: "cavern discovered" },
+              }),
+            );
+          }
+        },
+      },
+      {
+        onDay: 1,
+        write: ({ journal, world }) => {
+          const mine = world.map.structures.find((s) => s.kind === "mine");
+          journal.write(
+            `The scholars went in with better lights. They came back with two things: sketches of carvings on the far wall, and a disagreement that is still ongoing. The cavern predates the kingdom by at least three centuries.`,
+            "event",
+            mine?.id,
+          );
+        },
+      },
+      {
+        onDay: 3,
+        write: ({ journal, world, rand }) => {
+          const mine = world.map.structures.find((s) => s.kind === "mine");
+          const expiresAt = Date.now() + 120_000;
+          world.decisions.propose({
+            id: `cavern_${world.state.day}`,
+            title: "What should be done with the ancient cavern?",
+            body: "The chamber is stable and significant. Scholars want to study it. Miners want to know if it's safe to work around. The crown decides.",
+            expiresAt,
+            defaultOnExpire: false,
+            options: [
+              {
+                id: "seal",
+                label: "Seal it — leave it undisturbed",
+                onChoose: (w) => {
+                  w.journal.write(
+                    `The crown ordered the cavern sealed. The miners respaced their shafts around it. The carvings were copied first. The originals remain in the dark, as they have been for three centuries.`,
+                    "milestone",
+                    mine?.id,
+                  );
+                  w.treasury.acquire("scroll", `the copied carvings of the deep cavern, year ${w.state.year}`);
+                },
+              },
+              {
+                id: "excavate",
+                label: "Excavate carefully",
+                onChoose: (w) => {
+                  const bonus = 30 + Math.floor(rand() * 30);
+                  w.economy.state.gold += bonus;
+                  w.journal.write(
+                    `Careful excavation of the cavern turned up a sealed chamber within a chamber — old metal, old ceramics, and enough unusual stone to fund three seasons. ${bonus} gold equivalent, appraised and added to the treasury.`,
+                    "milestone",
+                    mine?.id,
+                  );
+                  w.treasury.acquire("gem", `from the deep cavern of the mine, year ${w.state.year}`);
+                },
+              },
+              {
+                id: "landmark",
+                label: "Open it as a landmark",
+                onChoose: (w) => {
+                  w.reputation.adjust(1);
+                  w.journal.write(
+                    `The crown opened the cavern as a public landmark. Lanterns were strung along the entrance shaft. The first visitors came in groups of six, walked in single file, and left speaking quietly. By the end of the month, everyone in the kingdom had been.`,
+                    "milestone",
+                    mine?.id,
+                  );
+                },
+              },
+            ],
+          });
+        },
+      },
+    ],
+  },
   // ── Late-game political arcs (year-gated) ───────────────────────────────
   {
     id: "succession_crisis",

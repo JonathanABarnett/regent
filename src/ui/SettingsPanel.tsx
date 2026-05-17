@@ -41,6 +41,7 @@ export function SettingsPanel({
   onOpenPetCreator,
   onOpenKingdomCard,
   onOpenChronicle,
+  onOpenVault,
 }: {
   open: boolean;
   onClose: () => void;
@@ -48,6 +49,7 @@ export function SettingsPanel({
   onOpenPetCreator: () => void;
   onOpenKingdomCard: () => void;
   onOpenChronicle: () => void;
+  onOpenVault: () => void;
 }) {
   const settings = useGameStore((s) => s.settings);
   const setCrt = useGameStore((s) => s.setCrt);
@@ -185,6 +187,14 @@ export function SettingsPanel({
             disabled={!identity}
           >
             📜 Kingdom Chronicle
+          </button>
+          <button
+            onClick={onOpenVault}
+            style={{ marginTop: 8, width: "100%" }}
+            title="Browse all artifacts in the royal vault"
+            disabled={!identity}
+          >
+            ◆ Royal Vault
           </button>
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
             <button

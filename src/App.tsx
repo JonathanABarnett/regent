@@ -28,6 +28,7 @@ import {
 import type { Structure } from "./sim/types";
 import { NPCProfilePanel } from "./ui/NPCProfilePanel";
 import { KingdomChronicle } from "./ui/KingdomChronicle";
+import { VaultPanel } from "./ui/VaultPanel";
 import { OnboardingModal } from "./ui/OnboardingModal";
 import { TitleScreen } from "./ui/TitleScreen";
 import { CharacterCreator } from "./ui/CharacterCreator";
@@ -88,6 +89,7 @@ export function App() {
   const [profileNpcId, setProfileNpcId] = useState<string | null>(null);
   const [kingdomCardOpen, setKingdomCardOpen] = useState(false);
   const [chronicleOpen, setChronicleOpen] = useState(false);
+  const [vaultOpen, setVaultOpen] = useState(false);
   // Show the title screen on first paint. Dismissed by Continue / New / etc.
   const [titleOpen, setTitleOpen] = useState(true);
   // Detect "has a saved kingdom" once on mount.
@@ -145,6 +147,21 @@ export function App() {
       setJournal([]);
     }
     world.onJournal = (entry) => pushJournalEntry(entry);
+
+    // Death bell: listen for the custom `death_bell:*` payload and trigger
+    // a brief vignette pulse on the canvas container.
+    world.bus.subscribe((ev) => {
+      if (
+        ev.kind === "custom" &&
+        typeof ev.payload.label === "string" &&
+        ev.payload.label.startsWith("death_bell:")
+      ) {
+        const el = containerRef.current;
+        if (!el) return;
+        el.classList.add("death-bell-pulse");
+        setTimeout(() => el.classList.remove("death-bell-pulse"), 2200);
+      }
+    });
 
     // Identity: hydrate from save if present.
     if (existing?.kingdomName && existing?.monarchName) {
@@ -315,6 +332,7 @@ export function App() {
         npcCount: world.npcs.length,
         seed: world.state.seed,
         npcNames,
+        factions: world.factions.snapshot(),
       });
     }, 500);
 
@@ -338,10 +356,27 @@ export function App() {
 
     let trayCleanup: (() => void) | null = null;
     bindTrayMenu()
-      .then((fn) => {
-        trayCleanup = fn;
-      })
+      .then((fn) => { trayCleanup = fn; })
       .catch(() => {});
+
+    // Git integration: the Rust side polls watched .git dirs and emits
+    // `kingdom:event` payloads that the world can consume directly.
+    // We only wire this when running inside Tauri.
+    let gitUnlisten: (() => void) | null = null;
+    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+      import("@tauri-apps/api/event").then(({ listen }) => {
+        listen<unknown>("kingdom:event", (ev) => {
+          const integrations = useGameStore.getState().settings.integrations;
+          if (!integrations.git) return;
+          const result = world.publishRaw(ev.payload);
+          if (!result.ok) {
+            console.warn("[git integration] invalid event from Rust:", result.error);
+          }
+        }).then((unlisten) => {
+          gitUnlisten = unlisten;
+        }).catch(() => {});
+      }).catch(() => {});
+    }
 
     // Autosave every 30 seconds; also on tab-hide and window-unload.
     const sessionStart = performance.now();
@@ -411,6 +446,7 @@ export function App() {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("beforeunload", doSave);
       trayCleanup?.();
+      gitUnlisten?.();
       audio.detach();
       audioRef.current = null;
       pixi.destroy();
@@ -915,6 +951,10 @@ export function App() {
           setSettingsOpen(false);
           setChronicleOpen(true);
         }}
+        onOpenVault={() => {
+          setSettingsOpen(false);
+          setVaultOpen(true);
+        }}
       />
       <KingdomCard
         world={worldRef.current}
@@ -924,6 +964,11 @@ export function App() {
       <KingdomChronicle
         open={chronicleOpen && !streamerMode}
         onClose={() => setChronicleOpen(false)}
+        getWorld={() => worldRef.current}
+      />
+      <VaultPanel
+        open={vaultOpen && !streamerMode}
+        onClose={() => setVaultOpen(false)}
         getWorld={() => worldRef.current}
       />
       <JournalPanel

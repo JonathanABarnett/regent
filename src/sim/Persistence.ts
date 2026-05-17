@@ -15,6 +15,92 @@ import { sanitizeName } from "../lib/sanitize";
 export const SAVE_VERSION = 1;
 const STORAGE_KEY = "kingdomos.kingdom.v1";
 
+// ── Multi-slot support ────────────────────────────────────────────────────────
+// Slots 0, 1, 2 each get their own storage key. The legacy single-key
+// `kingdomos.kingdom.v1` maps to slot 0 for backward compatibility.
+
+const SLOT_KEYS = [
+  "kingdomos.kingdom.v1",          // slot 0 (legacy key)
+  "kingdomos.kingdom.slot1.v1",    // slot 1
+  "kingdomos.kingdom.slot2.v1",    // slot 2
+] as const;
+
+export const SLOT_COUNT = SLOT_KEYS.length;
+
+export interface SlotMeta {
+  slot: number;
+  kingdomName?: string;
+  monarchName?: string;
+  year: number;
+  day: number;
+  population: number;
+  savedAt: string;
+  empty: boolean;
+}
+
+/** Read lightweight metadata about all save slots without fully parsing them. */
+export function readAllSlotMeta(): SlotMeta[] {
+  return SLOT_KEYS.map((key, slot) => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return { slot, year: 0, day: 0, population: 0, savedAt: "", empty: true };
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      return {
+        slot,
+        kingdomName: typeof parsed.kingdomName === "string" ? parsed.kingdomName : undefined,
+        monarchName: typeof parsed.monarchName === "string" ? parsed.monarchName : undefined,
+        year: typeof parsed.simTime === "number" ? Math.max(1, Math.floor(parsed.simTime / (56 * 24 * 60)) + 1) : 1,
+        day: 0,
+        population: Array.isArray(parsed.npcs) ? parsed.npcs.length : 0,
+        savedAt: typeof parsed.savedAt === "string" ? parsed.savedAt : "",
+        empty: false,
+      };
+    } catch {
+      return { slot, year: 0, day: 0, population: 0, savedAt: "", empty: true };
+    }
+  });
+}
+
+export function writeSaveToSlot(save: SaveData, slot: number): void {
+  const key = SLOT_KEYS[slot] ?? STORAGE_KEY;
+  try {
+    localStorage.setItem(key, JSON.stringify(save));
+  } catch (err) {
+    console.warn("[Persistence] slot write failed", err);
+  }
+}
+
+export function readSaveFromSlot(slot: number): SaveData | null {
+  const key = SLOT_KEYS[slot] ?? STORAGE_KEY;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    return validateSave(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+export function clearSaveSlot(slot: number): void {
+  const key = SLOT_KEYS[slot] ?? STORAGE_KEY;
+  try { localStorage.removeItem(key); } catch { /* ignore */ }
+}
+
+/** The active slot number, persisted across sessions. */
+const ACTIVE_SLOT_KEY = "kingdomos.activeSlot";
+
+export function getActiveSlot(): number {
+  try {
+    const v = localStorage.getItem(ACTIVE_SLOT_KEY);
+    const n = v !== null ? parseInt(v, 10) : 0;
+    return Number.isFinite(n) && n >= 0 && n < SLOT_COUNT ? n : 0;
+  } catch { return 0; }
+}
+
+export function setActiveSlot(slot: number): void {
+  try { localStorage.setItem(ACTIVE_SLOT_KEY, String(slot)); } catch { /* ignore */ }
+}
+
 export interface SaveData {
   version: number;
   /** ISO-8601 timestamp the save was written */
@@ -963,37 +1049,20 @@ function writeWelcomeBack(world: World, save: SaveData) {
 }
 
 export function writeSave(save: SaveData): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
-  } catch (err) {
-    console.warn("[Persistence] localStorage write failed", err);
-  }
+  const slot = getActiveSlot();
+  writeSaveToSlot(save, slot);
   // Best-effort Tauri filesystem mirror; ignore if not available
   void writeTauriCopy(save);
 }
 
 export function readSave(): SaveData | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    if (raw.length > SAVE_SIZE_MAX_BYTES) {
-      console.warn(`[Persistence] save too large (${raw.length} bytes); ignoring`);
-      return null;
-    }
-    const parsed = JSON.parse(raw);
-    return validateSave(parsed);
-  } catch (err) {
-    console.warn("[Persistence] read failed", err);
-    return null;
-  }
+  const slot = getActiveSlot();
+  return readSaveFromSlot(slot);
 }
 
 export function clearSave(): void {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    /* ignore */
-  }
+  const slot = getActiveSlot();
+  clearSaveSlot(slot);
 }
 
 /**

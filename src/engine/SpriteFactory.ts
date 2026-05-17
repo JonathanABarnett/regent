@@ -43,6 +43,8 @@ interface SpriteManifest {
 export class SpriteFactory {
   readonly tiles = new Map<TileKind, Texture[]>();
   readonly waterFrames = new Map<TileKind, Texture[]>();
+  /** Seasonal overrides: key = `"${season}:${kind}"`, value = 4 variant textures. */
+  readonly seasonTiles = new Map<string, Texture[]>();
   readonly structures = new Map<string, Texture>();
   readonly characters = new Map<string, Texture[]>();
   readonly props = new Map<string, Texture>();
@@ -66,6 +68,7 @@ export class SpriteFactory {
       this.tiles.set(k, variants);
     }
     this.buildWaterFrames();
+    this.buildSeasonalTiles();
     this.structures.set("castle", (await this.loadStructure("castle")) ?? this.buildCastle("#dc2626"));
     this.structures.set("town", (await this.loadStructure("town")) ?? this.buildTown());
     this.structures.set("library", (await this.loadStructure("library")) ?? this.buildLibrary());
@@ -240,6 +243,134 @@ export class SpriteFactory {
       }
       this.waterFrames.set(kind, frames);
     }
+  }
+
+  /**
+   * Generate seasonal tile overrides for the tiles that visually change across
+   * seasons. Autumn turns forest crowns orange/rust; winter adds snow patches
+   * to plains and hilltops and white-crowns the trees. Spring and summer use
+   * the base procedural tiles unchanged.
+   *
+   * Stored in `seasonTiles` as `"${season}:${kind}"` → 4-variant array.
+   * TileRenderer checks this map and falls back to the base tiles if absent.
+   */
+  private buildSeasonalTiles(): void {
+    const T = SpriteFactory.TILE_SIZE;
+    const SEASONS = ["autumn", "winter"] as const;
+    const AFFECTED: TileKind[] = ["forest", "plain", "hill"];
+
+    for (const season of SEASONS) {
+      for (const kind of AFFECTED) {
+        const variants: Texture[] = [];
+        for (let v = 0; v < 4; v++) {
+          variants.push(this._buildSeasonalTile(kind, v, season, T));
+        }
+        this.seasonTiles.set(`${season}:${kind}`, variants);
+      }
+    }
+  }
+
+  private _buildSeasonalTile(
+    kind: TileKind,
+    variant: number,
+    season: "autumn" | "winter",
+    T: number,
+  ): Texture {
+    const g = new Graphics();
+    const seed = variant * 7919 + kind.length * 31 + (season === "winter" ? 99991 : 44449);
+    let s = seed >>> 0;
+    const rand = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+
+    if (kind === "forest") {
+      const AUTUMN_CROWN  = ["#c2410c", "#d97706", "#b45309", "#92400e"];
+      const WINTER_CROWN  = ["#dbeafe", "#bfdbfe", "#e0f2fe", "#cffafe"];
+      const WINTER_GROUND = "#d1d5db";
+      const trunk = "#3c1f0a";
+
+      // Ground
+      if (season === "winter") {
+        g.rect(0, 0, T, T).fill(WINTER_GROUND);
+        for (let i = 0; i < 8; i++) {
+          g.rect(Math.floor(rand() * T), Math.floor(rand() * T), 2, 1).fill("#ffffff");
+        }
+      } else {
+        // Autumn ground — dry dark soil
+        g.rect(0, 0, T, T).fill("#78350f");
+        for (let i = 0; i < 6; i++) {
+          g.rect(Math.floor(rand() * T), Math.floor(rand() * T), 1, 1).fill("#92400e");
+        }
+      }
+
+      // Trunk
+      const tx = 8 + variant * 4;
+      const ty = 6;
+      g.rect(tx + 6, ty + 12, 4, 8).fill(trunk);
+      g.rect(tx + 6, ty + 12, 1, 8).fill(lightenHex(trunk, 0.25));
+
+      // Crown
+      const palette = season === "winter" ? WINTER_CROWN : AUTUMN_CROWN;
+      const [c0, c1, c2] = palette;
+      g.rect(tx + 2, ty, 12, 12).fill(c0);
+      g.rect(tx + 4, ty - 2, 8, 4).fill(c1);
+      g.rect(tx, ty + 2, 4, 8).fill(c1);
+      g.rect(tx + 12, ty + 2, 4, 8).fill(c1);
+      // highlight
+      g.rect(tx + 3, ty + 1, 4, 1).fill(lightenHex(c2, 0.3));
+      if (season === "winter") {
+        // snow drip on crown tip
+        g.rect(tx + 5, ty - 3, 6, 2).fill("#ffffff");
+        g.rect(tx + 5, ty - 1, 2, 2).fill("#e0f2fe");
+      }
+
+    } else if (kind === "plain") {
+      if (season === "winter") {
+        // Snow-covered plain
+        g.rect(0, 0, T, T).fill("#d1d5db");
+        // Snow patches
+        for (let i = 0; i < 12; i++) {
+          g.rect(Math.floor(rand() * T), Math.floor(rand() * T), 2 + Math.floor(rand() * 3), 1).fill("#ffffff");
+        }
+        // Dead grass poking through
+        for (let i = 0; i < 6; i++) {
+          g.rect(Math.floor(rand() * T), Math.floor(rand() * T), 1, 2).fill("#9ca3af");
+        }
+      } else {
+        // Autumn plain — dry golden-brown
+        g.rect(0, 0, T, T).fill("#92400e");
+        for (let i = 0; i < 14; i++) {
+          g.rect(Math.floor(rand() * T), Math.floor(rand() * T), 1, 2).fill("#b45309");
+        }
+        for (let i = 0; i < 8; i++) {
+          g.rect(Math.floor(rand() * T), Math.floor(rand() * T), 1, 1).fill("#d97706");
+        }
+      }
+
+    } else { // hill
+      const base = season === "winter" ? "#9ca3af" : TILE_COLORS["hill"][0];
+      g.rect(0, 0, T, T).fill(base);
+      // Mound
+      for (let y = 0; y < 8; y++) {
+        g.rect(6 + y, 4 + y, 20 - y * 2, 1).fill(season === "winter" ? "#d1d5db" : TILE_COLORS["hill"][1]);
+      }
+      if (season === "winter") {
+        // Snow cap
+        g.rect(10, 3, 12, 3).fill("#ffffff");
+        g.rect(13, 4, 6, 1).fill("#f0f9ff");
+      } else {
+        g.rect(13, 4, 6, 1).fill(TILE_COLORS["hill"][2]);
+      }
+      // Second mound
+      const m2x = 18 + variant;
+      g.rect(m2x, 18, 8, 4).fill(season === "winter" ? "#d1d5db" : TILE_COLORS["hill"][1]);
+      // Noise speckle
+      for (let i = 0; i < 10; i++) {
+        g.rect(Math.floor(rand() * T), Math.floor(rand() * T), 1, 1).fill(
+          season === "winter" ? "#e5e7eb" : darkenHex(base, 0.08),
+        );
+      }
+    }
+
+    return this.rt(g, T, T);
   }
 
   private buildTile(kind: TileKind, variant: number): Texture {
@@ -952,39 +1083,116 @@ export class SpriteFactory {
   }
 
   private buildCharacterFrames(role: string): Texture[] {
-    // 4 directional frames + 1 still frame
-    const colorByRole: Record<string, [string, string, string, string]> = {
-      villager:   ["#fde68a", "#1d4ed8", "#fbbf24", "#7c2d12"],
-      courier:    ["#fde68a", "#16a34a", "#fde68a", "#16a34a"],
-      scholar:    ["#fde68a", "#7c3aed", "#a78bfa", "#3b0764"],
-      blacksmith: ["#fde68a", "#7c2d12", "#9a3412", "#1c1917"],
-      miner:      ["#fde68a", "#52525b", "#a16207", "#27272a"],
-      guard:      ["#fde68a", "#dc2626", "#fbbf24", "#374151"],
+    const ROLES: Record<string, { skin: string; body: string; accent: string; boot: string; hair: string }> = {
+      villager:   { skin: "#fde68a", body: "#1d4ed8", accent: "#fbbf24", boot: "#7c2d12", hair: "#92400e" },
+      courier:    { skin: "#fde68a", body: "#166534", accent: "#4ade80", boot: "#1a2e1a", hair: "#78350f" },
+      scholar:    { skin: "#fde68a", body: "#4c1d95", accent: "#a78bfa", boot: "#2e1065", hair: "#c8a84b" },
+      blacksmith: { skin: "#fcd34d", body: "#7c2d12", accent: "#c2410c", boot: "#1c1917", hair: "#1c1917" },
+      miner:      { skin: "#fde68a", body: "#44403c", accent: "#a16207", boot: "#292524", hair: "#292524" },
+      guard:      { skin: "#fde68a", body: "#1e3a5f", accent: "#c8a84b", boot: "#111827", hair: "#374151" },
     };
-    const [skin, body, accent, boot] = colorByRole[role] ?? colorByRole.villager;
+    const c = ROLES[role] ?? ROLES.villager;
     const frames: Texture[] = [];
+
     for (let f = 0; f < 4; f++) {
       const T = 32;
       const g = new Graphics();
       g.rect(0, 0, T, T).fill({ alpha: 0 });
       const bob = f % 2 === 0 ? 0 : 1;
-      // shadow
-      g.ellipse(T / 2, T - 3, 6, 2).fill({ color: "#000000", alpha: 0.35 });
-      // legs
-      g.rect(11, 22 + bob, 4, 6).fill(boot);
-      g.rect(17, 22 - bob, 4, 6).fill(boot);
-      // body
-      g.rect(10, 14, 12, 10).fill(body);
-      g.rect(10, 14, 12, 2).fill(accent);
-      // head
-      g.rect(11, 6, 10, 8).fill(skin);
-      g.rect(11, 6, 10, 2).fill("#92400e"); // hair
-      // eyes
+
+      // Shadow
+      g.ellipse(T / 2, T - 3, 6, 2).fill({ color: "#000000", alpha: 0.32 });
+
+      // ── Role-specific lower body ──────────────────────────────────────────
+      if (role === "scholar") {
+        // Long robe — covers legs entirely, slight sway
+        g.rect(9, 18, 14, 10 + bob).fill(c.body);
+        g.rect(9, 25, 14, 3).fill(darkenHex(c.body, 0.15)); // robe hem
+      } else {
+        // Legs
+        g.rect(11, 22 + bob, 4, 6).fill(c.boot);
+        g.rect(17, 22 - bob, 4, 6).fill(c.boot);
+        // Boot sole shadow
+        g.rect(11, 27 + bob, 4, 1).fill(darkenHex(c.boot, 0.3));
+        g.rect(17, 27 - bob, 4, 1).fill(darkenHex(c.boot, 0.3));
+      }
+
+      // Body
+      g.rect(10, 14, 12, 10).fill(c.body);
+      // Collar / accent stripe
+      g.rect(10, 14, 12, 2).fill(c.accent);
+      // Body shading (right-side shadow)
+      g.rect(20, 15, 2, 8).fill(darkenHex(c.body, 0.18));
+
+      // ── Role-specific accessories ──────────────────────────────────────────
+      if (role === "guard") {
+        // Chest plate gleam
+        g.rect(13, 16, 6, 6).fill(lightenHex(c.body, 0.25));
+        g.rect(15, 16, 2, 5).fill(c.accent);
+        // Shield on left arm
+        g.rect(6, 16, 4, 5).fill(c.accent);
+        g.rect(7, 17, 2, 3).fill(lightenHex(c.accent, 0.25));
+      } else if (role === "blacksmith") {
+        // Leather apron overlay
+        g.rect(11, 16, 10, 8).fill(darkenHex(c.boot, 0.1));
+        g.rect(11, 16, 10, 1).fill(lightenHex(c.boot, 0.15));
+        // Hammer suggestion in right hand
+        if (f % 2 === 0) {
+          g.rect(23, 14 + bob, 3, 2).fill("#78716c"); // hammer head
+          g.rect(24, 16 + bob, 1, 4).fill("#7c2d12"); // handle
+        }
+      } else if (role === "scholar") {
+        // Book in left hand
+        g.rect(6, 16, 4, 5).fill("#c8a84b");
+        g.rect(7, 17, 2, 3).fill("#fde68a");
+        g.rect(7, 17, 2, 1).fill("#c8a84b");
+      } else if (role === "miner") {
+        // Belt + tool loops
+        g.rect(10, 20, 12, 2).fill(c.accent);
+        // Pickaxe over shoulder
+        if (f % 2 === 0) {
+          g.rect(7, 10 + bob, 1, 6).fill("#7c2d12"); // handle
+          g.rect(5, 10 + bob, 4, 2).fill("#78716c"); // pick head
+        }
+      } else if (role === "courier") {
+        // Saddlebag on side
+        g.rect(5, 17, 4, 4).fill(darkenHex(c.body, 0.2));
+        g.rect(6, 18, 2, 2).fill(lightenHex(c.body, 0.1));
+        // Cloak hem behind body
+        g.rect(8, 18, 2, 8 + bob).fill(darkenHex(c.body, 0.15));
+      }
+
+      // Arms
+      g.rect(7, 16, 3, 6).fill(c.body);
+      g.rect(22, 16, 3, 6).fill(c.body);
+
+      // Head
+      g.rect(11, 6, 10, 8).fill(c.skin);
+      // Hair / headgear
+      if (role === "guard") {
+        // Metal helmet
+        g.rect(10, 5, 12, 4).fill("#6b7280");
+        g.rect(10, 5, 12, 1).fill(lightenHex("#6b7280", 0.3));
+        g.rect(10, 8, 2, 3).fill("#6b7280"); // cheek guard
+        g.rect(20, 8, 2, 3).fill("#6b7280");
+      } else if (role === "miner") {
+        // Hard hat
+        g.rect(9, 5, 14, 3).fill("#fbbf24");
+        g.rect(9, 5, 14, 1).fill(lightenHex("#fbbf24", 0.3));
+        // Lamp on hat
+        g.rect(14, 4, 4, 2).fill("#fed7aa");
+        g.rect(15, 3, 2, 2).fill({ color: "#fbbf24", alpha: 0.7 });
+      } else {
+        // Normal hair (color per role)
+        g.rect(11, 6, 10, 2).fill(c.hair);
+      }
+
+      // Eyes + catchlights
       g.rect(13, 10, 2, 2).fill("#0c0a09");
       g.rect(17, 10, 2, 2).fill("#0c0a09");
-      // arms
-      g.rect(7, 16, 3, 6).fill(body);
-      g.rect(22, 16, 3, 6).fill(body);
+      g.rect(13, 10, 1, 1).fill({ color: "#ffffff", alpha: 0.8 });
+      g.rect(17, 10, 1, 1).fill({ color: "#ffffff", alpha: 0.8 });
+
       frames.push(this.rt(g, T, T));
     }
     return frames;

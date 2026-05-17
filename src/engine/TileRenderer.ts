@@ -1,12 +1,14 @@
 import { Container, Sprite, Texture } from "pixi.js";
 import type { OverworldMap } from "../sim/Map";
-import type { TileKind } from "../sim/types";
+import type { TileKind, Season } from "../sim/types";
 import type { SpriteFactory } from "./SpriteFactory";
 
 /**
- * Tile renderer with viewport culling: only sprites within (or just outside)
- * the camera-visible rect are mounted in the container, so a 96×64 map renders
- * cheaply even at 60 FPS.
+ * Tile renderer with viewport culling and seasonal texture overrides.
+ * Only sprites within (or just outside) the camera-visible rect are mounted.
+ *
+ * Season changes swap textures on all mounted tiles; new tiles mount with
+ * the correct seasonal texture from the start.
  */
 export class TileRenderer {
   readonly container = new Container();
@@ -14,10 +16,33 @@ export class TileRenderer {
   /** Tracks sprites for water (ocean/river) tiles so animate() can swap frames. */
   private animatedTiles = new Map<number, Sprite>();
   private pool: Sprite[] = [];
+  private currentSeason: Season = "spring";
 
   constructor(private map: OverworldMap, private factory: SpriteFactory) {
     this.container.label = "tile-layer";
     this.container.sortableChildren = false;
+  }
+
+  /**
+   * Called by PixiApp on season change. Swaps all mounted tile textures to
+   * the seasonal variant, or back to base for spring/summer.
+   */
+  setSeason(season: Season): void {
+    if (season === this.currentSeason) return;
+    this.currentSeason = season;
+    // Re-texture every currently-mounted tile.
+    for (const [key, sprite] of this.mounted) {
+      const tile = this.map.tiles[key];
+      sprite.texture = this._textureFor(tile.kind, tile.variant);
+    }
+  }
+
+  private _textureFor(kind: TileKind, variant: number): Texture {
+    const seasonKey = `${this.currentSeason}:${kind}`;
+    const seasonal = this.factory.seasonTiles.get(seasonKey);
+    if (seasonal && seasonal.length > variant) return seasonal[variant];
+    const base = this.factory.tiles.get(kind);
+    return base ? base[variant] : Texture.EMPTY;
   }
 
   /** Update visible tiles; bounds in tile coordinates. */
@@ -38,8 +63,7 @@ export class TileRenderer {
           this.container.addChild(sprite);
           this.mounted.set(key, sprite);
           const tile = this.map.tiles[key];
-          const variants = this.factory.tiles.get(tile.kind);
-          sprite.texture = variants ? variants[tile.variant] : Texture.EMPTY;
+          sprite.texture = this._textureFor(tile.kind, tile.variant);
           sprite.x = x * T;
           sprite.y = y * T;
           // register in animatedTiles if this is a water tile

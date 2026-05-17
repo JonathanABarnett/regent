@@ -53,19 +53,11 @@ export class BorderLayer {
     if (hull.length < 3) return;
 
     const T = 32;
-    // Dashed line; the kingdom outline reads as "claimed" not "fortified"
-    drawDashedPolygon(this.g, hull.map(([x, y]) => [x * T, y * T]), {
-      color: 0xfde68a,
-      alpha: 0.45,
-      width: 2,
-      dash: 10,
-      gap: 6,
-    });
-
-    // Faint fill so the bordered region tints subtly — readable at night
-    // when the world is dim, invisible enough during the day to not distract.
+    // Soft territory fill only — no border line. The region tints subtly
+    // so the player can feel the extent of their kingdom without any lines
+    // that read as game UI elements.
     this.g.poly(hull.flatMap(([x, y]) => [x * T, y * T]));
-    this.g.fill({ color: 0xfde68a, alpha: 0.04 });
+    this.g.fill({ color: 0xfde68a, alpha: 0.05 });
   }
 }
 

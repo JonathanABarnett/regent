@@ -3,7 +3,14 @@ import { useGameStore } from "../store/useGameStore";
 import { CanvasSurface, drawCharacter } from "../engine/CharacterRenderer";
 import { AboutDialog } from "./AboutDialog";
 import { PastKingdoms } from "./PastKingdoms";
-import { readSave } from "../sim/Persistence";
+import {
+  readSave,
+  readAllSlotMeta,
+  setActiveSlot,
+  getActiveSlot,
+  SLOT_COUNT,
+  type SlotMeta,
+} from "../sim/Persistence";
 import { readArchive } from "../sim/KingdomArchive";
 
 /**
@@ -35,7 +42,10 @@ export function TitleScreen({
   const [frame, setFrame] = useState(0);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [pastOpen, setPastOpen] = useState(false);
+  const [showSlots, setShowSlots] = useState(false);
+  const [activeSlot, setActiveSlotState] = useState(getActiveSlot);
   const pastCount = useMemo(() => readArchive().length, []);
+  const slotMeta = useMemo<SlotMeta[]>(() => readAllSlotMeta(), [showSlots]);
 
   // Pull the 3 most recent journal entries off the save file for the news
   // ticker. Computed once on mount because the title screen doesn't observe
@@ -119,6 +129,37 @@ export function TitleScreen({
           </div>
         )}
 
+        {/* Save slot picker */}
+        {showSlots && (
+          <div className="slot-picker">
+            <div className="slot-picker-label">Choose a save slot</div>
+            {slotMeta.map((meta) => (
+              <button
+                key={meta.slot}
+                className={`slot-btn ${meta.slot === activeSlot ? "slot-active" : ""}`}
+                onClick={() => {
+                  setActiveSlot(meta.slot);
+                  setActiveSlotState(meta.slot);
+                  setShowSlots(false);
+                  if (!meta.empty) onContinue();
+                  else onNew();
+                }}
+              >
+                <span className="slot-num">Slot {meta.slot + 1}</span>
+                {meta.empty ? (
+                  <span className="slot-empty">— empty —</span>
+                ) : (
+                  <span className="slot-info">
+                    <span className="slot-name">{meta.kingdomName ?? "Unnamed"}</span>
+                    <span className="slot-sub">Y{meta.year} · {meta.population} souls</span>
+                  </span>
+                )}
+              </button>
+            ))}
+            <button className="slot-cancel" onClick={() => setShowSlots(false)}>Cancel</button>
+          </div>
+        )}
+
         <div className="title-actions">
           {hasSave && (
             <button className="primary" onClick={onContinue}>
@@ -126,12 +167,19 @@ export function TitleScreen({
             </button>
           )}
           <button
+            className="ghost"
+            onClick={() => setShowSlots(true)}
+            title="Switch between save slots"
+          >
+            {SLOT_COUNT > 1 ? `Slot ${activeSlot + 1} ▾` : "Slots"}
+          </button>
+          <button
             className={hasSave ? "ghost" : "primary"}
             onClick={() => {
               if (
                 hasSave &&
                 !confirm(
-                  "Found a new kingdom? Your current realm will be lost forever.",
+                  "Start a new kingdom in this slot? The current realm will be archived.",
                 )
               ) {
                 return;

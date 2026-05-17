@@ -3,6 +3,7 @@ import type { Journal } from "./Journal";
 import type { NPC } from "../types";
 import { generateName } from "./Names";
 import { traitFor, epithetFor } from "./Traits";
+import { makeEvent } from "../events/EventSchema";
 
 /**
  * NPC life events: aging, marriages, births, deaths.
@@ -159,6 +160,10 @@ export class LifeEvents {
     const elderly = this.world.npcs.filter((n) => (n.age ?? 30) > 70);
     if (!elderly.length) return;
     const npc = elderly[Math.floor(this.rand() * elderly.length)];
+    // Determine significance before removing the NPC.
+    const hasPartner = !!npc.partnerId;
+    const children = this.world.npcs.filter((n) => n.parentIds?.includes(npc.id));
+    const isSignificant = hasPartner || children.length > 0 || (npc.age ?? 0) > 50;
     // remove
     const idx = this.world.npcs.findIndex((n) => n.id === npc.id);
     if (idx >= 0) this.world.npcs.splice(idx, 1);
@@ -168,6 +173,16 @@ export class LifeEvents {
       if (partner) partner.partnerId = undefined;
     }
     this.journal.write(this.deathLine(npc), "life", npc.homeId);
+    // Signal the engine to play a death bell and flash a brief vignette
+    // for NPCs who had families or lived a long life in the kingdom.
+    if (isSignificant) {
+      this.world.bus.publish(
+        makeEvent("custom", {
+          source: "internal",
+          payload: { label: `death_bell:${npc.name ?? "npc"}` },
+        }),
+      );
+    }
   }
 
   private deathLine(npc: NPC): string {

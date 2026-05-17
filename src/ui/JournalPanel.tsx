@@ -172,6 +172,18 @@ export function JournalPanel({
                         go to
                       </button>
                     )}
+                    <button
+                      type="button"
+                      className="entry-share"
+                      title="Copy this entry to clipboard"
+                      aria-label="Copy journal entry to clipboard"
+                      onClick={() => {
+                        const text = `${identity?.kingdomName ?? "Kingdom"} · Day ${e.day}, Y${e.year} (${e.season})\n\n${e.text}`;
+                        navigator.clipboard?.writeText(text).catch(() => {});
+                      }}
+                    >
+                      📋
+                    </button>
                   </li>
                 ))}
               </ul>

@@ -44,6 +44,11 @@ export function HUD({
         <span className="clock">{hourLabel}</span>
         <span className="weather">{weatherIcon[stats.weather] ?? "·"} {stats.weather}</span>
         <span className="npcs">☖ {stats.npcCount}</span>
+        <span className="factions" title={`Merchants ${factionLabel(stats.factions.merchants)} · Scholars ${factionLabel(stats.factions.scholars)} · Guard ${factionLabel(stats.factions.guard)}`}>
+          <span className={`faction-dot faction-m ${factionClass(stats.factions.merchants)}`} title={`Merchants: ${factionLabel(stats.factions.merchants)}`}>⚖</span>
+          <span className={`faction-dot faction-s ${factionClass(stats.factions.scholars)}`} title={`Scholars: ${factionLabel(stats.factions.scholars)}`}>📖</span>
+          <span className={`faction-dot faction-g ${factionClass(stats.factions.guard)}`} title={`Guard: ${factionLabel(stats.factions.guard)}`}>🛡</span>
+        </span>
       </div>
       <div className="hud-right">
         <button onClick={onToggleStats} title="Kingdom stats">Stats</button>
@@ -69,6 +74,20 @@ function formatHour(h: number) {
   const hour = Math.floor(h);
   const min = Math.floor((h - hour) * 60);
   return `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+function factionLabel(score: number): string {
+  if (score >= 5) return "pleased";
+  if (score >= 2) return "content";
+  if (score >= -2) return "neutral";
+  if (score >= -5) return "uneasy";
+  return "angry";
+}
+
+function factionClass(score: number): string {
+  if (score >= 4) return "faction-pleased";
+  if (score <= -4) return "faction-angry";
+  return "faction-neutral";
 }
 
 function greetingFor(inWorldHour: number, monarch: string): string {
