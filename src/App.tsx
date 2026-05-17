@@ -26,6 +26,7 @@ import {
   mapTwitchRaid,
 } from "./sim/events/EventMapper";
 import type { Structure } from "./sim/types";
+import { NPCProfilePanel } from "./ui/NPCProfilePanel";
 import { OnboardingModal } from "./ui/OnboardingModal";
 import { TitleScreen } from "./ui/TitleScreen";
 import { CharacterCreator } from "./ui/CharacterCreator";
@@ -83,6 +84,7 @@ export function App() {
   const [petCreatorOpen, setPetCreatorOpen] = useState(false);
   const [inspected, setInspected] = useState<Structure | null>(null);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [profileNpcId, setProfileNpcId] = useState<string | null>(null);
   const [kingdomCardOpen, setKingdomCardOpen] = useState(false);
   // Show the title screen on first paint. Dismissed by Continue / New / etc.
   const [titleOpen, setTitleOpen] = useState(true);
@@ -296,6 +298,11 @@ export function App() {
 
     // periodic world stats mirror — light read; cheaper than re-rendering React on every frame
     const statsInterval = window.setInterval(() => {
+      // Build name→id map for journal linkification (only named NPCs).
+      const npcNames: Record<string, string> = {};
+      for (const n of world.npcs) {
+        if (n.name) npcNames[n.name] = n.id;
+      }
       updateWorldStats({
         hour: world.state.hour,
         day: world.state.day,
@@ -305,6 +312,7 @@ export function App() {
         weather: world.state.weather,
         npcCount: world.npcs.length,
         seed: world.state.seed,
+        npcNames,
       });
     }, 500);
 
@@ -874,6 +882,7 @@ export function App() {
             s.pos.y + s.size.y / 2,
           );
         }}
+        onSelectNpc={(npcId) => setProfileNpcId(npcId)}
       />
       {inspected && worldRef.current && !streamerMode && (
         <StructureInspector
@@ -913,8 +922,19 @@ export function App() {
             return { x: c.x, y: c.y, zoom: c.zoom };
           }}
           getWorld={() => worldRef.current}
+          onClickNpc={(id) => setProfileNpcId(id)}
         />
       )}
+      <NPCProfilePanel
+        npcId={profileNpcId}
+        getWorld={() => worldRef.current}
+        onClose={() => setProfileNpcId(null)}
+        onSelectNpc={(id) => setProfileNpcId(id)}
+        onNavigateToNpc={(npc) => {
+          setProfileNpcId(null);
+          pixiRef.current?.camera.snapTo(npc.pos.x, npc.pos.y);
+        }}
+      />
       {titleOpen && (
         <TitleScreen
           hasSave={hasSaveRef.current}

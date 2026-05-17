@@ -805,26 +805,117 @@ function writeWelcomeBack(world: World, save: SaveData) {
   const lastSavedAt = save.savedAt ? new Date(save.savedAt).getTime() : 0;
   if (!lastSavedAt || Number.isNaN(lastSavedAt)) return;
   const realMsAway = Date.now() - lastSavedAt;
-  if (realMsAway < 5 * 60 * 1000) return; // skip for short reopens (< 5min)
+  if (realMsAway < 5 * 60 * 1000) return; // skip short reopens (< 5 min)
+
   const hoursAway = Math.floor(realMsAway / (60 * 60 * 1000));
-  let summary: string;
-  if (hoursAway < 24) {
-    const hourWord = hoursAway <= 1 ? "an hour" : `${hoursAway} hours`;
-    summary = `You returned after ${hourWord} away. The kingdom carried on.`;
-  } else {
-    const days = Math.floor(hoursAway / 24);
-    summary = `You returned after ${days} day${days === 1 ? "" : "s"} away. The kingdom aged with you, in its own time.`;
+  const daysAway = Math.floor(hoursAway / 24);
+
+  // ── Time-away phrase ──────────────────────────────────────────────────────
+  let timePhrase: string;
+  if (hoursAway < 2) timePhrase = "an hour";
+  else if (hoursAway < 24) timePhrase = `${hoursAway} hours`;
+  else timePhrase = `${daysAway} day${daysAway === 1 ? "" : "s"}`;
+
+  // ── Population + treasury snapshot ────────────────────────────────────────
+  const pop = world.npcs.length;
+  const gold = Math.floor(world.economy.state.gold);
+  const { year, season, day } = world.state;
+  const seasonLabel = season.charAt(0).toUpperCase() + season.slice(1);
+
+  // ── Find notable deaths and births recorded while away ────────────────────
+  // "While away" = journal entries more recent than the save timestamp.
+  // We approximate by looking for life entries since we don't timestamp them
+  // precisely; instead we read from the saved journal (pre-load) for names.
+  const journalEntries = save.journal ?? [];
+  const lastSaveEntryIdx = journalEntries.length - 1;
+  // Deaths are identified by keywords in recent "life" entries.
+  const recentLife = journalEntries
+    .slice(Math.max(0, lastSaveEntryIdx - 20))
+    .filter((e) => e.kind === "life");
+  const deaths = recentLife.filter(
+    (e) => e.text.includes("laid to rest") ||
+           e.text.includes("passed") ||
+           e.text.includes("closed their eyes") ||
+           e.text.includes("bells tolled") ||
+           e.text.includes("procession"),
+  );
+  const births = recentLife.filter(
+    (e) => e.text.includes("was born") ||
+           e.text.includes("welcomed") ||
+           e.text.includes("new cry") ||
+           e.text.includes("healthy birth"),
+  );
+
+  // ── Build the steward's report ────────────────────────────────────────────
+  // Delivers 2-4 lines as separate journal entries so each point is readable.
+  const lines: Array<{ text: string; kind: "system" | "life" | "milestone" }> = [];
+
+  // Opening: time away + current date.
+  const STEWARD_OPENINGS = [
+    `The steward meets you at the door — ${timePhrase} away, and ${seasonLabel} of year ${year} is already well underway.`,
+    `A ${timePhrase} passed in the world outside. The scribes have the date: ${seasonLabel}, year ${year}, day ${day}.`,
+    `${timePhrase} gone. The kingdom noted it and moved on. It is now ${seasonLabel} of year ${year}.`,
+    `The chronicle marks your return after ${timePhrase}. Year ${year}, ${seasonLabel}. Day ${day}.`,
+  ];
+  lines.push({
+    text: STEWARD_OPENINGS[Math.floor(Math.random() * STEWARD_OPENINGS.length)],
+    kind: "system",
+  });
+
+  // Population + gold line.
+  const POP_LINES = [
+    `The kingdom numbers ${pop} souls. The treasury holds ${gold} gold.`,
+    `${pop} people call this land home. The treasury: ${gold} gold.`,
+    `Headcount: ${pop}. The treasury reports ${gold} gold — the scribes checked twice.`,
+  ];
+  lines.push({ text: POP_LINES[Math.floor(Math.random() * POP_LINES.length)], kind: "system" });
+
+  // Births while away.
+  if (births.length > 0) {
+    const count = births.length;
+    lines.push({
+      text: count === 1
+        ? `While you were away, a child was born to the kingdom. The herald left a note.`
+        : `While you were away, ${count} children were born to the kingdom. The herald has the names.`,
+      kind: "life",
+    });
   }
-  // Note: world.journal exists but its onEntry callback won't be hooked up
-  // yet at apply-time (App.tsx wires it after). Queue this message for the
-  // next event so it lands in the Zustand journal too.
+
+  // Deaths while away (with extra weight — loss should feel felt).
+  if (deaths.length > 0) {
+    const DEATH_AWAY_LINES = [
+      `The kingdom also mourned ${deaths.length === 1 ? "a passing" : `${deaths.length} passings`} in your absence. The chronicle has the names.`,
+      `${deaths.length === 1 ? "One soul was" : `${deaths.length} souls were`} laid to rest while you were away. The scribes wrote it down, as they always do.`,
+      `${deaths.length === 1 ? "Someone dear to the kingdom is gone." : `${deaths.length} are gone.`} The candles are lit. The chronicle remembers them.`,
+    ];
+    lines.push({
+      text: DEATH_AWAY_LINES[Math.floor(Math.random() * DEATH_AWAY_LINES.length)],
+      kind: "life",
+    });
+  }
+
+  // Closing line for long absences.
+  if (daysAway >= 3) {
+    const LONG_AWAY = [
+      "Three days or more. The kingdom kept going, as kingdoms do. It missed nothing — except, perhaps, you.",
+      "The gates were closed, but the fields still turned and the forge still ran. That is what a kingdom is.",
+    ];
+    lines.push({
+      text: LONG_AWAY[Math.floor(Math.random() * LONG_AWAY.length)],
+      kind: "system",
+    });
+  }
+
+  // Queue after App wires the onJournal callback.
   setTimeout(() => {
-    try {
-      world.journal.write(summary, "system");
-    } catch {
-      /* ignore */
+    for (const line of lines) {
+      try {
+        world.journal.write(line.text, line.kind);
+      } catch {
+        /* ignore */
+      }
     }
-  }, 200);
+  }, 250);
 }
 
 export function writeSave(save: SaveData): void {

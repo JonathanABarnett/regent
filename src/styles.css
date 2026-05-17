@@ -1846,6 +1846,253 @@ html, body, #root, .app-root {
 .npc-parents { color: var(--panel-muted); }
 .npc-trait { color: var(--accent); font-style: italic; text-transform: none; }
 .npc-speech { color: var(--accent); font-style: italic; margin-top: 4px; }
+.npc-tooltip-hint { color: var(--panel-muted); font-size: 9px; margin-top: 4px; opacity: 0.7; letter-spacing: 0.05em; }
+
+/* ── NPC Profile Panel ──────────────────────────────────────────────────── */
+.npc-profile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 88;
+  background: rgba(0,0,0,0.25);
+  backdrop-filter: blur(1px);
+}
+.npc-profile-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 89;
+  width: 320px;
+  max-width: 90vw;
+  background: rgba(10, 12, 24, 0.97);
+  border-left: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: -8px 0 32px rgba(0,0,0,0.6);
+  animation: slideInRight var(--motion-fast, 160ms) ease;
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.npc-profile-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 16px 14px;
+  border-bottom: 2px solid transparent;
+  flex-shrink: 0;
+}
+.npc-profile-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+.npc-profile-avatar-initial {
+  font-size: 22px;
+  font-weight: bold;
+  line-height: 1;
+}
+.npc-profile-crown {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));
+}
+.npc-profile-title {
+  flex: 1;
+  min-width: 0;
+}
+.npc-profile-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #f1f5f9;
+  margin: 0 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.npc-profile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.npc-role-badge {
+  font-size: 9px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+.npc-trait-badge {
+  font-size: 9px;
+  color: var(--panel-muted);
+  font-style: italic;
+  padding: 2px 0;
+}
+.npc-profile-age {
+  font-size: 10px;
+  color: var(--panel-muted);
+}
+.npc-profile-close {
+  background: none;
+  border: none;
+  color: var(--panel-muted);
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 0;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity var(--motion-fast, 160ms);
+}
+.npc-profile-close:hover { opacity: 1; color: #f1f5f9; }
+
+.npc-profile-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.npc-profile-backstory {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--panel-muted);
+  line-height: 1.6;
+  margin: 0;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.03);
+  border-left: 2px solid rgba(255,255,255,0.1);
+  border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0;
+}
+.npc-profile-section h3 {
+  font-size: 9px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--panel-muted);
+  margin: 0 0 8px;
+}
+.npc-profile-locations {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #cbd5e1;
+}
+.npc-profile-family {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.npc-family-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11px;
+}
+.npc-family-label {
+  color: var(--panel-muted);
+  font-size: 10px;
+  flex-shrink: 0;
+  width: 60px;
+}
+.npc-family-names {
+  color: #f1f5f9;
+}
+/* NPC name links — both in profile panel and in journal */
+.npc-name-link,
+.journal-npc-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+  font-style: inherit;
+  line-height: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  transition: color var(--motion-fast, 160ms);
+}
+.npc-name-link:hover,
+.journal-npc-link:hover {
+  color: #f9a8d4;
+  text-decoration-style: solid;
+}
+.npc-profile-mentions {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.npc-mention {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.03);
+  border-radius: var(--radius-sm, 4px);
+  border-left: 2px solid transparent;
+}
+.npc-mention.kind-milestone { border-color: #c8a84b; }
+.npc-mention.kind-life      { border-color: #fb7185; }
+.npc-mention.kind-event     { border-color: #60a5fa; }
+.npc-mention.kind-weather   { border-color: #94a3b8; }
+.npc-mention-day {
+  font-size: 9px;
+  color: var(--panel-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.npc-mention-text {
+  font-size: 11px;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+.npc-profile-empty {
+  font-size: 11px;
+  color: var(--panel-muted);
+  font-style: italic;
+  margin: 0;
+}
+.npc-profile-footer {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.npc-find-btn {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #cbd5e1;
+  font-size: 12px;
+  padding: 8px 0;
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  transition: background var(--motion-fast, 160ms);
+}
+.npc-find-btn:hover {
+  background: rgba(255,255,255,0.12);
+  color: #f1f5f9;
+}
 
 /* HUD: day/season chips */
 .hud .day { color: #cbd5e1; font-variant-numeric: tabular-nums; }

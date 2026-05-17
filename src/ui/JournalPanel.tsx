@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useGameStore } from "../store/useGameStore";
 import type { SavedJournalEntry } from "../sim/Persistence";
 import {
@@ -50,11 +50,14 @@ export function JournalPanel({
   open,
   onClose,
   onNavigateToStructure,
+  onSelectNpc,
   eventLogOpen,
 }: {
   open: boolean;
   onClose: () => void;
   onNavigateToStructure?: (structureId: string) => void;
+  /** Open the NPC profile panel for an NPC id. */
+  onSelectNpc?: (npcId: string) => void;
   /** When the event log is also open, the journal slides left to make room. */
   eventLogOpen?: boolean;
 }) {
@@ -62,6 +65,7 @@ export function JournalPanel({
   const clearJournal = useGameStore((s) => s.clearJournal);
   const settings = useGameStore((s) => s.settings);
   const identity = useGameStore((s) => s.identity);
+  const npcNames = useGameStore((s) => s.worldStats.npcNames);
 
   const [filter, setFilter] = useState<JournalFilter>(DEFAULT_FILTER);
 
@@ -154,7 +158,9 @@ export function JournalPanel({
                 {group.entries.map((e) => (
                   <li key={e.id} className={`entry kind-${e.kind}`}>
                     <span className="entry-icon" aria-hidden="true">{kindIcon[e.kind]}</span>
-                    <span className="entry-text">{e.text}</span>
+                    <span className="entry-text">
+                      {linkifyNpcNames(e.text, npcNames, onSelectNpc)}
+                    </span>
                     {e.targetStructureId && onNavigateToStructure && (
                       <button
                         type="button"
@@ -184,6 +190,57 @@ export function JournalPanel({
       </footer>
     </aside>
   );
+}
+
+/**
+ * Scan `text` for known NPC names and wrap each occurrence in a clickable
+ * button that opens the NPC's profile panel. Returns an array of strings
+ * and React elements (compatible with JSX children).
+ *
+ * We sort names longest-first so "Berta the Smith" matches before "Berta"
+ * when both exist, avoiding a partial match that swallows the full name.
+ * Skips linkification if no `onSelectNpc` callback is provided (saves work
+ * when the panel isn't mounted yet).
+ */
+function linkifyNpcNames(
+  text: string,
+  npcNames: Record<string, string>,
+  onSelectNpc?: (id: string) => void,
+): ReactNode {
+  if (!onSelectNpc) return text;
+  const names = Object.keys(npcNames).sort((a, b) => b.length - a.length);
+  if (!names.length) return text;
+
+  // Build a single regex that matches any of the names (word-boundary anchored).
+  const escaped = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const pattern = new RegExp(`(${escaped.join("|")})`, "g");
+
+  const parts: ReactNode[] = [];
+  let last = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = pattern.exec(text)) !== null) {
+    const [word] = match;
+    const id = npcNames[word];
+    if (!id) continue;
+    if (match.index > last) {
+      parts.push(text.slice(last, match.index));
+    }
+    parts.push(
+      <button
+        key={key++}
+        className="journal-npc-link"
+        onClick={() => onSelectNpc(id)}
+        title={`View ${word}'s profile`}
+      >
+        {word}
+      </button>,
+    );
+    last = match.index + word.length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts.length ? parts : text;
 }
 
 interface JournalGroup {

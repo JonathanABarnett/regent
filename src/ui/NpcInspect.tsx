@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { World } from "../sim/World";
 import type { NPC } from "../sim/types";
 import { setHoveredNpc } from "../engine/HoverState";
@@ -11,23 +11,29 @@ interface HoverState {
 }
 
 /**
- * Hover-over-NPC tooltip. Reads mouse position vs pixi canvas, looks up the
- * nearest NPC in world-space, and renders a tiny info card next to the cursor.
+ * Hover-over-NPC tooltip + click-to-profile.
  *
- * Cheap: only computes on mousemove, and only re-renders when the nearest NPC
- * changes identity. Doesn't touch the pixi stage at all — works purely from
- * canvas coordinates and the camera transform.
+ * On hover: renders a compact info card near the cursor.
+ * On click: calls `onClickNpc(npc.id)` so App can open NPCProfilePanel.
+ *
+ * Cheap: only computes on mousemove via rAF, and only re-renders when the
+ * nearest NPC changes identity. Doesn't touch the Pixi stage at all.
  */
 export function NpcInspect({
   getCanvas,
   getCamera,
   getWorld,
+  onClickNpc,
 }: {
   getCanvas: () => HTMLCanvasElement | null;
   getCamera: () => { x: number; y: number; zoom: number } | null;
   getWorld: () => World | null;
+  onClickNpc?: (npcId: string) => void;
 }) {
   const [hover, setHover] = useState<HoverState | null>(null);
+  // Track the current hover NPC id in a ref so the click handler can read it
+  // without a stale closure.
+  const hoverIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let raf = 0;
@@ -39,6 +45,7 @@ export function NpcInspect({
         const world = getWorld();
         if (!canvas || !cam || !world) {
           setHover(null);
+          hoverIdRef.current = null;
           return;
         }
         const rect = canvas.getBoundingClientRect();
@@ -46,17 +53,14 @@ export function NpcInspect({
         const py = ev.clientY - rect.top;
         if (px < 0 || py < 0 || px > rect.width || py > rect.height) {
           setHover(null);
+          hoverIdRef.current = null;
           return;
         }
         // map screen → tile-space
         const T = 32;
         const tileX = (px - rect.width / 2) / (T * cam.zoom) + cam.x;
         const tileY = (py - rect.height / 2) / (T * cam.zoom) + cam.y;
-        // find nearest NPC within ~1 tile. NPCs are visually offset by a
-        // deterministic per-seed amount (see EntityLayer.update) so the
-        // sprite the cursor is over isn't at npc.pos but at npc.pos + offset.
-        // Apply the same offset here so the hover lands on the right NPC
-        // when several share a tile.
+        // find nearest NPC within ~1 tile (same offset math as EntityLayer)
         let best: NPC | null = null;
         let bestDist = 1.2;
         for (const n of world.npcs) {
@@ -73,6 +77,7 @@ export function NpcInspect({
         if (!best) {
           setHover(null);
           setHoveredNpc(null);
+          hoverIdRef.current = null;
           return;
         }
         const partner = best.partnerId
@@ -85,6 +90,7 @@ export function NpcInspect({
             if (p) parents.push(p);
           }
         }
+        hoverIdRef.current = best.id;
         setHover({
           npc: best,
           partner,
@@ -97,15 +103,26 @@ export function NpcInspect({
     const onLeave = () => {
       setHover(null);
       setHoveredNpc(null);
+      hoverIdRef.current = null;
+    };
+    // Click on the canvas → open the profile panel for the currently-hovered NPC.
+    const onClick = () => {
+      if (hoverIdRef.current && onClickNpc) {
+        onClickNpc(hoverIdRef.current);
+      }
     };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseleave", onLeave);
+    // Attach click to the canvas specifically so map drags don't trigger it.
+    const canvas = getCanvas();
+    canvas?.addEventListener("click", onClick);
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseleave", onLeave);
+      canvas?.removeEventListener("click", onClick);
     };
-  }, [getCanvas, getCamera, getWorld]);
+  }, [getCanvas, getCamera, getWorld, onClickNpc]);
 
   if (!hover) return null;
   const { npc, partner, parents, screen } = hover;
@@ -128,6 +145,9 @@ export function NpcInspect({
         </div>
       )}
       {npc.speech && <div className="npc-speech">"{npc.speech}"</div>}
+      {onClickNpc && (
+        <div className="npc-tooltip-hint">click for full profile</div>
+      )}
     </div>
   );
 }

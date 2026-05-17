@@ -88,7 +88,12 @@ export class LifeEvents {
     const aName = describe(a);
     const bName = describe(b);
     const place = nice(a.homeId);
-    return pickFrom(MARRIAGE_LINES, this.rand)
+    // Pick a pool that knows both traits if both are set; otherwise fall back
+    // to the general pool. Trait-aware lines make each wedding feel unique.
+    const pool = (a.trait && b.trait)
+      ? traitMarriagePool(a.trait, b.trait)
+      : MARRIAGE_LINES;
+    return pickFrom(pool, this.rand)
       .replaceAll("{a}", aName)
       .replaceAll("{b}", bName)
       .replaceAll("{place}", place);
@@ -140,11 +145,14 @@ export class LifeEvents {
 
   private birthLine(name: string, a: NPC, b: NPC): string {
     const place = nice(a.homeId);
+    // Build a small blessing phrase based on the parents' combined traits.
+    const blessing = birthBlessing(a.trait, b.trait, this.rand);
     return pickFrom(BIRTH_LINES, this.rand)
       .replaceAll("{name}", name)
       .replaceAll("{a}", a.name ?? "the mother")
       .replaceAll("{b}", b.name ?? "the father")
-      .replaceAll("{place}", place);
+      .replaceAll("{place}", place)
+      .replaceAll("{blessing}", blessing);
   }
 
   private tryDeath() {
@@ -166,17 +174,29 @@ export class LifeEvents {
     const age = Math.floor(npc.age ?? 70);
     const desc = describe(npc);
     const name = npc.name ?? "someone";
+    // Build a survivor clause — the most emotionally resonant part.
+    const partner = npc.partnerId
+      ? this.world.npcs.find((n) => n.id === npc.partnerId)
+      : undefined;
+    const children = this.world.npcs.filter((n) => n.parentIds?.includes(npc.id));
+    const survivors = buildSurvivorLine(partner, children);
     return pickFrom(DEATH_LINES, this.rand)
       .replaceAll("{desc}", desc)
       .replaceAll("{name}", name)
-      .replaceAll("{age}", String(age));
+      .replaceAll("{age}", String(age))
+      .replaceAll("{survivors}", survivors);
   }
 }
 
-// ── Phrasing pools ─────────────────────────────────────────────────────
-// Each pool is small but bigger than the player will remember between sessions.
-// `{a}` / `{b}` / `{name}` / `{place}` / `{desc}` / `{age}` are substituted at
-// write time. Adding entries here is the lowest-friction way to bump variety.
+// ── Phrasing pools ─────────────────────────────────────────────────────────
+// Placeholders:
+//   {a} / {b}      — NPC display names (may include epithet from describe())
+//   {name}         — child's name (births)
+//   {place}        — home location display name
+//   {desc}         — "the ever-cheerful Berta" (death)
+//   {age}          — integer age (death)
+//   {survivors}    — built inline from live roster (death); may be ""
+//   {blessing}     — single-phrase blessing based on parent traits (birth)
 
 const MARRIAGE_LINES: readonly string[] = [
   "{a} and {b} were wed at {place}.",
@@ -186,27 +206,169 @@ const MARRIAGE_LINES: readonly string[] = [
   "After a year of small kindnesses, {a} and {b} were wed at {place} this morning.",
   "{a} and {b} exchanged vows at {place} as the bells rang for noon.",
   "{place} hosted a quiet wedding — {a} and {b}, by lamplight, with only family present.",
+  "No announcement — {a} and {b} simply appeared at the register together, smiling and holding hands.",
+  "The ceremony at {place} was over in ten minutes. The celebration lasted until the fire burned out.",
+  "{a} and {b} were married in the early morning before anyone else was awake. They said it felt right.",
+  "The whole of {place} seemed to have known before {a} and {b} did. The wedding felt like a foregone conclusion.",
+  "{a} found a flower from {b} on the doorstep three mornings in a row before anything was said aloud.",
 ];
 
 const BIRTH_LINES: readonly string[] = [
-  "A child, {name}, was born to {a} and {b} in {place}.",
-  "{place} woke to a new cry — {name}, child of {a} and {b}.",
-  "{a} and {b} welcomed {name} into the world today.",
-  "{name} was born at {place} just before dawn; {a} and {b} were both well.",
-  "A small celebration in {place}: {a} and {b} introduced their child, {name}.",
-  "{name} arrived in the late afternoon. {a} and {b} are home and resting.",
-  "The midwife of {place} announced a healthy birth — {name}, child of {a} and {b}.",
+  "A child, {name}, was born to {a} and {b} in {place}. {blessing}",
+  "{place} woke to a new cry — {name}, child of {a} and {b}. {blessing}",
+  "{a} and {b} welcomed {name} into the world today. {blessing}",
+  "{name} was born at {place} just before dawn; {a} and {b} were both well. {blessing}",
+  "A small celebration in {place}: {a} and {b} introduced their child, {name}. {blessing}",
+  "{name} arrived in the late afternoon. {a} and {b} are home and resting. {blessing}",
+  "The midwife of {place} announced a healthy birth — {name}, child of {a} and {b}. {blessing}",
+  "{name} came into the world noisily, which the midwife said was a very good sign. {a} and {b} agreed.",
+  "By afternoon everyone in {place} knew: {a} and {b} had a child. {name}. The name was settled within the hour.",
 ];
 
 const DEATH_LINES: readonly string[] = [
-  "{desc} passed peacefully at the age of {age}. They will be remembered.",
-  "{name} — {age} years old — was laid to rest today.",
-  "{desc} closed their eyes for the last time. They were {age}.",
-  "Bells tolled at dusk; {desc} had passed in their {age}th year.",
-  "{desc} died in their sleep last night. The chronicle records {age} good years.",
-  "Word reached the keep at midday: {desc}, {age}, has gone. The family asks for quiet.",
-  "A small procession wound through the lanes for {desc}, who was {age}, and beloved.",
+  "{desc} passed peacefully at the age of {age}.{survivors}",
+  "{name}, {age} years old, was laid to rest today.{survivors}",
+  "{desc} closed their eyes for the last time. They were {age}.{survivors}",
+  "Bells tolled at dusk; {desc} had passed in their {age}th year.{survivors}",
+  "{desc} died in their sleep last night. The chronicle records {age} good years.{survivors}",
+  "Word reached the keep at midday: {desc}, {age}, has gone. The family asks for quiet.{survivors}",
+  "A small procession wound through the lanes for {desc}, who was {age}, and beloved.{survivors}",
+  "{name} — {age} — was found at first light, still as stone and wearing a half-smile. The old ones called it a good end.{survivors}",
+  "The chronicle adds {name}'s name to the list of those who lived long enough to grow into their face. {age} years. A good run.{survivors}",
+  "{desc} had been slowing for a season. When it came, it came gently. {age} years is a life worth mourning.{survivors}",
+  "The healer sat with {desc} through the last night. In the morning they were gone, {age} years completed.{survivors}",
 ];
+
+/**
+ * Build the trailing survivor sentence: who outlives the deceased and by name.
+ * May return "" if the NPC died alone.
+ */
+function buildSurvivorLine(partner: NPC | undefined, children: NPC[]): string {
+  if (!partner && children.length === 0) return "";
+  const childNames = children
+    .slice(0, 3)
+    .map((c) => c.name)
+    .filter(Boolean)
+    .join(", ");
+  const moreChildren = children.length > 3 ? ` and ${children.length - 3} others` : "";
+
+  if (partner && children.length > 0) {
+    return ` ${partner.name} and their ${
+      children.length === 1 ? `child ${childNames}` : `children ${childNames}${moreChildren}`
+    } survive them.`;
+  }
+  if (partner) return ` ${partner.name} survives them.`;
+  return children.length === 1
+    ? ` Their child, ${childNames}, carries on.`
+    : ` Their children — ${childNames}${moreChildren} — carry on.`;
+}
+
+/**
+ * A short blessing phrase for a newborn, derived from the parents' combined
+ * traits. Returned as a complete sentence, or "" for the default templates
+ * that don't need one.
+ */
+function birthBlessing(
+  traitA: NPC["trait"],
+  traitB: NPC["trait"],
+  rand: () => number,
+): string {
+  const BLESSINGS: Record<string, readonly string[]> = {
+    joyful: [
+      "The midwife said they laughed before they cried, which everyone agreed was impossible and also correct.",
+      "The room seemed lighter the moment they arrived.",
+    ],
+    grim: [
+      "Even the solemn say a child is a beginning.",
+      "The parents sat quietly with them for a long time and felt something lift.",
+    ],
+    curious: [
+      "The child looked around immediately, as if taking inventory.",
+      "They already seem to want to know what everything is.",
+    ],
+    stoic: [
+      "The parents received the news quietly, which for them was as good as a celebration.",
+      "No words were spoken. None were needed.",
+    ],
+    kind: [
+      "The neighbors brought food without being asked, the way they always do for this family.",
+      "Three people offered to help before being asked. The family thanked all of them.",
+    ],
+    ambitious: [
+      "The parents have already begun arguing about the child's name in a way that suggests they each have plans.",
+      "Even now the parents have opinions about which trade the child will learn.",
+    ],
+    anxious: [
+      "Both parents are well, the midwife confirmed twice, and then again when asked.",
+      "The midwife eventually had to ask the parents to stop worrying long enough to celebrate.",
+    ],
+    wise: [
+      "The elders say children born in this season grow up with patience, which is the rarest gift.",
+      "The old women sat outside the door and told stories until dawn, as is tradition.",
+    ],
+  };
+  // Try the shared trait first, then one of the parents' traits.
+  const pool =
+    traitA && traitA === traitB
+      ? BLESSINGS[traitA]
+      : traitA && BLESSINGS[traitA]
+        ? BLESSINGS[traitA]
+        : traitB && BLESSINGS[traitB]
+          ? BLESSINGS[traitB]
+          : undefined;
+  if (!pool) return "";
+  return pool[Math.floor(rand() * pool.length)];
+}
+
+/**
+ * Trait-aware marriage line pool. When both NPCs have known traits, we can
+ * pick from a pool that reflects their pairing. Falls back to MARRIAGE_LINES
+ * if no trait-specific pool exists.
+ */
+function traitMarriagePool(
+  traitA: NPC["trait"],
+  traitB: NPC["trait"],
+): readonly string[] {
+  // Complementary pairs get special prose; same-trait pairs get their own.
+  const PAIR_POOLS: Record<string, readonly string[]> = {
+    "joyful+grim": [
+      "{a} filled the room with noise while {b} stood quietly at the altar — which is exactly how everyone expected this to go.",
+      "The wedding at {place} was half celebration, half ceremony. {a} arranged the celebration. {b} arranged the ceremony.",
+    ],
+    "curious+wise": [
+      "{a} had a hundred questions; {b} answered the three that actually mattered. They were married by noon.",
+      "The scholars of {place} said the match made sense before either {a} or {b} admitted it.",
+    ],
+    "ambitious+kind": [
+      "{a} had plans for the next five years. {b} made sure the first year was worth living through.",
+      "Someone had to reach for the horizon. Someone had to keep the fire lit. {a} and {b} at {place}.",
+    ],
+    "stoic+anxious": [
+      "{b} worried aloud. {a} stood still and waited. This, the guests agreed, would work.",
+      "At {place}, {a} and {b} wed. {b} had prepared for fourteen different outcomes. {a} had prepared for one.",
+    ],
+    "joyful+joyful": [
+      "The wedding at {place} lasted two days. No one complained.",
+      "{a} and {b} were so happy they made everyone around them suspicious — and then happy too.",
+    ],
+    "stoic+stoic": [
+      "{a} and {b} signed the register, shook hands, and announced a modest supper. The guests found this deeply moving.",
+      "At {place}, the vows were brief and the meaning was not.",
+    ],
+    "wise+wise": [
+      "{a} and {b} had been talking for years before someone finally asked why they weren't married.",
+      "Two old souls, recognized. The ceremony at {place} felt like a confirmation of something everyone already knew.",
+    ],
+    "ambitious+ambitious": [
+      "The guests at {place} quietly placed bets on which of them would run the town within a year.",
+      "{a} and {b}: a wedding that felt less like a celebration and more like the beginning of a very productive arrangement.",
+    ],
+  };
+
+  // Build a normalized key (sorted so order doesn't matter).
+  const sorted = [String(traitA), String(traitB)].sort().join("+");
+  return PAIR_POOLS[sorted] ?? MARRIAGE_LINES;
+}
 
 function pickFrom<T>(arr: readonly T[], rand: () => number): T {
   return arr[Math.floor(rand() * arr.length)];

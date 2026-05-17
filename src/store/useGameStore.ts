@@ -95,6 +95,8 @@ export interface GameState {
     weather: string;
     npcCount: number;
     seed: number;
+    /** name → NPC id map; refreshed each stats update so JournalPanel can linkify names */
+    npcNames: Record<string, string>;
   };
   pushEvent: (e: ExternalEvent) => void;
   clearEvents: () => void;
@@ -190,6 +192,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     weather: "clear",
     npcCount: 0,
     seed: 0,
+    npcNames: {},
   },
   pushEvent: (e) => {
     set((s) => {
