@@ -577,6 +577,98 @@ const ARCS: ArcDef[] = [
     ],
   },
   {
+    id: "wandering_bard",
+    title: "The Wandering Bard",
+    // 4-phase music-and-court arc over 5 days. The bard's name + song
+    // title are packed into the flavor string at arc-start so every phase
+    // narrates the same story. The final phase drops a "ballad" scroll
+    // into the vault — a permanent record of the song that was left
+    // behind, distinct from one-off festival events.
+    pickFlavor: (_world, rand) => {
+      const bards = [
+        "Lenore of Three Roads", "Old Wynn", "Mira Quickfinger",
+        "Bestal the Long-Walker", "Calla of the Sea-Glass Inn",
+        "Roen Twice-Lost", "Sister Pipe", "the Marsh-Singer",
+        "Ulin of the Mountain Pass", "Phael",
+        "the Boy with the Cracked Lute", "Ysolde Greycloak",
+      ];
+      const songs = [
+        "The Crow and the Coin", "Long Was the Road from Eastmarch",
+        "What the Miller Saw", "Three Lamps at the Inn",
+        "The Princess Who Stayed", "A Cup of Cold River-Water",
+        "Bones Beneath the Apple Tree", "The Last Ship Out of Coldspring",
+        "Wine in the Hayloft", "A Song for Late Winter",
+        "The Smith's Daughter Says No", "The Wedding at the Mill",
+        "Old Roads", "What the Bell Heard", "The Fox and the Glove",
+        "Whoever Stole My Hat",
+      ];
+      const bard = bards[Math.floor(rand() * bards.length)];
+      const song = songs[Math.floor(rand() * songs.length)];
+      return `${bard}||${song}`;
+    },
+    phases: [
+      {
+        onDay: 0,
+        write: ({ journal, world, flavor, rand }) => {
+          const [bard] = flavor.split("||");
+          const town = pickTown(world, rand);
+          journal.write(
+            `${bard} arrived at the gates of ${town.name} with a road-worn cloak and a lute slung crossways. They asked only for a quiet room and a window.`,
+            "event",
+            town.id,
+          );
+        },
+      },
+      {
+        onDay: 1,
+        write: ({ journal, world, flavor, rand }) => {
+          const [bard] = flavor.split("||");
+          const town = pickTown(world, rand);
+          journal.write(
+            `${bard} practiced in the tavern at ${town.name} all afternoon. The kitchen staff stopped chopping more than once.`,
+            "event",
+            town.id,
+          );
+        },
+      },
+      {
+        onDay: 3,
+        write: ({ journal, world, flavor }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          const [bard, song] = flavor.split("||");
+          if (castle) {
+            world.bus.publish(
+              makeEvent("festival", {
+                source: "narrative",
+                intensity: 0.7,
+                duration_ms: 35_000,
+                payload: { structure: castle.id, label: `${bard} performs` },
+              }),
+            );
+          }
+          journal.write(
+            `${bard} performed "${song}" for the court tonight. The keep was silent for a full half-minute after the last verse.`,
+            "milestone",
+            castle?.id,
+          );
+        },
+      },
+      {
+        onDay: 4,
+        write: ({ journal, world, flavor }) => {
+          const castle = world.map.structures.find((s) => s.kind === "castle");
+          const [bard, song] = flavor.split("||");
+          journal.write(
+            `${bard} left at dawn with a fresh loaf and the same lute, refusing payment. They left behind a copy of "${song}" — written on the back of a wine list, in a hand that nobody at court could later forget.`,
+            "milestone",
+            castle?.id,
+          );
+          world.treasury.acquire("scroll", `the ballad "${song}"`);
+        },
+      },
+    ],
+  },
+  {
     id: "long_drought",
     title: "The Long Drought",
     // 4-phase weather/economy saga over 6 days. Pinned mostly to the castle

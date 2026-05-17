@@ -272,6 +272,101 @@ describe("Quests — phase deduplication regression", () => {
     expect(runOnce()).toBe(runOnce());
   });
 
+  describe("wandering_bard arc", () => {
+    it("fires 4 phases over 5 days, drops a ballad scroll on the final day", () => {
+      const w = new World({ seed: 47 });
+      const entries: Array<{ text: string; kind: string }> = [];
+      w.onJournal = (e) => entries.push({ text: e.text, kind: e.kind });
+      const internal = w.quests as unknown as {
+        active: {
+          arcId: string;
+          startDay: number;
+          flavor: string;
+          firedPhases: number[];
+        } | null;
+        lastRolledDay: number;
+      };
+      internal.active = {
+        arcId: "wandering_bard",
+        startDay: 1,
+        flavor: "Lenore of Three Roads||The Crow and the Coin",
+        firedPhases: [],
+      };
+      const vaultBefore = w.treasury.count();
+      for (let d = 1; d <= 6; d++) {
+        w.state.day = d;
+        internal.lastRolledDay = d;
+        w.quests.tick();
+      }
+      const arcLines = entries.filter((e) =>
+        /^Lenore of Three Roads (arrived|practiced|performed|left at dawn)/.test(e.text),
+      );
+      expect(arcLines.length).toBe(4);
+      // Vault gains exactly one scroll (the ballad).
+      expect(w.treasury.count()).toBe(vaultBefore + 1);
+    });
+
+    it("performance phase publishes a festival event labeled with the bard's name", () => {
+      const w = new World({ seed: 47 });
+      const events: Array<{ kind: string; label?: string }> = [];
+      w.bus.subscribe((ev) => {
+        if (ev.source === "narrative") events.push({ kind: ev.kind, label: ev.payload.label });
+      });
+      const internal = w.quests as unknown as {
+        active: {
+          arcId: string;
+          startDay: number;
+          flavor: string;
+          firedPhases: number[];
+        } | null;
+        lastRolledDay: number;
+      };
+      internal.active = {
+        arcId: "wandering_bard",
+        startDay: 1,
+        flavor: "Mira Quickfinger||A Song for Late Winter",
+        firedPhases: [],
+      };
+      for (let d = 1; d <= 6; d++) {
+        w.state.day = d;
+        internal.lastRolledDay = d;
+        w.quests.tick();
+      }
+      expect(
+        events.some((e) => e.kind === "festival" && e.label === "Mira Quickfinger performs"),
+      ).toBe(true);
+    });
+
+    it("pickFlavor produces a packed string the phases can unpack", () => {
+      // Drive ticks until the picker selects wandering_bard at least once.
+      // The picker invokes def.pickFlavor() to build the active arc's
+      // flavor; we verify the resulting string has the bard||song shape.
+      const w = new World({ seed: 47 });
+      const internal = w.quests as unknown as {
+        active: { arcId: string; flavor: string } | null;
+        lastRolledDay: number;
+      };
+      let found = false;
+      for (let d = 1; d <= 400 && !found; d++) {
+        w.state.day = d;
+        internal.lastRolledDay = d - 1;
+        w.quests.tick();
+        if (internal.active?.arcId === "wandering_bard") {
+          expect(internal.active.flavor.includes("||")).toBe(true);
+          const [bard, song] = internal.active.flavor.split("||");
+          expect(bard.length).toBeGreaterThan(0);
+          expect(song.length).toBeGreaterThan(0);
+          found = true;
+        }
+        // Clear non-target arcs so we keep rolling
+        if (internal.active && internal.active.arcId !== "wandering_bard") {
+          internal.active = null;
+        }
+      }
+      expect(found).toBe(true);
+    });
+  });
+
   describe("long_drought arc", () => {
     it("fires 4 phases over 6 days and spends gold on grain stores in phase 2", () => {
       const w = new World({ seed: 31 });
