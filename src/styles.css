@@ -2,16 +2,57 @@
   --hud-bg: rgba(15, 18, 36, 0.85);
   --hud-fg: #e7e5e4;
   --hud-border: #2c3760;
+  --hud-border-soft: rgba(120, 130, 180, 0.18);
   --accent: #fbbf24;
   --accent-dim: #92400e;
+  --accent-ring: rgba(251, 191, 36, 0.35);
   --panel-bg: rgba(10, 14, 30, 0.92);
   --panel-fg: #d6d3d1;
   --panel-muted: #78716c;
+  /* Modernization tokens — used by panels/modals/buttons. Subtle by design
+     so the retro feel survives; the changes are corner radius softening,
+     shadow depth, and motion timing. */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  --motion-fast: 120ms ease-out;
+  --motion-med: 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
   font-family: "Press Start 2P", "VT323", "Courier New", ui-monospace, monospace;
   color-scheme: dark;
 }
 
+/* Reduce-motion respect — transitions become instant.
+   Set as a separate rule (rather than disabling at the var level) so any
+   author-overridden timing still benefits. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
 * { box-sizing: border-box; }
+
+/* Modern baseline for every button in the app.
+   - All buttons get smooth hover/focus transitions (cheap; cached per element)
+   - All buttons render a clean focus ring for keyboard users
+   - Panel-specific selectors below freely override radius/padding/color
+     without losing the focus-ring guarantee. */
+button {
+  transition: color var(--motion-fast), border-color var(--motion-fast),
+              background-color var(--motion-fast), transform var(--motion-fast),
+              box-shadow var(--motion-fast);
+}
+button:focus-visible {
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 2px;
+}
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
 
 html, body, #root, .app-root {
   margin: 0;
@@ -68,12 +109,14 @@ html, body, #root, .app-root {
   justify-content: space-between;
   align-items: center;
   padding: 6px 10px;
-  background: var(--hud-bg);
-  border-bottom: 1px solid var(--hud-border);
+  background: linear-gradient(180deg, rgba(15, 18, 36, 0.92) 0%, rgba(15, 18, 36, 0.78) 100%);
+  border-bottom: 1px solid var(--hud-border-soft);
   font-size: 12px;
   letter-spacing: 0.05em;
   user-select: none;
   pointer-events: auto;
+  backdrop-filter: blur(6px) saturate(120%);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
 }
 .hud-left, .hud-right { display: flex; gap: 14px; align-items: center; }
 .hud .badge {
@@ -90,8 +133,13 @@ html, body, #root, .app-root {
   padding: 4px 10px;
   font: inherit;
   cursor: pointer;
+  border-radius: var(--radius-sm);
 }
-.hud button:hover { border-color: var(--accent); color: var(--accent); }
+.hud button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(251, 191, 36, 0.05);
+}
 .hud button.has-badge {
   position: relative;
   padding-right: 28px;
@@ -131,7 +179,9 @@ html, body, #root, .app-root {
   flex-direction: column;
   font-size: 11px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(4px) saturate(115%);
 }
 .event-log { right: 8px; }
 .settings-panel { left: 8px; width: 380px; }
@@ -141,8 +191,8 @@ html, body, #root, .app-root {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--hud-border);
-  background: rgba(0,0,0,0.2);
+  border-bottom: 1px solid var(--hud-border-soft);
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.18));
   font-weight: bold;
   letter-spacing: 0.1em;
 }
@@ -154,10 +204,18 @@ html, body, #root, .app-root {
   padding: 2px 8px;
   font: inherit;
   margin-left: 4px;
+  border-radius: var(--radius-sm);
+  transition: color var(--motion-fast), border-color var(--motion-fast),
+              background var(--motion-fast);
 }
 .event-log-header button:hover, .settings-header button:hover {
   border-color: var(--accent);
   color: var(--accent);
+  background: rgba(251, 191, 36, 0.06);
+}
+.event-log-header button:focus-visible, .settings-header button:focus-visible {
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 1px;
 }
 
 .event-log-list {
@@ -336,9 +394,10 @@ html, body, #root, .app-root {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(8px) saturate(115%);
   cursor: pointer;
+  animation: modal-fade-in var(--motion-med);
 }
 .photo-card {
   background: var(--panel-bg);
@@ -351,7 +410,17 @@ html, body, #root, .app-root {
   align-items: center;
   gap: 12px;
   cursor: default;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  animation: modal-pop-in var(--motion-med);
+}
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes modal-pop-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
 }
 .photo-card img {
   max-width: 80vw;
@@ -389,9 +458,10 @@ html, body, #root, .app-root {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.78);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.66);
+  backdrop-filter: blur(8px) saturate(115%);
   cursor: pointer;
+  animation: modal-fade-in var(--motion-med);
 }
 .kingdom-card-frame {
   background: var(--panel-bg);
@@ -403,7 +473,12 @@ html, body, #root, .app-root {
   flex-direction: column;
   gap: 14px;
   cursor: default;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  animation: modal-pop-in var(--motion-med);
+}
+.kingdom-card-canvas {
+  border-radius: var(--radius-sm);
 }
 .kingdom-card-canvas-wrap {
   max-width: 88vw;
@@ -483,8 +558,10 @@ html, body, #root, .app-root {
   flex-direction: column;
   color: var(--panel-fg);
   font-size: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  transition: right 0.18s ease;
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(4px) saturate(115%);
+  transition: right var(--motion-med);
 }
 /* When the event log is also open, slide the journal left so they stack
    side-by-side without overlapping. Event log is 360px wide at right:8px,
@@ -655,10 +732,12 @@ html, body, #root, .app-root {
   border: 1px solid #5a3a22;
   padding: 16px 22px 18px;
   z-index: 40;
-  box-shadow: 0 16px 40px rgba(251, 191, 36, 0.18);
+  border-radius: var(--radius-md);
+  box-shadow: 0 16px 40px rgba(251, 191, 36, 0.22), var(--shadow-lg);
   color: var(--panel-fg);
   font-size: 12px;
-  animation: dec-in 0.35s ease-out;
+  animation: dec-in 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+  backdrop-filter: blur(2px);
 }
 @keyframes dec-in {
   from { opacity: 0; transform: translateX(-50%) translateY(20px); }
@@ -940,7 +1019,9 @@ html, body, #root, .app-root {
   flex-direction: column;
   font-size: 11px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(4px) saturate(115%);
+  box-shadow: var(--shadow-md);
 }
 .stats-header {
   display: flex;
@@ -1617,8 +1698,10 @@ html, body, #root, .app-root {
   cursor: pointer;
   font-size: 12px;
   max-width: 320px;
-  box-shadow: 0 10px 30px rgba(251, 191, 36, 0.2);
-  animation: ach-slide-in 0.4s ease-out;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(251, 191, 36, 0.22), var(--shadow-md);
+  animation: ach-slide-in 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+  backdrop-filter: blur(4px);
 }
 @keyframes ach-slide-in {
   from { opacity: 0; transform: translateX(40px); }
@@ -1646,8 +1729,9 @@ html, body, #root, .app-root {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px) saturate(115%);
+  animation: modal-fade-in var(--motion-med);
 }
 .structure-card {
   background: var(--panel-bg);
@@ -1658,7 +1742,9 @@ html, body, #root, .app-root {
   padding: 14px 18px 18px;
   color: var(--panel-fg);
   font-size: 11px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  animation: modal-pop-in var(--motion-med);
 }
 .structure-card header {
   display: flex;
