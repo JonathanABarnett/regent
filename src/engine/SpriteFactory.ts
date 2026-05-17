@@ -208,25 +208,43 @@ export class SpriteFactory {
       g.rect(18, 18 - variant, 8, 1).fill(c1);
       g.rect(10, 24, 10, 1).fill(c2);
     } else if (kind === "coast") {
-      for (let i = 0; i < 12; i++) {
+      // More sand/shell-fleck speckle so each variant looks distinct.
+      for (let i = 0; i < 20; i++) {
         const x = Math.floor(rand() * T);
         const y = Math.floor(rand() * T);
         g.rect(x, y, 1, 1).fill(c1);
       }
+      // Occasional 2px highlight crystal — picks up the sun.
+      for (let i = 0; i < 4; i++) {
+        const x = Math.floor(rand() * (T - 1));
+        const y = Math.floor(rand() * (T - 1));
+        g.rect(x, y, 2, 1).fill(lightenHex(base, 0.18));
+      }
     } else if (kind === "plain") {
-      // grass tufts
-      for (let i = 0; i < 8; i++) {
+      // grass tufts — denser pass + a darker noise band for depth
+      for (let i = 0; i < 14; i++) {
         const x = Math.floor(rand() * T);
         const y = Math.floor(rand() * T);
         g.rect(x, y, 1, 2).fill(c1);
       }
-      g.rect(0, T - 1, T, 1).fill(edge);
+      // Subtle darker noise — pixels of darken(base, 0.1) — gives a worn-grass feel
+      for (let i = 0; i < 10; i++) {
+        const x = Math.floor(rand() * T);
+        const y = Math.floor(rand() * T);
+        g.rect(x, y, 1, 1).fill(darkenHex(base, 0.10));
+      }
     } else if (kind === "forest") {
-      // base grass
-      for (let i = 0; i < 4; i++) {
+      // base grass — denser
+      for (let i = 0; i < 10; i++) {
         const x = Math.floor(rand() * T);
         const y = Math.floor(rand() * T);
         g.rect(x, y, 1, 1).fill("#14532d");
+      }
+      // dappled light through the canopy
+      for (let i = 0; i < 6; i++) {
+        const x = Math.floor(rand() * T);
+        const y = Math.floor(rand() * T);
+        g.rect(x, y, 1, 1).fill(lightenHex(c1, 0.22));
       }
       // tree
       const tx = 8 + variant * 4;
@@ -256,10 +274,16 @@ export class SpriteFactory {
         g.rect(16 - y, 28 - y, y * 2, 1).fill(c1);
       }
     }
-    g.rect(0, 0, T, 1).fill(edge);
-    g.rect(0, T - 1, T, 1).fill(edge);
-    g.rect(0, 0, 1, T).fill(edge);
-    g.rect(T - 1, 0, 1, T).fill(edge);
+    // The hard 1px frame on every tile was what made the map read as a
+    // *checkerboard* rather than terrain. Only the geological tiles
+    // (hill/mountain/snow) keep a frame, and even then we soften it with
+    // alpha so adjacent tiles blend more cleanly.
+    if (kind === "hill" || kind === "mountain" || kind === "snow") {
+      g.rect(0, 0, T, 1).fill({ color: edge, alpha: 0.6 });
+      g.rect(0, T - 1, T, 1).fill({ color: edge, alpha: 0.6 });
+      g.rect(0, 0, 1, T).fill({ color: edge, alpha: 0.6 });
+      g.rect(T - 1, 0, 1, T).fill({ color: edge, alpha: 0.6 });
+    }
     return this.rt(g, T, T);
   }
 
@@ -1269,4 +1293,34 @@ export class SpriteFactory {
     g.ellipse(50, 16, 14, 6).fill({ color: "#ffffff", alpha: 0.55 });
     return this.rt(g, W, H);
   }
+}
+
+/**
+ * Tiny color helpers used by the tile noise pass. We avoid pulling these
+ * from CharacterRenderer to keep SpriteFactory free of cross-module imports.
+ */
+function darkenHex(hex: string, amount: number): string {
+  const { r, g, b } = parseHexLocal(hex);
+  return rgbHexLocal(
+    Math.max(0, Math.floor(r * (1 - amount))),
+    Math.max(0, Math.floor(g * (1 - amount))),
+    Math.max(0, Math.floor(b * (1 - amount))),
+  );
+}
+function lightenHex(hex: string, amount: number): string {
+  const { r, g, b } = parseHexLocal(hex);
+  return rgbHexLocal(
+    Math.min(255, Math.floor(r + (255 - r) * amount)),
+    Math.min(255, Math.floor(g + (255 - g) * amount)),
+    Math.min(255, Math.floor(b + (255 - b) * amount)),
+  );
+}
+function parseHexLocal(hex: string): { r: number; g: number; b: number } {
+  const h = hex.replace("#", "");
+  const n = parseInt(h, 16);
+  if (h.length === 6) return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff };
+  return { r: 0, g: 0, b: 0 };
+}
+function rgbHexLocal(r: number, g: number, b: number): string {
+  return "#" + [r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("");
 }

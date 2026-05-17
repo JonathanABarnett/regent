@@ -90,9 +90,13 @@ export function drawCharacter(
   const bob = frame % 2 === 0 ? 0 : 1;
   const body = bodyMetrics(spec);
 
-  // Shadow (scales slightly with body width)
+  // Soft drop shadow — three alpha bands, narrowing as they recede so the
+  // figure feels grounded rather than floating on a solid block. Same
+  // 32×32 footprint as before; just less "stamped on" looking.
   const shadowW = body.width - 2;
-  surface.rectAlpha(body.left + 1, 28, shadowW, 2, "#000000", 0.4);
+  surface.rectAlpha(body.left + 1, 28, shadowW, 1, "#000000", 0.36);
+  surface.rectAlpha(body.left + 2, 29, shadowW - 2, 1, "#000000", 0.22);
+  surface.rectAlpha(body.left + 3, 30, Math.max(1, shadowW - 4), 1, "#000000", 0.10);
 
   // ── Cape (BEHIND body) ──────────────────────────────────────────────────
   drawCape(surface, spec, body);
@@ -119,6 +123,11 @@ export function drawCharacter(
   // ── Head ────────────────────────────────────────────────────────────────
   surface.rect(body.headLeft, 6, body.headWidth, 8, skin);
   surface.rect(body.headLeft, 13, body.headWidth, 1, skinShade);
+  // Cheek + brow shading — adds dimension without adding pixels. The left
+  // edge picks up the implicit light source, the right edge falls into
+  // shade. Two 1px columns is enough to read as a rounded head.
+  surface.rectAlpha(body.headLeft, 7, 1, 6, "#ffffff", 0.15);
+  surface.rectAlpha(body.headLeft + body.headWidth - 1, 8, 1, 5, "#000000", 0.18);
 
   // hair
   drawHair(surface, spec, body);
@@ -155,6 +164,7 @@ function drawOutfit(surface: DrawSurface, spec: CharacterSpec, bob: number, body
   const main = spec.outfitColor;
   const accent = spec.accentColor;
   const shade = darken(main, 0.2);
+  const highlight = lighten(main, 0.18);
   const L = body.left;
   const W = body.width;
   const cx = L + W / 2;
@@ -190,6 +200,16 @@ function drawOutfit(surface: DrawSurface, spec: CharacterSpec, bob: number, body
       break;
   }
   if (bob) surface.rectAlpha(L, 23, W, 1, "#000000", 0.15);
+  // Left-edge highlight column — the light source for the whole sprite is
+  // implicitly upper-left, so a 1px lighter band on the outfit's left edge
+  // reads as a rounded torso. Skip on `regal` because the trim already
+  // covers that column with the accent color.
+  if (spec.outfit !== "regal") {
+    surface.rect(L, 15, 1, 8, highlight);
+  }
+  // Right-edge subtle shadow band — narrow, low alpha, makes the figure
+  // pop from the background.
+  surface.rectAlpha(L + W - 1, 15, 1, 8, "#000000", 0.15);
 }
 
 function drawCape(surface: DrawSurface, spec: CharacterSpec, body: BodyMetrics) {
@@ -326,6 +346,7 @@ function drawEyes(surface: DrawSurface, spec: CharacterSpec, body: BodyMetrics) 
 function drawHair(surface: DrawSurface, spec: CharacterSpec, body: BodyMetrics) {
   const c = spec.hairColor;
   const shade = darken(c, 0.2);
+  const sheen = lighten(c, 0.22);
   const HL = body.headLeft;
   const HW = body.headWidth;
   switch (spec.hairStyle) {
@@ -336,6 +357,9 @@ function drawHair(surface: DrawSurface, spec: CharacterSpec, body: BodyMetrics) 
       surface.rect(HL - 1, 7, 1, 3, c); // sideburn L
       surface.rect(HL + HW, 7, 1, 3, c); // sideburn R
       surface.rect(HL, 6, HW, 1, shade);
+      // Tiny sheen pixel — a single highlight crystal makes the hair feel
+      // like a surface instead of a colored block.
+      surface.rect(HL + 1, 7, 2, 1, sheen);
       break;
     case "long":
       surface.rect(HL, 6, HW, 4, c);
@@ -343,11 +367,13 @@ function drawHair(surface: DrawSurface, spec: CharacterSpec, body: BodyMetrics) 
       surface.rect(HL + HW, 7, 1, 8, c);   // R cascade
       surface.rect(HL, 14, HW, 1, c); // back tail visible behind neck
       surface.rect(HL, 6, HW, 1, shade);
+      surface.rect(HL + 1, 7, 2, 1, sheen);
       break;
     case "ponytail":
       surface.rect(HL, 6, HW, 3, c);
       surface.rect(HL + HW - 1, 8, 2, 6, c); // ponytail strand
       surface.rect(HL, 6, HW, 1, shade);
+      surface.rect(HL + 1, 7, 2, 1, sheen);
       break;
     case "mohawk":
       surface.rect(HL + Math.floor(HW / 2) - 1, 4, 2, 5, c);
@@ -457,6 +483,19 @@ function darken(hex: string, amount: number): string {
   const dg = Math.max(0, Math.floor(g * (1 - amount)));
   const db = Math.max(0, Math.floor(b * (1 - amount)));
   return rgbToHex(dr, dg, db);
+}
+
+/**
+ * Lighten a hex color by `amount` (0..1). Mirrors `darken`; used by the
+ * less-blocky sprite pass to add highlight bands on the left edge of each
+ * sprite (where the light is implicitly coming from in this art style).
+ */
+function lighten(hex: string, amount: number): string {
+  const { r, g, b } = hexToRgb(hex);
+  const lr = Math.min(255, Math.floor(r + (255 - r) * amount));
+  const lg = Math.min(255, Math.floor(g + (255 - g) * amount));
+  const lb = Math.min(255, Math.floor(b + (255 - b) * amount));
+  return rgbToHex(lr, lg, lb);
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
