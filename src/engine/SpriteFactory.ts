@@ -1224,116 +1224,253 @@ export class SpriteFactory {
     return this.rt(g, W, H);
   }
 
+  /**
+   * Build 4 walk-cycle frames for a given role.
+   *
+   * The character is 16px wide × 22px tall, centred in a 32×32 tile.
+   * Pixel-art conventions:
+   *   • 1px dark outline drawn around the head and body
+   *   • Proper alternating-leg walk (L-fwd/R-fwd/L-back/R-back)
+   *   • 3-shade colour ramp per major shape (base / shadow / highlight)
+   *   • Role-specific silhouette readable at 8px or less
+   *
+   * Frame layout  (f = 0..3):
+   *   0 → stand neutral (slight weight on right foot)
+   *   1 → stride: left leg forward, right leg back
+   *   2 → stand neutral (weight on left foot)
+   *   3 → stride: right leg forward, left leg back
+   */
   private buildCharacterFrames(role: string): Texture[] {
-    const ROLES: Record<string, { skin: string; body: string; accent: string; boot: string; hair: string }> = {
-      villager:   { skin: "#fde68a", body: "#1d4ed8", accent: "#fbbf24", boot: "#7c2d12", hair: "#92400e" },
-      courier:    { skin: "#fde68a", body: "#166534", accent: "#4ade80", boot: "#1a2e1a", hair: "#78350f" },
-      scholar:    { skin: "#fde68a", body: "#4c1d95", accent: "#a78bfa", boot: "#2e1065", hair: "#c8a84b" },
-      blacksmith: { skin: "#fcd34d", body: "#7c2d12", accent: "#c2410c", boot: "#1c1917", hair: "#1c1917" },
-      miner:      { skin: "#fde68a", body: "#44403c", accent: "#a16207", boot: "#292524", hair: "#292524" },
-      guard:      { skin: "#fde68a", body: "#1e3a5f", accent: "#c8a84b", boot: "#111827", hair: "#374151" },
+    type RolePalette = {
+      skin: string; skinHi: string; skinSh: string;
+      body: string; bodySh: string; bodyHi: string;
+      accent: string;
+      boot: string; bootSh: string;
+      hair: string;
+      outline: string;
     };
+
+    const ROLES: Record<string, RolePalette> = {
+      villager: {
+        skin: "#fde68a", skinHi: "#fef3c7", skinSh: "#d97706",
+        body: "#1d4ed8", bodySh: "#1e3a8a", bodyHi: "#3b82f6",
+        accent: "#fbbf24",
+        boot: "#7c2d12", bootSh: "#450a03",
+        hair: "#92400e", outline: "#1c0a00",
+      },
+      courier: {
+        skin: "#fde68a", skinHi: "#fef3c7", skinSh: "#d97706",
+        body: "#166534", bodySh: "#052e16", bodyHi: "#16a34a",
+        accent: "#4ade80",
+        boot: "#1a2e1a", bootSh: "#0a1a0a",
+        hair: "#78350f", outline: "#031a0a",
+      },
+      scholar: {
+        skin: "#fde68a", skinHi: "#fef3c7", skinSh: "#d97706",
+        body: "#4c1d95", bodySh: "#2e1065", bodyHi: "#7c3aed",
+        accent: "#a78bfa",
+        boot: "#2e1065", bootSh: "#1e0a3c",
+        hair: "#c8a84b", outline: "#1e0a3c",
+      },
+      blacksmith: {
+        skin: "#fcd34d", skinHi: "#fef3c7", skinSh: "#b45309",
+        body: "#78350f", bodySh: "#3c1505", bodyHi: "#a16207",
+        accent: "#ef4444",
+        boot: "#1c1917", bootSh: "#0a0908",
+        hair: "#292524", outline: "#0a0908",
+      },
+      miner: {
+        skin: "#fde68a", skinHi: "#fef3c7", skinSh: "#d97706",
+        body: "#44403c", bodySh: "#1c1917", bodyHi: "#78716c",
+        accent: "#a16207",
+        boot: "#292524", bootSh: "#0a0908",
+        hair: "#1c1917", outline: "#0a0908",
+      },
+      guard: {
+        skin: "#fde68a", skinHi: "#fef3c7", skinSh: "#d97706",
+        body: "#1e3a5f", bodySh: "#0f1f3d", bodyHi: "#2563eb",
+        accent: "#c8a84b",
+        boot: "#111827", bootSh: "#080e18",
+        hair: "#374151", outline: "#080e18",
+      },
+    };
+
     const c = ROLES[role] ?? ROLES.villager;
+    const T = 32;
+    // Character sits in the bottom-centre of the tile.
+    // ox/oy = pixel offset of the character's left-top corner inside the tile.
+    const ox = 8;  // 16px wide, centred in 32
+    const oy = 6;  // 22px tall, sits at tile bottom minus 4px ground gap
+
+    // Walk cycle: leg offsets for (leftLegY, rightLegY, leftLegX, rightLegX)
+    // relative to the body bottom. Positive Y = lower (further down the tile).
+    // Frame 0: neutral stand
+    // Frame 1: left leg forward (higher = further forward in 2D), right back
+    // Frame 2: neutral stand (mirrored weight)
+    // Frame 3: right leg forward, left leg back
+    const WALK: Array<{ ly: number; ry: number; lx: number; rx: number; armSwing: number }> = [
+      { ly: 0, ry: 0, lx: 0, rx: 0, armSwing:  0 },  // stand
+      { ly:-2, ry: 1, lx:-1, rx: 1, armSwing:  2 },  // L-fwd
+      { ly: 0, ry: 0, lx: 0, rx: 0, armSwing:  0 },  // stand
+      { ly: 1, ry:-2, lx: 1, rx:-1, armSwing: -2 },  // R-fwd
+    ];
+
     const frames: Texture[] = [];
 
     for (let f = 0; f < 4; f++) {
-      const T = 32;
       const g = new Graphics();
       g.rect(0, 0, T, T).fill({ alpha: 0 });
-      const bob = f % 2 === 0 ? 0 : 1;
+      const w = WALK[f];
 
-      // Shadow
-      g.ellipse(T / 2, T - 3, 6, 2).fill({ color: "#000000", alpha: 0.32 });
+      // ── Ground shadow ────────────────────────────────────────────────────
+      g.ellipse(ox + 8, oy + 23, 7, 2).fill({ color: "#000000", alpha: 0.28 });
 
-      // ── Role-specific lower body ──────────────────────────────────────────
+      // ── Legs / lower body ────────────────────────────────────────────────
       if (role === "scholar") {
-        // Long robe — covers legs entirely, slight sway
-        g.rect(9, 18, 14, 10 + bob).fill(c.body);
-        g.rect(9, 25, 14, 3).fill(darkenHex(c.body, 0.15)); // robe hem
+        // Long robe — one solid shape with slight sway
+        const sway = Math.abs(w.armSwing);
+        g.rect(ox + 1, oy + 12, 14, 10 + sway).fill(c.body);
+        g.rect(ox + 1, oy + 12, 14, 1).fill(c.bodyHi);   // belt line
+        g.rect(ox + 1, oy + 20 + sway, 14, 2).fill(c.bodySh); // robe hem
+        // dark outline bottom
+        g.rect(ox + 1, oy + 22 + sway, 14, 1).fill(c.outline);
       } else {
-        // Legs
-        g.rect(11, 22 + bob, 4, 6).fill(c.boot);
-        g.rect(17, 22 - bob, 4, 6).fill(c.boot);
-        // Boot sole shadow
-        g.rect(11, 27 + bob, 4, 1).fill(darkenHex(c.boot, 0.3));
-        g.rect(17, 27 - bob, 4, 1).fill(darkenHex(c.boot, 0.3));
+        // Left leg
+        const lLeg = { x: ox + 2 + w.lx, y: oy + 13 + w.ly };
+        g.rect(lLeg.x,     lLeg.y,     5, 9).fill(c.boot);
+        g.rect(lLeg.x + 4, lLeg.y,     1, 9).fill(c.bootSh);   // right shadow
+        g.rect(lLeg.x,     lLeg.y + 8, 5, 1).fill(c.bootSh);   // boot sole
+        g.rect(lLeg.x,     lLeg.y,     5, 1).fill(c.outline);   // outline top
+
+        // Right leg
+        const rLeg = { x: ox + 9 + w.rx, y: oy + 13 + w.ry };
+        g.rect(rLeg.x,     rLeg.y,     5, 9).fill(c.boot);
+        g.rect(rLeg.x + 4, rLeg.y,     1, 9).fill(c.bootSh);
+        g.rect(rLeg.x,     rLeg.y + 8, 5, 1).fill(c.bootSh);
+        g.rect(rLeg.x,     rLeg.y,     5, 1).fill(c.outline);
       }
 
-      // Body
-      g.rect(10, 14, 12, 10).fill(c.body);
-      // Collar / accent stripe
-      g.rect(10, 14, 12, 2).fill(c.accent);
-      // Body shading (right-side shadow)
-      g.rect(20, 15, 2, 8).fill(darkenHex(c.body, 0.18));
+      // ── Body / torso ─────────────────────────────────────────────────────
+      // Main torso
+      g.rect(ox + 2, oy + 8, 12, 7).fill(c.body);
+      // Left shadow strip
+      g.rect(ox + 2, oy + 8, 1, 7).fill(c.bodySh);
+      // Right shadow strip
+      g.rect(ox + 13, oy + 8, 1, 7).fill(c.bodySh);
+      // Shoulder highlight
+      g.rect(ox + 3, oy + 8, 10, 1).fill(c.bodyHi);
+      // Outline top
+      g.rect(ox + 2, oy + 7, 12, 1).fill(c.outline);
 
-      // ── Role-specific accessories ──────────────────────────────────────────
+      // Role-specific torso details
       if (role === "guard") {
-        // Chest plate gleam
-        g.rect(13, 16, 6, 6).fill(lightenHex(c.body, 0.25));
-        g.rect(15, 16, 2, 5).fill(c.accent);
-        // Shield on left arm
-        g.rect(6, 16, 4, 5).fill(c.accent);
-        g.rect(7, 17, 2, 3).fill(lightenHex(c.accent, 0.25));
+        // Armour plate — centre chest
+        g.rect(ox + 4, oy + 9, 8, 5).fill(lightenHex(c.body, 0.3));
+        g.rect(ox + 7, oy + 9, 2, 5).fill(c.accent);
       } else if (role === "blacksmith") {
-        // Leather apron overlay
-        g.rect(11, 16, 10, 8).fill(darkenHex(c.boot, 0.1));
-        g.rect(11, 16, 10, 1).fill(lightenHex(c.boot, 0.15));
-        // Hammer suggestion in right hand
-        if (f % 2 === 0) {
-          g.rect(23, 14 + bob, 3, 2).fill("#78716c"); // hammer head
-          g.rect(24, 16 + bob, 1, 4).fill("#7c2d12"); // handle
-        }
-      } else if (role === "scholar") {
-        // Book in left hand
-        g.rect(6, 16, 4, 5).fill("#c8a84b");
-        g.rect(7, 17, 2, 3).fill("#fde68a");
-        g.rect(7, 17, 2, 1).fill("#c8a84b");
+        // Leather apron
+        g.rect(ox + 4, oy + 10, 8, 5).fill(darkenHex(c.boot, 0.05));
+        g.rect(ox + 4, oy + 10, 8, 1).fill(lightenHex(c.boot, 0.2));
       } else if (role === "miner") {
-        // Belt + tool loops
-        g.rect(10, 20, 12, 2).fill(c.accent);
-        // Pickaxe over shoulder
-        if (f % 2 === 0) {
-          g.rect(7, 10 + bob, 1, 6).fill("#7c2d12"); // handle
-          g.rect(5, 10 + bob, 4, 2).fill("#78716c"); // pick head
-        }
+        // Tool belt
+        g.rect(ox + 2, oy + 13, 12, 2).fill(c.accent);
       } else if (role === "courier") {
-        // Saddlebag on side
-        g.rect(5, 17, 4, 4).fill(darkenHex(c.body, 0.2));
-        g.rect(6, 18, 2, 2).fill(lightenHex(c.body, 0.1));
-        // Cloak hem behind body
-        g.rect(8, 18, 2, 8 + bob).fill(darkenHex(c.body, 0.15));
-      }
-
-      // Arms
-      g.rect(7, 16, 3, 6).fill(c.body);
-      g.rect(22, 16, 3, 6).fill(c.body);
-
-      // Head
-      g.rect(11, 6, 10, 8).fill(c.skin);
-      // Hair / headgear
-      if (role === "guard") {
-        // Metal helmet
-        g.rect(10, 5, 12, 4).fill("#6b7280");
-        g.rect(10, 5, 12, 1).fill(lightenHex("#6b7280", 0.3));
-        g.rect(10, 8, 2, 3).fill("#6b7280"); // cheek guard
-        g.rect(20, 8, 2, 3).fill("#6b7280");
-      } else if (role === "miner") {
-        // Hard hat
-        g.rect(9, 5, 14, 3).fill("#fbbf24");
-        g.rect(9, 5, 14, 1).fill(lightenHex("#fbbf24", 0.3));
-        // Lamp on hat
-        g.rect(14, 4, 4, 2).fill("#fed7aa");
-        g.rect(15, 3, 2, 2).fill({ color: "#fbbf24", alpha: 0.7 });
+        // Saddlebag on left side
+        g.rect(ox - 2, oy + 10, 5, 5).fill(darkenHex(c.body, 0.25));
+        g.rect(ox - 2, oy + 10, 5, 1).fill(lightenHex(c.body, 0.1));
+      } else if (role === "scholar") {
+        // Nothing extra — robe is the identifier
       } else {
-        // Normal hair (color per role)
-        g.rect(11, 6, 10, 2).fill(c.hair);
+        // Villager: simple belt
+        g.rect(ox + 3, oy + 13, 10, 1).fill(c.accent);
       }
 
-      // Eyes + catchlights
-      g.rect(13, 10, 2, 2).fill("#0c0a09");
-      g.rect(17, 10, 2, 2).fill("#0c0a09");
-      g.rect(13, 10, 1, 1).fill({ color: "#ffffff", alpha: 0.8 });
-      g.rect(17, 10, 1, 1).fill({ color: "#ffffff", alpha: 0.8 });
+      // ── Arms ─────────────────────────────────────────────────────────────
+      const armSwing = w.armSwing;
+      // Left arm
+      g.rect(ox - 1, oy + 9 - armSwing, 3, 7).fill(c.body);
+      g.rect(ox - 1, oy + 9 - armSwing, 1, 7).fill(c.bodySh);
+      // Right arm
+      g.rect(ox + 14, oy + 9 + armSwing, 3, 7).fill(c.body);
+      g.rect(ox + 16, oy + 9 + armSwing, 1, 7).fill(c.bodySh);
+
+      // Role-specific held items
+      if (role === "blacksmith" && f % 2 === 0) {
+        // Hammer raised
+        g.rect(ox + 15, oy + 3, 3, 3).fill("#78716c"); // head
+        g.rect(ox + 16, oy + 6, 1, 5).fill("#7c2d12"); // handle
+        g.rect(ox + 15, oy + 3, 3, 1).fill("#a8a29e"); // gleam
+      } else if (role === "miner" && f % 2 !== 0) {
+        // Pickaxe shoulder
+        g.rect(ox - 4, oy + 4, 5, 2).fill("#78716c");
+        g.rect(ox - 2, oy + 6, 2, 5).fill("#7c2d12");
+      } else if (role === "scholar") {
+        // Book in right hand
+        g.rect(ox + 14, oy + 11, 4, 5).fill("#c8a84b");
+        g.rect(ox + 14, oy + 11, 4, 1).fill(darkenHex("#c8a84b", 0.2));
+        g.rect(ox + 14, oy + 12, 1, 4).fill(lightenHex("#c8a84b", 0.3));
+      } else if (role === "courier" && f % 2 !== 0) {
+        // Scroll in hand
+        g.rect(ox + 14, oy + 12, 2, 4).fill("#fde68a");
+        g.rect(ox + 14, oy + 12, 2, 1).fill("#c8a84b");
+      } else if (role === "guard") {
+        // Spear
+        g.rect(ox - 2, oy + 2, 1, 16).fill("#78716c");
+        g.rect(ox - 2, oy + 2, 1, 3).fill(lightenHex("#78716c", 0.4));
+      }
+
+      // ── Head ─────────────────────────────────────────────────────────────
+      // Head face
+      g.rect(ox + 3, oy, 10, 8).fill(c.skin);
+      // Outline
+      g.rect(ox + 3, oy,     10, 1).fill(c.outline); // top
+      g.rect(ox + 2, oy + 1,  1, 6).fill(c.outline); // left side
+      g.rect(ox + 13, oy + 1, 1, 6).fill(c.outline); // right side
+
+      // Shading on face: right cheek shadow
+      g.rect(ox + 11, oy + 2, 2, 5).fill(c.skinSh);
+      // Highlight on left brow
+      g.rect(ox + 4, oy + 1, 4, 1).fill(c.skinHi);
+
+      // Headgear
+      if (role === "guard") {
+        // Steel helmet — full coverage
+        g.rect(ox + 2, oy - 2, 12, 5).fill("#6b7280");
+        g.rect(ox + 2, oy - 2, 12, 1).fill("#9ca3af"); // rim highlight
+        g.rect(ox + 2, oy + 2,  2, 4).fill("#6b7280"); // cheek L
+        g.rect(ox + 12, oy + 2, 2, 4).fill("#6b7280"); // cheek R
+        g.rect(ox + 2, oy - 2, 1, 5).fill(darkenHex("#6b7280", 0.2)); // left shadow
+      } else if (role === "miner") {
+        // Hard hat with lamp
+        g.rect(ox + 2, oy - 3, 12, 4).fill("#fbbf24");
+        g.rect(ox + 2, oy - 3, 12, 1).fill("#fde68a"); // brim highlight
+        g.rect(ox + 7, oy - 4,  3, 2).fill("#fed7aa"); // lamp housing
+        g.rect(ox + 8, oy - 5,  1, 2).fill({ color: "#fef3c7", alpha: 0.85 }); // glow
+      } else if (role === "scholar") {
+        // Wide-brimmed academic hat
+        g.rect(ox + 1, oy - 1, 14, 2).fill(c.hair); // brim
+        g.rect(ox + 4, oy - 4,  8, 4).fill(c.hair); // crown
+        g.rect(ox + 1, oy - 1,  1, 2).fill(lightenHex(c.hair, 0.2)); // brim left hi
+      } else if (role === "courier") {
+        // Traveller's cap
+        g.rect(ox + 2, oy - 1, 12, 2).fill(c.hair);
+        g.rect(ox + 4, oy - 3,  8, 3).fill(c.hair);
+        g.rect(ox + 4, oy - 3,  8, 1).fill(lightenHex(c.hair, 0.25));
+      } else {
+        // Standard hair
+        g.rect(ox + 3, oy, 10, 2).fill(c.hair);
+        // Side tufts
+        g.rect(ox + 2, oy + 1, 1, 2).fill(c.hair);
+        g.rect(ox + 13, oy + 1, 1, 2).fill(c.hair);
+      }
+
+      // Eyes — 2px wide, side by side, with catchlights
+      g.rect(ox + 4, oy + 3, 2, 2).fill("#1c1917");
+      g.rect(ox + 9, oy + 3, 2, 2).fill("#1c1917");
+      g.rect(ox + 4, oy + 3, 1, 1).fill({ color: "#ffffff", alpha: 0.85 }); // catchlight L
+      g.rect(ox + 9, oy + 3, 1, 1).fill({ color: "#ffffff", alpha: 0.85 }); // catchlight R
+      // Mouth hint — tiny single pixel below nose centre
+      g.rect(ox + 7, oy + 6, 2, 1).fill(c.skinSh);
 
       frames.push(this.rt(g, T, T));
     }

@@ -18,6 +18,8 @@ import { CrtOverlay } from "./layers/CrtOverlay";
 import { BorderLayer } from "./layers/BorderLayer";
 import { CutawayLayer } from "./layers/CutawayLayer";
 import { EdgeLayer } from "./layers/EdgeLayer";
+import { RoadLayer } from "./layers/RoadLayer";
+import { DecorLayer } from "./layers/DecorLayer";
 import { NightLightsLayer } from "./layers/NightLightsLayer";
 
 /** Virtual canvas dimensions for low-res (retro 16-bit) mode. */
@@ -53,6 +55,8 @@ export class PixiApp {
   borderLayer!: BorderLayer;
   cutawayLayer!: CutawayLayer;
   edgeLayer!: EdgeLayer;
+  roadLayer!: RoadLayer;
+  decorLayer!: DecorLayer;
   nightLightsLayer!: NightLightsLayer;
   weatherLayer!: WeatherLayer;
   parallax = new ParallaxBackground();
@@ -137,6 +141,8 @@ export class PixiApp {
 
     this.tileRenderer = new TileRenderer(this.opts.world.map, this.factory);
     this.edgeLayer = new EdgeLayer(this.opts.world.map);
+    this.roadLayer  = new RoadLayer(this.opts.world.map);
+    this.decorLayer = new DecorLayer(this.opts.world.map);
     this.structureLayer = new StructureLayer(this.opts.world.map, this.factory);
     this.nightLightsLayer = new NightLightsLayer(this.opts.world);
     this.borderLayer = new BorderLayer(this.opts.world);
@@ -148,8 +154,10 @@ export class PixiApp {
     this.entityLayer.cutawayLayer = this.cutawayLayer;
 
     // Layer order (bottom → top):
-    //   tiles → edge-transitions → border → structures → night-lights → cutaway → entities → weather
+    //   tiles → roads → decor → edge-transitions → border → structures → night-lights → cutaway → entities → weather
     this.worldStage.addChild(this.tileRenderer.container);
+    this.worldStage.addChild(this.roadLayer.container);
+    this.worldStage.addChild(this.decorLayer.container);
     this.worldStage.addChild(this.edgeLayer.container);
     this.worldStage.addChild(this.borderLayer.container);
     this.worldStage.addChild(this.structureLayer.container);
@@ -309,8 +317,9 @@ export class PixiApp {
     const simTime = this.opts.world.state.time;
     const hour = this.opts.world.state.hour;
 
-    // Switch seasonal tile textures when the in-world season changes.
+    // Switch seasonal tile textures + decor when the in-world season changes.
     this.tileRenderer.setSeason(this.opts.world.state.season);
+    this.decorLayer.update(this.opts.world.state.season);
     this.tileRenderer.update(minX, minY, maxX, maxY);
     // Animate water tiles: slow ripple cycle driven by sim time.
     this.tileRenderer.animate(simTime);

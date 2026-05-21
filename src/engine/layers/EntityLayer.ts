@@ -23,6 +23,9 @@ function hash01(n: number): number {
  * Renders NPCs, couriers, and active effects each frame.
  * Reads the simulation; never writes to it.
  */
+/** NPC activity/emotion indicator types. */
+type IndicatorKind = "sleep" | "work_forge" | "work_mine" | "heart" | "alert";
+
 export class EntityLayer {
   readonly container = new Container();
   private npcSprites = new Map<string, Sprite>();
@@ -30,6 +33,8 @@ export class EntityLayer {
   private courierSprites = new Map<string, Sprite>();
   private effectNodes = new Map<string, Container>();
   private speechNodes = new Map<string, Container>();
+  /** Floating activity/emotion indicators drawn above NPC heads. */
+  private indicatorNodes = new Map<string, { g: Graphics; kind: IndicatorKind }>();
   private hoverRing = new Graphics();
   /** Optionally set by PixiApp; lets us relocate NPCs to stations when the
    *  cutaway dollhouse mode is active. */
@@ -158,12 +163,53 @@ export class EntityLayer {
         b.destroy({ children: true });
         this.speechNodes.delete(npc.id);
       }
+
+      // ── Activity / emotion indicator ─────────────────────────────────────
+      // Shown above the head when no speech bubble is present.
+      if (!npc.speech) {
+        const kind = this.indicatorKind(npc, simTime);
+        if (kind) {
+          let node = this.indicatorNodes.get(npc.id);
+          if (!node || node.kind !== kind) {
+            // Remove stale node if kind changed.
+            if (node) { node.g.parent?.removeChild(node.g); node.g.destroy(); }
+            const ig = this.drawIndicator(kind);
+            this.container.addChild(ig);
+            node = { g: ig, kind };
+            this.indicatorNodes.set(npc.id, node);
+          }
+          // Float above the sprite head; gentle bob for sleep
+          const bobOffset = kind === "sleep"
+            ? Math.sin(simTime * 1.4 + npc.seed * 0.01) * 2
+            : Math.sin(simTime * 2.5 + npc.seed * 0.01) * 1.5;
+          node.g.x = sprite.x - 6;
+          node.g.y = sprite.y - T * 1.6 + bobOffset;
+          node.g.zIndex = sprite.zIndex + 2;
+          // Pulse alpha for forge-work sparks
+          if (kind === "work_forge") {
+            node.g.alpha = 0.6 + 0.4 * Math.abs(Math.sin(simTime * 4));
+          }
+        } else {
+          const node = this.indicatorNodes.get(npc.id);
+          if (node) {
+            node.g.parent?.removeChild(node.g);
+            node.g.destroy();
+            this.indicatorNodes.delete(npc.id);
+          }
+        }
+      } else {
+        // Hide indicator while speech bubble is up.
+        const node = this.indicatorNodes.get(npc.id);
+        if (node) node.g.visible = false;
+      }
     }
     for (const [id, sprite] of this.npcSprites) {
       if (!seenNpc.has(id)) {
         sprite.parent?.removeChild(sprite);
         sprite.destroy();
         this.npcSprites.delete(id);
+        const ind = this.indicatorNodes.get(id);
+        if (ind) { ind.g.parent?.removeChild(ind.g); ind.g.destroy(); this.indicatorNodes.delete(id); }
       }
     }
 
@@ -280,6 +326,122 @@ export class EntityLayer {
 
     // Hover highlight ring under the cursor-hovered NPC.
     this.updateHoverRing(simTime);
+  }
+
+  /**
+   * Decide which indicator (if any) to show above an NPC.
+   * Priority: alert > heart > work > sleep. Returns null = no indicator.
+   */
+  private indicatorKind(npc: import("../../sim/types").NPC, simTime: number): IndicatorKind | null {
+    const hour  = this.world.state.hour;
+    const isNight = hour >= 21 || hour < 6;
+
+    // Alert: monarch's usurper/uprising is active
+    if (
+      npc.role === "monarch" &&
+      (this.world.usurper.state.active || this.world.uprising.state.active)
+    ) return "alert";
+
+    // Heart: just got married (partner exists AND both are idle near home)
+    if (
+      npc.partnerId &&
+      npc.activity !== "walking" &&
+      Math.sin(simTime * 0.3 + npc.seed) > 0.7  // show only some of the time (pulses in/out)
+    ) {
+      const partner = this.world.npcs.find((n) => n.id === npc.partnerId);
+      if (partner) {
+        const dist = Math.hypot(npc.pos.x - partner.pos.x, npc.pos.y - partner.pos.y);
+        if (dist < 2) return "heart";
+      }
+    }
+
+    // Work: forge/mine active workers
+    if (npc.activity === "working") {
+      const workStruct = this.world.map.structures.find((s) => s.id === npc.workId);
+      if (workStruct?.kind === "forge") return "work_forge";
+      if (workStruct?.kind === "mine")  return "work_mine";
+    }
+
+    // Sleep: idle NPCs at home during night hours
+    if (isNight && npc.activity !== "walking") {
+      const homeStruct = this.world.map.structures.find((s) => s.id === npc.homeId);
+      if (homeStruct && Math.hypot(npc.pos.x - (homeStruct.pos.x + homeStruct.size.x / 2), npc.pos.y - (homeStruct.pos.y + homeStruct.size.y / 2)) < 3) {
+        return "sleep";
+      }
+    }
+
+    return null;
+  }
+
+  /** Draw a tiny 12×10 indicator graphic for the given kind. */
+  private drawIndicator(kind: IndicatorKind): Graphics {
+    const g = new Graphics();
+    switch (kind) {
+      case "sleep": {
+        // Three staggered 'z' dots at decreasing size and opacity
+        g.rect(4, 6, 4, 1).fill({ color: "#a5b4fc", alpha: 0.9 });
+        g.rect(4, 6, 4, 1).fill({ color: "#a5b4fc", alpha: 0.9 });
+        g.rect(3, 4, 3, 1).fill({ color: "#a5b4fc", alpha: 0.65 });
+        g.rect(2, 2, 2, 1).fill({ color: "#a5b4fc", alpha: 0.4 });
+        // Small 'z' pixel-letter (3×3 each)
+        for (const [px, py, a] of [[3, 7, 0.9], [2, 5, 0.65], [1, 3, 0.45]] as [number, number, number][]) {
+          // top bar
+          g.rect(px, py,   3, 1).fill({ color: "#c7d2fe", alpha: a });
+          // diagonal
+          g.rect(px + 2, py + 1, 1, 1).fill({ color: "#c7d2fe", alpha: a * 0.8 });
+          g.rect(px + 1, py + 2, 1, 1).fill({ color: "#c7d2fe", alpha: a * 0.6 });
+          // bottom bar
+          g.rect(px, py + 3, 3, 1).fill({ color: "#c7d2fe", alpha: a });
+        }
+        break;
+      }
+      case "work_forge": {
+        // Orange spark cluster
+        g.rect(5, 5, 2, 2).fill({ color: "#f97316", alpha: 0.95 });
+        g.rect(3, 3, 1, 1).fill({ color: "#fbbf24", alpha: 0.8 });
+        g.rect(7, 2, 1, 1).fill({ color: "#fde047", alpha: 0.7 });
+        g.rect(4, 7, 1, 1).fill({ color: "#f97316", alpha: 0.6 });
+        g.rect(8, 5, 1, 1).fill({ color: "#fbbf24", alpha: 0.5 });
+        g.rect(6, 1, 1, 1).fill({ color: "#fef9c3", alpha: 0.85 });
+        break;
+      }
+      case "work_mine": {
+        // Yellow lantern glow
+        g.rect(4, 3, 4, 5).fill({ color: "#a16207", alpha: 0.9 });
+        g.rect(5, 4, 2, 3).fill({ color: "#fbbf24", alpha: 0.85 });
+        g.rect(5, 4, 2, 1).fill({ color: "#fef9c3", alpha: 0.9 });
+        g.rect(5, 8, 2, 1).fill({ color: "#78350f", alpha: 0.6 }); // base
+        g.rect(3, 5, 1, 2).fill({ color: "#fbbf24", alpha: 0.3 }); // glow L
+        g.rect(8, 5, 1, 2).fill({ color: "#fbbf24", alpha: 0.3 }); // glow R
+        break;
+      }
+      case "heart": {
+        // Tiny red pixel heart (9×8)
+        const heartPixels = [
+          [1,0],[2,0],[4,0],[5,0],
+          [0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],
+          [0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],
+          [1,3],[2,3],[3,3],[4,3],[5,3],
+          [2,4],[3,4],[4,4],
+          [3,5],
+        ];
+        for (const [px, py] of heartPixels) {
+          g.rect(px, py, 1, 1).fill({ color: "#f43f5e", alpha: 0.92 });
+        }
+        g.rect(1, 1, 1, 1).fill({ color: "#fda4af", alpha: 0.7 }); // highlight
+        break;
+      }
+      case "alert": {
+        // Yellow exclamation mark
+        g.rect(4, 0, 3, 5).fill({ color: "#facc15", alpha: 0.95 }); // stem
+        g.rect(4, 7, 3, 3).fill({ color: "#facc15", alpha: 0.95 }); // dot
+        // Outline
+        g.rect(3, 0, 1, 5).fill({ color: "#78350f", alpha: 0.5 });
+        g.rect(7, 0, 1, 5).fill({ color: "#78350f", alpha: 0.5 });
+        break;
+      }
+    }
+    return g;
   }
 
   /** Speech bubble: rounded white bg, dark border, small tail under the text. */

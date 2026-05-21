@@ -148,20 +148,36 @@ export function App() {
     }
     world.onJournal = (entry) => pushJournalEntry(entry);
 
-    // Death bell: listen for the custom `death_bell:*` payload and trigger
-    // a brief vignette pulse on the canvas container.
+    // Death bell + lightning flash: listen on the world bus for special signals.
     world.bus.subscribe((ev) => {
+      const el = containerRef.current;
+      if (!el) return;
+
       if (
         ev.kind === "custom" &&
         typeof ev.payload.label === "string" &&
         ev.payload.label.startsWith("death_bell:")
       ) {
-        const el = containerRef.current;
-        if (!el) return;
         el.classList.add("death-bell-pulse");
         setTimeout(() => el.classList.remove("death-bell-pulse"), 2200);
       }
+
+      // Storm event → brief lightning white flash
+      if (ev.kind === "storm" || (ev.kind === "custom" && ev.payload.label === "lightning")) {
+        el.classList.add("lightning-flash");
+        setTimeout(() => el.classList.remove("lightning-flash"), 180);
+      }
     });
+
+    // Trigger occasional lightning during active storms via the world weather state.
+    const lightningInterval = window.setInterval(() => {
+      if (worldRef.current?.state.weather === "storm" && Math.random() < 0.08) {
+        const el = containerRef.current;
+        if (!el) return;
+        el.classList.add("lightning-flash");
+        setTimeout(() => el.classList.remove("lightning-flash"), 160);
+      }
+    }, 3000);
 
     // Identity: hydrate from save if present.
     if (existing?.kingdomName && existing?.monarchName) {
@@ -446,6 +462,7 @@ export function App() {
       clearInterval(audioInterval);
       clearInterval(petTargetInterval);
       clearInterval(saveInterval);
+      clearInterval(lightningInterval);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("beforeunload", doSave);
       trayCleanup?.();
