@@ -312,9 +312,7 @@ export class War {
     const strategy = this.state.strategy ?? "defend";
     const guardChance = strategy === "counter" ? GUARD_CHANCE_COUNTER : GUARD_CHANCE_DEFEND;
 
-    const guards = this.world.npcs.filter(
-      (n) => n.role === "guard" && n.role !== "monarch",
-    );
+    const guards = this.world.npcs.filter((n) => n.role === "guard");
     let casualties = 0;
 
     // Guards take the first hits.
