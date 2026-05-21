@@ -17,6 +17,9 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # silence Node 20 deprecation warnings
+
 jobs:
   build:
     name: Build static demo
@@ -26,7 +29,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
 
       - name: Install rsvg-convert (for SVG→PNG icon + og:image rendering)
