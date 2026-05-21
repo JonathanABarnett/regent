@@ -38,6 +38,7 @@ import { LifeCycle } from "./systems/LifeCycle";
 import { Reputation } from "./systems/Reputation";
 import { Factions } from "./systems/Factions";
 import { TreasuryPressure } from "./systems/TreasuryPressure";
+import { Exploration, INITIAL_REVEAL_RADIUS } from "./systems/Exploration";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -203,6 +204,7 @@ export class World {
   readonly reputation: Reputation;
   readonly factions: Factions;
   readonly treasuryPressure: TreasuryPressure;
+  readonly exploration: Exploration;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -293,6 +295,9 @@ export class World {
     this.lifeCycle = new LifeCycle(this, this.journal, this.rand);
     this.factions = new Factions(this, this.journal);
     this.treasuryPressure = new TreasuryPressure(this, this.journal);
+    // Exploration must be constructed after the map (structures must be placed
+    // so we know where the castle is) but before spawnInitialNPCs.
+    this.exploration = new Exploration(this, this.journal, INITIAL_REVEAL_RADIUS);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -357,6 +362,8 @@ export class World {
       this.factions.tick();
       // Treasury pressure: bankruptcy warnings and prosperity celebrations.
       this.treasuryPressure.tick();
+      // Exploration: advance the fog-of-war frontier by 1 tile per week.
+      this.exploration.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {

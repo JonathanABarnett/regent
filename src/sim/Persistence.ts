@@ -126,6 +126,18 @@ export interface SaveData {
   totalLifetimeSec: number;
   /** seed used to procgen this world */
   seed: number;
+  /**
+   * Map dimensions at the time the world was created. Saved so that reloading
+   * always regenerates the same map regardless of future default-size changes.
+   * New games use 192×128; old saves without these fields fall back to 96×64.
+   */
+  mapWidth?: number;
+  mapHeight?: number;
+  /**
+   * Current exploration frontier radius in tiles, measured from the castle
+   * center. The full explored mask is recomputed from this on load.
+   */
+  exploredRadius?: number;
   /** in-world simulation time (seconds since boot) */
   simTime: number;
   weather: string;
@@ -309,6 +321,9 @@ export function serialize(
     petSpec: extras.petSpec,
     totalLifetimeSec: lifetimeSec,
     seed: world.state.seed,
+    mapWidth: world.map.width,
+    mapHeight: world.map.height,
+    exploredRadius: world.exploration.snapshot(),
     simTime: world.state.time,
     weather: world.state.weather,
     loadFactor: world.state.loadFactor,
@@ -518,6 +533,9 @@ export function validateSave(rawInput: unknown): SaveData | null {
     petSpec: raw.petSpec,
     totalLifetimeSec: safeNumber(raw.totalLifetimeSec, 0),
     seed,
+    mapWidth: raw.mapWidth === undefined ? undefined : safeInt(raw.mapWidth, 96, 32, 1024),
+    mapHeight: raw.mapHeight === undefined ? undefined : safeInt(raw.mapHeight, 64, 32, 512),
+    exploredRadius: raw.exploredRadius === undefined ? undefined : safeInt(raw.exploredRadius, 28, 1, 512),
     simTime: Math.max(0, safeNumber(raw.simTime, 0)),
     weather: safeString(raw.weather, 16) || "clear",
     loadFactor: Math.max(0, Math.min(1, safeNumber(raw.loadFactor, 0))),
@@ -839,6 +857,10 @@ export function applySave(world: World, save: SaveData): void {
   // we touch it intentionally as a save-load concession.
   (world.lifeEvents as unknown as { lastProcessedDay: number }).lastProcessedDay =
     world.state.day;
+  // Restore exploration frontier (silently — no journal entries on load).
+  if (save.exploredRadius !== undefined) {
+    world.exploration.restore(save.exploredRadius);
+  }
   // Restore succession state if present.
   if (save.succession) {
     world.succession.state.generation = save.succession.generation;

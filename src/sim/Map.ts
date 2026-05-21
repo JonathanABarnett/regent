@@ -87,6 +87,8 @@ export function generateMap(cfg: MapConfig): OverworldMap {
         walkable,
         variant: Math.floor((d + 1) * 2) % 4,
         elevation: e,
+        // Exploration system marks tiles explored once the frontier expands to them.
+        explored: false,
       };
     }
   }

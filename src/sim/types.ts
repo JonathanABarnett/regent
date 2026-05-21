@@ -17,6 +17,14 @@ export interface Tile {
   variant: number;
   /** elevation 0..1 */
   elevation: number;
+  /**
+   * Whether this tile has been revealed by the Exploration system.
+   * Starts false for tiles outside the initial castle radius; the renderer
+   * tints unexplored tiles dark so the terrain silhouette is visible but the
+   * detail is hidden. Persisted indirectly — only the reveal radius is saved;
+   * the explored mask is recomputed from it on load.
+   */
+  explored: boolean;
 }
 
 export interface Vec2 {

@@ -152,8 +152,22 @@ export function App() {
     const existing = readSave();
     const world = new World(
       existing
-        ? { seed: existing.seed, foundedAtMs: existing.foundedAtMs, followRealSeasons }
-        : { followRealSeasons },
+        ? {
+            seed: existing.seed,
+            // Preserve the map dimensions from the original save so the same
+            // seed always regenerates the same terrain. Old saves that predate
+            // the mapWidth/mapHeight fields fall back to the original 96×64.
+            width: existing.mapWidth ?? 96,
+            height: existing.mapHeight ?? 64,
+            foundedAtMs: existing.foundedAtMs,
+            followRealSeasons,
+          }
+        : {
+            // New games get the full 192×128 overworld with fog of war.
+            width: 192,
+            height: 128,
+            followRealSeasons,
+          },
     );
     if (existing) {
       try {

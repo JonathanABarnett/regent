@@ -58,11 +58,11 @@ export class TileRenderer {
         const key = y * this.map.width + x;
         visible.add(key);
         let sprite = this.mounted.get(key);
+        const tile = this.map.tiles[key];
         if (!sprite) {
           sprite = this.acquire();
           this.container.addChild(sprite);
           this.mounted.set(key, sprite);
-          const tile = this.map.tiles[key];
           sprite.texture = this._textureFor(tile.kind, tile.variant);
           sprite.x = x * T;
           sprite.y = y * T;
@@ -70,6 +70,15 @@ export class TileRenderer {
           if (this.getAnimatedKinds().has(tile.kind)) {
             this.animatedTiles.set(key, sprite);
           }
+        }
+        // Fog of war — re-evaluated every frame so tiles that the Exploration
+        // system just revealed light up on the very next render tick.
+        // explored=true  → full color (no tint)
+        // explored=false → very dark navy; terrain silhouette visible, biome unreadable
+        if (tile.explored) {
+          sprite.tint = 0xffffff;
+        } else {
+          sprite.tint = 0x0d0d1a;
         }
       }
     }
