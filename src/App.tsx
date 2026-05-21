@@ -1012,7 +1012,23 @@ export function App() {
       )}
       <div ref={containerRef} className="pixi-host" />
       {/* In streamer mode every panel is force-closed so the OBS source stays clean */}
-      <EventLog open={logOpen && !streamerMode} onClose={() => setLogOpen(false)} />
+      <EventLog
+        open={logOpen && !streamerMode}
+        onClose={() => setLogOpen(false)}
+        onLocate={(structureId) => {
+          const w = worldRef.current;
+          const cam = pixiRef.current?.camera;
+          if (!w || !cam) return;
+          // Try structure list first, then landmarks map (covers towns etc.)
+          const s = w.map.structures.find((x) => x.id === structureId);
+          if (s) {
+            cam.snapTo(s.pos.x + s.size.x / 2, s.pos.y + s.size.y / 2);
+          } else {
+            const lm = w.map.landmarks.get(structureId);
+            if (lm) cam.snapTo(lm.x, lm.y);
+          }
+        }}
+      />
       <SettingsPanel
         open={settingsOpen && !streamerMode}
         onClose={() => setSettingsOpen(false)}

@@ -236,11 +236,20 @@ html, body, #root, .app-root {
 .event-log-item.expanded {
   background: rgba(255, 255, 255, 0.03);
 }
+/* Row wrapper: toggle button fills the space, "go to" pin to the right */
+.event-log-row {
+  display: flex;
+  align-items: center;
+}
+.event-log-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
 .event-log-row-toggle {
   display: grid;
   grid-template-columns: 18px 80px 1fr 60px;
-  width: 100%;
-  padding: 4px 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px 4px 12px;
   align-items: center;
   gap: 6px;
   background: transparent;
@@ -250,12 +259,28 @@ html, body, #root, .app-root {
   text-align: left;
   cursor: pointer;
 }
-.event-log-row-toggle:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
 .event-log-row-toggle:focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: -1px;
+}
+/* "go to" button — matches the journal panel's style */
+.event-log-goto {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  margin-right: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  color: var(--panel-muted);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+}
+.event-log-goto:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--panel-fg);
 }
 .event-log-item .event-source { color: var(--accent); text-align: center; }
 .event-log-item .event-kind { text-transform: uppercase; letter-spacing: 0.1em; color: #cbd5e1; }

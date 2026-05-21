@@ -114,8 +114,11 @@ export class Camera {
     } else if (this.autopilot) {
       this.autopilotTick(dt);
     }
-    // exponential smoothing
-    const k = 1 - Math.exp(-dt * 1.4);
+    // Snappy exponential smoothing — factor 8 covers ~75% of the remaining
+    // distance per second, so manual pans feel responsive without being instant.
+    // The old factor 1.4 took 3+ seconds to settle and caused a motion-blur
+    // smear effect as tiles slid slowly across subpixel positions.
+    const k = 1 - Math.exp(-dt * 8);
     this.x += (this.targetX - this.x) * k;
     this.y += (this.targetY - this.y) * k;
   }

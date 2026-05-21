@@ -319,10 +319,13 @@ export class PixiApp {
 
     this.camera.tick(dt);
 
-    // world stage transform: center camera tile in screen
+    // world stage transform: center camera tile in screen.
+    // Round to integer virtual pixels so tiles never land on fractional
+    // positions — fractional positions cause subpixel blur in a CSS-upscaled
+    // nearest-neighbour canvas (the "smear" effect during camera movement).
     this.worldStage.scale.set(zoom);
-    this.worldStage.x = -this.camera.x * T * zoom + w / 2;
-    this.worldStage.y = -this.camera.y * T * zoom + h / 2;
+    this.worldStage.x = Math.round(-this.camera.x * T * zoom + w / 2);
+    this.worldStage.y = Math.round(-this.camera.y * T * zoom + h / 2);
 
     // viewport in tile-space
     const visTilesX = w / (T * zoom);

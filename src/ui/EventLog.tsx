@@ -26,12 +26,18 @@ const kindLabel: Record<string, string> = {
   custom: "custom",
 };
 
-export function EventLog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function EventLog({
+  open,
+  onClose,
+  onLocate,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Jump the camera to a structure/landmark by ID (e.g. "ironhearth"). */
+  onLocate?: (structureId: string) => void;
+}) {
   const events = useGameStore((s) => s.events);
   const clearEvents = useGameStore((s) => s.clearEvents);
-  // Track which event ids are expanded so the player can see the full payload.
-  // Local state — resets when the panel closes and reopens; events are
-  // ephemeral enough that persistence here would be over-engineering.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   if (!open) return null;
@@ -61,24 +67,40 @@ export function EventLog({ open, onClose }: { open: boolean; onClose: () => void
         {[...events].reverse().map((e) => {
           const isExpanded = expanded.has(e.id);
           const label = e.payload.label ?? e.payload.from ?? "";
+          // Prefer the most specific location in the payload.
+          const locationId =
+            e.payload.structure ?? e.payload.to ?? e.payload.from ?? null;
           return (
             <li
               key={e.id}
               className={`event-log-item event-${e.kind} src-${e.source}${isExpanded ? " expanded" : ""}`}
-              title={isExpanded ? "Click to collapse" : label}
             >
-              <button
-                type="button"
-                className="event-log-row-toggle"
-                onClick={() => toggle(e.id)}
-                aria-expanded={isExpanded}
-                aria-label={`${e.kind} event: ${label || "no label"}. ${isExpanded ? "Collapse" : "Expand"} details.`}
-              >
-                <span className="event-source">{sourceIcon[e.source] ?? "·"}</span>
-                <span className="event-kind">{kindLabel[e.kind] ?? e.kind}</span>
-                <span className="event-label">{label}</span>
-                <span className="event-ts">{formatTs(e.ts)}</span>
-              </button>
+              <div className="event-log-row">
+                <button
+                  type="button"
+                  className="event-log-row-toggle"
+                  onClick={() => toggle(e.id)}
+                  aria-expanded={isExpanded}
+                  aria-label={`${e.kind} event: ${label || "no label"}. ${isExpanded ? "Collapse" : "Expand"} details.`}
+                  title={isExpanded ? "Collapse" : "Expand details"}
+                >
+                  <span className="event-source">{sourceIcon[e.source] ?? "·"}</span>
+                  <span className="event-kind">{kindLabel[e.kind] ?? e.kind}</span>
+                  <span className="event-label">{label}</span>
+                  <span className="event-ts">{formatTs(e.ts)}</span>
+                </button>
+                {locationId && onLocate && (
+                  <button
+                    type="button"
+                    className="event-log-goto"
+                    onClick={() => onLocate(locationId)}
+                    title={`Go to ${locationId}`}
+                    aria-label={`Go to ${locationId}`}
+                  >
+                    go to
+                  </button>
+                )}
+              </div>
               {isExpanded && <EventDetails event={e} />}
             </li>
           );
