@@ -44,6 +44,7 @@ describe("War", () => {
       totalCasualties: 1,
       lastBattleDay: 10,
       lastCheckedDay: 11,
+      lastWarEndedDay: -42,
       totalWars: 1,
       strategy: "defend",
       phase: "ongoing",
@@ -106,7 +107,7 @@ describe("War", () => {
       w.war.restore({
         active: true, factionName: "the Test Faction",
         startedDay: 1, daysRemaining: 6, totalCasualties: 0,
-        lastBattleDay: 0, lastCheckedDay: 0,
+        lastBattleDay: 0, lastCheckedDay: 0, lastWarEndedDay: -42,
         totalWars: 1, strategy, phase: "ongoing",
       });
       // Force rand to always hit the casualty threshold.
