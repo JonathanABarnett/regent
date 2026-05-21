@@ -18,6 +18,7 @@ function makeMap(rows: string[]): OverworldMap {
         walkable: ch !== "X",
         variant: 0,
         elevation: 0.5,
+        explored: true,
       });
     }
   }
