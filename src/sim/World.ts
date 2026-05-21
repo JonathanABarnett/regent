@@ -41,6 +41,8 @@ import { TreasuryPressure } from "./systems/TreasuryPressure";
 import { Exploration, INITIAL_REVEAL_RADIUS } from "./systems/Exploration";
 import { Immigration } from "./systems/Immigration";
 import type { ImmigrationSnapshot } from "./systems/Immigration";
+import { War } from "./systems/War";
+import type { WarSnapshot } from "./systems/War";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -214,6 +216,7 @@ export class World {
   readonly treasuryPressure: TreasuryPressure;
   readonly exploration: Exploration;
   readonly immigration: Immigration;
+  readonly war: War;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -309,6 +312,7 @@ export class World {
     // so we know where the castle is) but before spawnInitialNPCs.
     this.exploration = new Exploration(this, this.journal, INITIAL_REVEAL_RADIUS);
     this.immigration = new Immigration(this, this.journal, this.rand);
+    this.war = new War(this, this.journal, this.rand);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -377,6 +381,8 @@ export class World {
       this.exploration.tick();
       // Immigration: check for wanderer arrivals and newly revealed camps.
       this.immigration.tick();
+      // War: may declare a war, advance an active battle, or resolve it.
+      this.war.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {

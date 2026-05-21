@@ -227,6 +227,19 @@ export interface SaveData {
     lastWandererDay: number;
     processedCampIds: string[];
   };
+  /** War system snapshot. */
+  war?: {
+    active: boolean;
+    factionName: string;
+    startedDay: number;
+    daysRemaining: number;
+    totalCasualties: number;
+    lastBattleDay: number;
+    lastCheckedDay: number;
+    totalWars: number;
+    strategy: "defend" | "counter" | "terms" | null;
+    phase: "opening" | "ongoing" | "final";
+  };
   /** Per-day stats snapshots for the sparklines panel. Oldest first. */
   history?: Array<{
     day: number;
@@ -374,6 +387,7 @@ export function serialize(
     landmarks: world.discoveries.snapshot(),
     edicts: world.edicts.snapshot(),
     immigration: world.immigration.snapshot(),
+    war: world.war.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
@@ -605,6 +619,32 @@ export function validateSave(rawInput: unknown): SaveData | null {
       : undefined,
     lifeCycle: validateLifeCycle(raw.lifeCycle),
     immigration: validateImmigration(raw.immigration),
+    war: validateWar(raw.war),
+  };
+}
+
+const VALID_WAR_STRATEGIES = new Set(["defend", "counter", "terms", null]);
+const VALID_WAR_PHASES = new Set(["opening", "ongoing", "final"]);
+
+function validateWar(raw: unknown): SaveData["war"] {
+  if (!isPlainObject(raw)) return undefined;
+  const strategy = raw.strategy;
+  const phase = String(raw.phase ?? "opening");
+  return {
+    active: Boolean(raw.active),
+    factionName: safeString(raw.factionName, 64) || "",
+    startedDay: safeInt(raw.startedDay, 0, 0, 1_000_000),
+    daysRemaining: safeInt(raw.daysRemaining, 0, 0, 100),
+    totalCasualties: safeInt(raw.totalCasualties, 0, 0, 10_000),
+    lastBattleDay: safeInt(raw.lastBattleDay, 0, 0, 1_000_000),
+    lastCheckedDay: safeInt(raw.lastCheckedDay, -1, -1, 1_000_000),
+    totalWars: safeInt(raw.totalWars, 0, 0, 10_000),
+    strategy: VALID_WAR_STRATEGIES.has(strategy as string | null)
+      ? (strategy as "defend" | "counter" | "terms" | null)
+      : null,
+    phase: VALID_WAR_PHASES.has(phase)
+      ? (phase as "opening" | "ongoing" | "final")
+      : "opening",
   };
 }
 
@@ -891,6 +931,10 @@ export function applySave(world: World, save: SaveData): void {
   // Restore immigration state so wanderer cooldown and processed camps survive reloads.
   if (save.immigration) {
     world.immigration.restore(save.immigration);
+  }
+  // Restore war state (may re-enter an active war mid-battle).
+  if (save.war) {
+    world.war.restore(save.war);
   }
   // Restore succession state if present.
   if (save.succession) {

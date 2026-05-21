@@ -4,6 +4,11 @@ import type { NPC } from "../types";
 import { generateName } from "./Names";
 import { traitFor, epithetFor } from "./Traits";
 import { makeEvent } from "../events/EventSchema";
+import {
+  WAR_GUARD_DEATH_LINES,
+  WAR_CIVILIAN_DEATH_LINES,
+  WAR_GRIEF_ADDENDA,
+} from "./War";
 
 /**
  * NPC life events: aging, marriages, births, deaths.
@@ -210,6 +215,82 @@ export class LifeEvents {
         }),
       );
     }
+  }
+
+  /**
+   * Remove `npc` from the kingdom as a war casualty. Writes vivid,
+   * named prose — guard deaths reference their post; civilian deaths
+   * note the cruel mismatch of their role. Surviving partners and
+   * children are named in the same entry.
+   *
+   * Called by War.ts when a battle roll kills an NPC.
+   */
+  warDeath(npc: NPC, factionName: string): void {
+    const idx = this.world.npcs.findIndex((n) => n.id === npc.id);
+    if (idx < 0) return;
+    this.world.npcs.splice(idx, 1);
+
+    const partner = npc.partnerId
+      ? this.world.npcs.find((n) => n.id === npc.partnerId)
+      : undefined;
+    const children = this.world.npcs.filter((n) => n.parentIds?.includes(npc.id));
+
+    // Choose the right prose pool.
+    const pool =
+      npc.role === "guard" ? WAR_GUARD_DEATH_LINES : WAR_CIVILIAN_DEATH_LINES;
+    let line = pool[Math.floor(this.rand() * pool.length)];
+
+    // Humanise: name, role, nearest structure to the fighting.
+    const battleStructure = this.world.map.structures.find(
+      (s) => s.kind === "castle" || s.kind === "town",
+    );
+    line = line
+      .replace("{name}", npc.name ?? "an unnamed soul")
+      .replace("{role}", npc.role)
+      .replace("{structure}", battleStructure?.name ?? "the castle");
+
+    // Grief addendum: surviving partner is named.
+    if (partner?.name) {
+      const addendum = WAR_GRIEF_ADDENDA[Math.floor(this.rand() * WAR_GRIEF_ADDENDA.length)]
+        .replace("{partner}", partner.name);
+      line += addendum;
+    } else if (children.length > 0) {
+      // No partner, but children are orphaned.
+      const count = children.length;
+      const childNames = children
+        .filter((c) => c.name)
+        .map((c) => c.name!)
+        .slice(0, 2)
+        .join(" and ");
+      if (childNames) {
+        line += ` Their ${count === 1 ? "child" : `${count} children`} — ${childNames} — remain.`;
+      } else {
+        line += ` Their ${count === 1 ? "child" : `${count} children`} remain.`;
+      }
+    }
+
+    // Free the partner link.
+    if (partner) {
+      partner.partnerId = undefined;
+      partner.partneredOnDay = undefined;
+    }
+    // Remove deceased from children's parent lists.
+    for (const child of children) {
+      if (child.parentIds) {
+        child.parentIds = child.parentIds.filter((id) => id !== npc.id);
+      }
+    }
+
+    // Anchor the entry at the castle (the front line of the kingdom's defence).
+    this.journal.write(line, "life", battleStructure?.id);
+
+    // Death bell — always ring for war casualties (they died in service).
+    this.world.bus.publish(
+      makeEvent("custom", {
+        source: "internal",
+        payload: { label: `death_bell:${npc.name ?? "npc"}` },
+      }),
+    );
   }
 
   private deathLine(npc: NPC): string {
