@@ -1,12 +1,13 @@
 /**
- * Wall-clock calendar. The kingdom advances 1 in-world day every 24 in-world
- * minutes of sim time, BUT we also track a "kingdom epoch" (real-world ms at
- * the moment the world was first founded) so the displayed Day-N tracks real
- * elapsed time. Players who close the app for a week return to a kingdom that
- * is "a week older" without having to leave it running.
+ * Wall-clock calendar. The kingdom advances 1 in-world day every
+ * `minutesPerDay` real-world minutes (default 48 — one in-world year ≈ 38h).
+ * We track a "kingdom epoch" (real-world ms at the founding moment) so the
+ * displayed Day-N tracks actual elapsed real time. Players who close the app
+ * for a week return to a kingdom that is "a week older".
  *
- * Seasons rotate every 14 in-world days = ~5.6 real hours. We also offer a
- * "match real-world seasons" mode where season tracks the calendar month.
+ * Seasons rotate every 14 in-world days:
+ *   at 48 min/day  →  ~11h 12min per season, ~44h 48min per year
+ *   at 24 min/day  →  ~5h 36min per season,  ~22h 24min per year
  */
 
 export type Season = "spring" | "summer" | "autumn" | "winter";
@@ -34,7 +35,7 @@ const SEASON_ORDER: Season[] = ["spring", "summer", "autumn", "winter"];
 export interface CalendarConfig {
   /** real-world ms at which day 1 began for this kingdom */
   foundedAtMs: number;
-  /** real-time minutes per in-world day. Default 24. */
+  /** real-time minutes per in-world day. Default 48. */
   minutesPerDay?: number;
   /** if true, season is taken from real wall-clock month instead of in-world day */
   followRealSeasons?: boolean;
@@ -44,7 +45,7 @@ export class Calendar {
   constructor(public cfg: CalendarConfig) {}
 
   snapshot(nowMs: number = Date.now()): CalendarSnapshot {
-    const minutesPerDay = this.cfg.minutesPerDay ?? 24;
+    const minutesPerDay = this.cfg.minutesPerDay ?? 48;
     const realMsPerDay = minutesPerDay * 60 * 1000;
     const elapsedMs = Math.max(0, nowMs - this.cfg.foundedAtMs);
     const daysElapsed = Math.floor(elapsedMs / realMsPerDay);

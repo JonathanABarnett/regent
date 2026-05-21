@@ -154,18 +154,19 @@ export function App() {
       existing
         ? {
             seed: existing.seed,
-            // Preserve the map dimensions from the original save so the same
-            // seed always regenerates the same terrain. Old saves that predate
-            // the mapWidth/mapHeight fields fall back to the original 96×64.
+            // Preserve map dimensions — old saves fall back to original 96×64.
             width: existing.mapWidth ?? 96,
             height: existing.mapHeight ?? 64,
+            // Preserve day speed — old saves fall back to original 24 min/day.
+            minutesPerDay: existing.minutesPerDay ?? 24,
             foundedAtMs: existing.foundedAtMs,
             followRealSeasons,
           }
         : {
-            // New games get the full 192×128 overworld with fog of war.
-            width: 192,
-            height: 128,
+            // New games: 320×200 overworld, 48 min/day (1 year ≈ 38 real hours).
+            width: 320,
+            height: 200,
+            minutesPerDay: 48,
             followRealSeasons,
           },
     );

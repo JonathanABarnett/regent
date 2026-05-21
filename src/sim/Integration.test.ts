@@ -18,9 +18,9 @@ import {
  */
 
 describe("Integration — full session smoke", () => {
-  it("boots a world with 15 base NPCs + assignable structures", () => {
+  it("boots a world with base NPCs + assignable structures", () => {
     const w = new World({ seed: 42 });
-    expect(w.npcs.length).toBeGreaterThanOrEqual(10);
+    expect(w.npcs.length).toBeGreaterThanOrEqual(5); // 5-NPC founding party
     expect(w.map.structures.length).toBeGreaterThanOrEqual(3);
     expect(w.map.landmarks.size).toBeGreaterThanOrEqual(3);
   });
@@ -147,8 +147,8 @@ describe("Integration — full session smoke", () => {
 
   it("newborn NPCs survive a save/load round-trip (parentIds preserved)", () => {
     const w = new World({ seed: 42, foundedAtMs: Date.UTC(2025, 0, 1) });
-    // Simulate a newborn child of two existing villagers.
-    const parents = w.npcs.filter((n) => n.role === "villager").slice(0, 2);
+    // Simulate a newborn child of two existing NPCs (any roles).
+    const parents = w.npcs.slice(0, 2);
     expect(parents.length).toBe(2);
     const newborn = {
       id: "npc_test_child",

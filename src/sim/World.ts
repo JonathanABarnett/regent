@@ -39,6 +39,8 @@ import { Reputation } from "./systems/Reputation";
 import { Factions } from "./systems/Factions";
 import { TreasuryPressure } from "./systems/TreasuryPressure";
 import { Exploration, INITIAL_REVEAL_RADIUS } from "./systems/Exploration";
+import { Immigration } from "./systems/Immigration";
+import type { ImmigrationSnapshot } from "./systems/Immigration";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -78,6 +80,12 @@ export interface WorldOptions {
   foundedAtMs?: number;
   /** when true, season tracks the wall-clock month rather than in-world day */
   followRealSeasons?: boolean;
+  /**
+   * Real-world minutes per in-world day. Defaults to 48 (one in-world year ≈
+   * 38 real hours). Persisted in the save so a kingdom always runs at the
+   * speed it was created with.
+   */
+  minutesPerDay?: number;
 }
 
 /** "1" → "1st", "2" → "2nd", "3" → "3rd", "4-20" → "Nth", then mod-10 rule. */
@@ -205,6 +213,7 @@ export class World {
   readonly factions: Factions;
   readonly treasuryPressure: TreasuryPressure;
   readonly exploration: Exploration;
+  readonly immigration: Immigration;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -273,6 +282,7 @@ export class World {
     this.calendar = new Calendar({
       foundedAtMs: opts.foundedAtMs ?? Date.now(),
       followRealSeasons: opts.followRealSeasons ?? false,
+      minutesPerDay: opts.minutesPerDay,
     });
     this.journal = new Journal(this, (entry) => this.onJournal?.(entry));
     this.lifeEvents = new LifeEvents(this, this.journal, this.rand);
@@ -298,6 +308,7 @@ export class World {
     // Exploration must be constructed after the map (structures must be placed
     // so we know where the castle is) but before spawnInitialNPCs.
     this.exploration = new Exploration(this, this.journal, INITIAL_REVEAL_RADIUS);
+    this.immigration = new Immigration(this, this.journal, this.rand);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -364,6 +375,8 @@ export class World {
       this.treasuryPressure.tick();
       // Exploration: advance the fog-of-war frontier by 1 tile per week.
       this.exploration.tick();
+      // Immigration: check for wanderer arrivals and newly revealed camps.
+      this.immigration.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {
@@ -582,13 +595,15 @@ export class World {
       villager: homes[0],
     };
 
+    // Small founding party — 5 people plus the monarch (spawned separately).
+    // Scholars, extra smiths, guards, and miners are recruited later through
+    // the Immigration system as the kingdom grows and the frontier expands.
     const roster: Array<{ role: NPCRole; count: number }> = [
-      { role: "villager", count: 5 },
-      { role: "blacksmith", count: 2 },
-      { role: "miner", count: 3 },
-      { role: "scholar", count: 2 },
-      { role: "guard", count: 2 },
-      { role: "courier", count: 1 },
+      { role: "villager",   count: 1 },
+      { role: "blacksmith", count: 1 },
+      { role: "guard",      count: 1 },
+      { role: "miner",      count: 1 },
+      { role: "courier",    count: 1 },
     ];
 
     let idCounter = 0;

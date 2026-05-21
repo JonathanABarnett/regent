@@ -138,6 +138,12 @@ export interface SaveData {
    * center. The full explored mask is recomputed from this on load.
    */
   exploredRadius?: number;
+  /**
+   * Real-world minutes per in-world day. Saved so a kingdom always runs at
+   * the speed it was created with, regardless of future default changes.
+   * Old saves without this field default to 24 min/day (the original speed).
+   */
+  minutesPerDay?: number;
   /** in-world simulation time (seconds since boot) */
   simTime: number;
   weather: string;
@@ -215,6 +221,11 @@ export interface SaveData {
   edicts?: {
     activeId: string | null;
     endsOnDay: number;
+  };
+  /** Immigration system — wanderer cooldown + processed camp IDs. */
+  immigration?: {
+    lastWandererDay: number;
+    processedCampIds: string[];
   };
   /** Per-day stats snapshots for the sparklines panel. Oldest first. */
   history?: Array<{
@@ -324,6 +335,7 @@ export function serialize(
     mapWidth: world.map.width,
     mapHeight: world.map.height,
     exploredRadius: world.exploration.snapshot(),
+    minutesPerDay: world.calendar.cfg.minutesPerDay ?? 48,
     simTime: world.state.time,
     weather: world.state.weather,
     loadFactor: world.state.loadFactor,
@@ -361,6 +373,7 @@ export function serialize(
     history: world.history.snapshots,
     landmarks: world.discoveries.snapshot(),
     edicts: world.edicts.snapshot(),
+    immigration: world.immigration.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
@@ -536,6 +549,7 @@ export function validateSave(rawInput: unknown): SaveData | null {
     mapWidth: raw.mapWidth === undefined ? undefined : safeInt(raw.mapWidth, 96, 32, 1024),
     mapHeight: raw.mapHeight === undefined ? undefined : safeInt(raw.mapHeight, 64, 32, 512),
     exploredRadius: raw.exploredRadius === undefined ? undefined : safeInt(raw.exploredRadius, 28, 1, 512),
+    minutesPerDay: raw.minutesPerDay === undefined ? undefined : safeInt(raw.minutesPerDay, 48, 1, 9999),
     simTime: Math.max(0, safeNumber(raw.simTime, 0)),
     weather: safeString(raw.weather, 16) || "clear",
     loadFactor: Math.max(0, Math.min(1, safeNumber(raw.loadFactor, 0))),
@@ -590,6 +604,19 @@ export function validateSave(rawInput: unknown): SaveData | null {
       ? Math.max(-10, Math.min(10, Math.round(raw.reputation as number)))
       : undefined,
     lifeCycle: validateLifeCycle(raw.lifeCycle),
+    immigration: validateImmigration(raw.immigration),
+  };
+}
+
+function validateImmigration(raw: unknown): SaveData["immigration"] {
+  if (!isPlainObject(raw)) return undefined;
+  const toStrArr = (v: unknown, cap: number): string[] => {
+    if (!Array.isArray(v)) return [];
+    return (v as unknown[]).slice(0, cap).filter((x): x is string => typeof x === "string" && x.length <= 80);
+  };
+  return {
+    lastWandererDay: safeInt(raw.lastWandererDay, 0, 0, 1_000_000),
+    processedCampIds: toStrArr(raw.processedCampIds, 200),
   };
 }
 
@@ -860,6 +887,10 @@ export function applySave(world: World, save: SaveData): void {
   // Restore exploration frontier (silently — no journal entries on load).
   if (save.exploredRadius !== undefined) {
     world.exploration.restore(save.exploredRadius);
+  }
+  // Restore immigration state so wanderer cooldown and processed camps survive reloads.
+  if (save.immigration) {
+    world.immigration.restore(save.immigration);
   }
   // Restore succession state if present.
   if (save.succession) {
