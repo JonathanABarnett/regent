@@ -1,7 +1,8 @@
 {
   "$schema": "./manifest.schema.json",
   "version": 1,
-  "description": "Drop PNG files into the matching folders, list them here, reload — the engine prefers manifest entries over programmatic placeholders. Anything missing falls back to the procedural sprite.",
+  "description": "Drop PNG/JSON files into the matching folders, list them here, reload — the engine prefers manifest entries over programmatic placeholders. Anything missing falls back to the procedural sprite.",
+
   "tiles": {
     "ocean":    [],
     "coast":    [],
@@ -12,13 +13,39 @@
     "mountain": [],
     "snow":     []
   },
-  "structures": {
-    "castle":   null,
-    "town":     null,
-    "library":  null,
-    "forge":    null,
-    "mine":     null
+
+  "seasonalTiles": {
+    "autumn": {
+      "forest": [],
+      "plain":  [],
+      "hill":   []
+    },
+    "winter": {
+      "forest": [],
+      "plain":  [],
+      "hill":   []
+    },
+    "summer": {},
+    "spring": {}
   },
+
+  "structures": {
+    "castle":            null,
+    "town":              null,
+    "library":           null,
+    "forge":             null,
+    "mine":              null,
+    "watchtower":        null,
+    "mill":              null,
+    "shrine":            null,
+    "astronomers_tower": null,
+    "standing_stones":   null,
+    "ruin":              null,
+    "camp":              null,
+    "wellspring":        null,
+    "obelisk":           null
+  },
+
   "characters": {
     "villager":   { "sheet": null, "directions": 4, "frames": 4, "frameW": 32, "frameH": 32 },
     "courier":    { "sheet": null, "directions": 4, "frames": 4, "frameW": 32, "frameH": 32 },
@@ -27,6 +54,7 @@
     "miner":      { "sheet": null, "directions": 4, "frames": 4, "frameW": 32, "frameH": 32 },
     "guard":      { "sheet": null, "directions": 4, "frames": 4, "frameW": 32, "frameH": 32 }
   },
+
   "props": {
     "airship":     null,
     "monster":     null,
@@ -36,5 +64,7 @@
     "smoke":       null,
     "firework":    null,
     "cloud":       null
-  }
+  },
+
+  "atlases": []
 }

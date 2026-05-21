@@ -20,6 +20,9 @@ import { CutawayLayer } from "./layers/CutawayLayer";
 import { EdgeLayer } from "./layers/EdgeLayer";
 import { NightLightsLayer } from "./layers/NightLightsLayer";
 
+/** Virtual canvas dimensions for low-res (retro 16-bit) mode. */
+export const RETRO_CANVAS = { w: 480, h: 270 } as const;
+
 export interface PixiAppOptions {
   world: World;
   parent: HTMLElement;
@@ -27,6 +30,17 @@ export interface PixiAppOptions {
   paused?: () => boolean;
   /** Sim speed multiplier: 0 = paused, 1 = normal, 2 = double, etc. */
   speedMultiplier?: () => number;
+  /**
+   * When true, the game renders at 480×270 (RETRO_CANVAS) and is CSS-stretched
+   * to fill the container with nearest-neighbour upscaling.  Every pixel becomes
+   * a crisp 4-6 px block on a 1080p/1440p monitor — authentic 16-bit feel.
+   *
+   * When false, the canvas resizes to the container (current high-res behaviour).
+   *
+   * A setting change requires a full PixiApp re-initialisation to take effect.
+   * Defaults to true.
+   */
+  lowResMode?: boolean;
 }
 
 export class PixiApp {
@@ -56,22 +70,46 @@ export class PixiApp {
   constructor(private opts: PixiAppOptions) {}
 
   async init(): Promise<void> {
-    await this.app.init({
-      background: 0x222244,
-      resizeTo: this.opts.parent,
-      antialias: false,
-      resolution: 1,
-      autoDensity: false,
-      preference: "webgl",
-    });
+    const lowRes = this.opts.lowResMode ?? true;
+    if (lowRes) {
+      await this.app.init({
+        background: 0x0d0d2b,           // deep night — matches ParallaxBackground sky
+        width:  RETRO_CANVAS.w,
+        height: RETRO_CANVAS.h,
+        antialias: false,
+        resolution: 1,
+        autoDensity: false,
+        preference: "webgl",
+      });
+    } else {
+      await this.app.init({
+        background: 0x222244,
+        resizeTo: this.opts.parent,
+        antialias: false,
+        resolution: 1,
+        autoDensity: false,
+        preference: "webgl",
+      });
+    }
+
     if (this.destroyed) {
-      // raced with destroy(); tear down what we just built and bail
       this.app.destroy(true, { children: true, texture: true });
       return;
     }
-    // pixel-perfect scaling
-    this.app.canvas.style.imageRendering = "pixelated";
-    this.opts.parent.appendChild(this.app.canvas);
+
+    // pixel-perfect: native canvas is tiny, CSS stretches it up
+    const canvas = this.app.canvas;
+    canvas.style.imageRendering = "pixelated";
+    if (lowRes) {
+      // Fill the parent container while maintaining aspect ratio.
+      // Letterboxes on non-16:9 screens (black bars), which is intentional —
+      // the game world is always shown at its canonical pixel density.
+      canvas.style.width  = "100%";
+      canvas.style.height = "100%";
+      canvas.style.objectFit = "contain";
+      canvas.style.display = "block";
+    }
+    this.opts.parent.appendChild(canvas);
 
     this.factory = new SpriteFactory(this.app);
     await this.factory.build();
@@ -92,6 +130,9 @@ export class PixiApp {
     this.camera = new Camera(this.opts.world.map, {
       x: startStruct ? startStruct.pos.x + startStruct.size.x / 2 : this.opts.world.map.width / 2,
       y: startStruct ? startStruct.pos.y + startStruct.size.y / 2 : this.opts.world.map.height / 2,
+      // Low-res mode: zoom=1 so 32px tiles fill the 480px canvas at 1:1 virtual pixels.
+      // High-res mode: zoom=2 keeps the same apparent tile size on large monitors.
+      initialZoom: lowRes ? 1 : 2,
     });
 
     this.tileRenderer = new TileRenderer(this.opts.world.map, this.factory);
@@ -123,9 +164,14 @@ export class PixiApp {
 
     if (this.opts.crtEnabled) this.setCrt(true);
 
-    // resize parallax + CRT overlay with the window
+    // In low-res mode the renderer stays at the fixed virtual resolution —
+    // only the CSS changes on resize, so we just initialise parallax once.
+    // In high-res mode the ResizeObserver drives renderer + overlay updates.
+    this.parallax.resize(this.app.renderer.width, this.app.renderer.height);
+    this.crtOverlay.resize(this.app.renderer.width, this.app.renderer.height);
     const ro = new ResizeObserver(() => {
       if (!this.initialized || this.destroyed) return;
+      if (lowRes) return; // CSS handles it; renderer stays fixed
       const rw = this.app.renderer.width;
       const rh = this.app.renderer.height;
       this.parallax.resize(rw, rh);

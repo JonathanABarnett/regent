@@ -63,6 +63,7 @@ export function SettingsPanel({
   const setMusicEnabled = useGameStore((s) => s.setMusicEnabled);
   const setPadEnabled = useGameStore((s) => s.setPadEnabled);
   const setCutawayMode = useGameStore((s) => s.setCutawayMode);
+  const setRetro16bit  = useGameStore((s) => s.setRetro16bit);
   const addWatchedPath = useGameStore((s) => s.addWatchedPath);
   const removeWatchedPath = useGameStore((s) => s.removeWatchedPath);
   const resetKingdom = useGameStore((s) => s.resetKingdom);
@@ -263,6 +264,23 @@ export function SettingsPanel({
         <EdictsSection />
         <section>
           <h3>Visual</h3>
+          <label className="row">
+            <input
+              type="checkbox"
+              checked={settings.retro16bit}
+              onChange={(e) => {
+                setRetro16bit(e.target.checked);
+                // Requires reload — PixiApp reads this once at init.
+                if (confirm("Switching pixel mode requires a reload. Reload now?")) {
+                  location.reload();
+                }
+              }}
+            />
+            Retro 16-bit mode (480×270, chunky pixels)
+            <span className="tip" style={{ display: "block", marginTop: 2 }}>
+              Renders at low resolution then upscales — requires reload.
+            </span>
+          </label>
           <label className="row">
             <input
               type="checkbox"

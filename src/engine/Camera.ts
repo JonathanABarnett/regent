@@ -32,11 +32,14 @@ export class Camera {
   /** Cinematic POI list supplied by PixiApp each frame. */
   private pois: CinematicPOI[] = [];
 
-  constructor(private map: OverworldMap, start: { x: number; y: number }) {
+  constructor(private map: OverworldMap, start: { x: number; y: number; initialZoom?: number }) {
     this.x = start.x;
     this.y = start.y;
     this.targetX = start.x;
     this.targetY = start.y;
+    if (start.initialZoom !== undefined) {
+      this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, start.initialZoom));
+    }
   }
 
   setManual(x: number, y: number) {

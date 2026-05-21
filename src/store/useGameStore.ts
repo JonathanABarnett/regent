@@ -44,6 +44,12 @@ export interface SettingsState {
   /** Ambient drone pad (the low background hum). Toggleable independently. */
   padEnabled: boolean;
   /**
+   * Render the world at 480×270 then CSS-upscale for authentic chunky
+   * 16-bit pixel feel. Requires a page reload to take effect.
+   * Defaults to true — the retro look is the intended aesthetic.
+   */
+  retro16bit: boolean;
+  /**
    * Cutaway / "dollhouse" mode: building sprites fade to translucent and
    * NPCs at home/work render INSIDE their building at the appropriate
    * station. Toggleable with the X key or in Settings.
@@ -127,6 +133,7 @@ export interface GameState {
   setMusicEnabled: (b: boolean) => void;
   setPadEnabled: (b: boolean) => void;
   setCutawayMode: (b: boolean) => void;
+  setRetro16bit: (b: boolean) => void;
   markSeenJournal: () => void;
   markSeenEvents: () => void;
 }
@@ -155,6 +162,7 @@ function loadSettings(): SettingsState {
     musicEnabled: true,
     padEnabled: true,
     cutawayMode: false,
+    retro16bit: true,
   };
   if (typeof localStorage === "undefined") return fallback;
   try {
@@ -320,6 +328,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   setCutawayMode: (b) =>
     set((s) => {
       const next = { ...s.settings, cutawayMode: b };
+      persistSettings(next);
+      return { settings: next };
+    }),
+  setRetro16bit: (b) =>
+    set((s) => {
+      const next = { ...s.settings, retro16bit: b };
       persistSettings(next);
       return { settings: next };
     }),

@@ -105,16 +105,30 @@ export class EntityLayer {
         sprite.y = (iy + oy + 1) * T;
         sprite.zIndex = sprite.y;
       }
-      // simple frame cycling when walking
-      if (npc.activity === "walking") {
-        const frames = this.factory.characters.get(npc.role) ?? [];
-        if (frames.length) {
+      // Frame selection: single-direction procedural vs. multi-direction sheet.
+      // Row convention for 4-dir sheets: 0=S  1=N  2=W  3=E
+      const frames  = this.factory.characters.get(npc.role) ?? [];
+      const dirs    = this.factory.characterDirs.get(npc.role) ?? 1;
+      if (dirs >= 4 && frames.length >= 4) {
+        // Real sprite sheet — pick row by facing, column by walk frame.
+        const FACING_ROW: Record<string, number> = { s: 0, n: 1, w: 2, e: 3 };
+        const row        = FACING_ROW[npc.facing] ?? 0;
+        const framesPerRow = Math.floor(frames.length / dirs);
+        const walkCol    = npc.activity === "walking"
+          ? Math.floor(simTime * 6) % framesPerRow   // ~6 fps walk cycle
+          : 0;                                          // idle = stand frame
+        const idx = row * framesPerRow + walkCol;
+        if (frames[idx]) sprite.texture = frames[idx];
+        sprite.scale.x = 1; // no flip — each direction has its own frames
+      } else {
+        // Procedural sprites (single direction): cycle frames while walking,
+        // flip horizontally for west-facing.
+        if (npc.activity === "walking" && frames.length) {
           const i = Math.floor(simTime * 4) % frames.length;
           sprite.texture = frames[i];
         }
+        sprite.scale.x = npc.facing === "w" ? -1 : 1;
       }
-      // facing flip: w → mirror, e → normal; n/s use forward-facing for now
-      sprite.scale.x = npc.facing === "w" ? -1 : 1;
 
       // speech bubble — Container with rounded bg, tail, and text
       if (npc.speech) {

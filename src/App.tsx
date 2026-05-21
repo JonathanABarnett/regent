@@ -251,6 +251,9 @@ export function App() {
       world,
       parent: containerRef.current,
       crtEnabled: crt,
+      // Low-res (retro 16-bit) mode: read from settings at boot time.
+      // Changing it requires a reload — we read once here intentionally.
+      lowResMode: useGameStore.getState().settings.retro16bit,
       // Read sim speed from the live store every frame so the HUD button works
       // immediately. Returns 0 (paused) while no `identity` is set so the world
       // doesn't tick during the title screen + onboarding + character creator

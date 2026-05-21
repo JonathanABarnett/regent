@@ -6,6 +6,7 @@ import {
   Rectangle,
   Texture,
   RenderTexture,
+  Spritesheet,
 } from "pixi.js";
 import type { TileKind } from "../sim/types";
 import { TILE_COLORS } from "./Palette";
@@ -17,6 +18,8 @@ import { drawPet } from "./PetSpec";
 interface SpriteManifest {
   version: number;
   tiles: Partial<Record<TileKind, string[]>>;
+  /** Seasonal tile overrides: key = season name (autumn/winter), value = same shape as tiles. */
+  seasonalTiles?: Partial<Record<string, Partial<Record<TileKind, string[]>>>>;
   structures: Partial<Record<string, string | null>>;
   characters: Partial<
     Record<
@@ -31,6 +34,21 @@ interface SpriteManifest {
     >
   >;
   props: Partial<Record<string, string | null>>;
+  /**
+   * TexturePacker / Aseprite JSON atlases to preload.
+   * Each entry is a path relative to public/sprites/ (e.g. "atlas.json").
+   *
+   * Naming conventions for frames inside the atlas:
+   *   tile_<kind>_<variant>      → tiles (e.g. "tile_forest_0")
+   *   tile_<season>_<kind>_<v>  → seasonal tile (e.g. "tile_winter_plain_0")
+   *   struct_<kind>              → structure sprite (e.g. "struct_castle")
+   *   char_<role>_<dir>_<frame> → character frame (e.g. "char_guard_s_0")
+   *   prop_<name>                → prop sprite (e.g. "prop_airship")
+   *
+   * Any frame whose name doesn't match a known convention is silently ignored.
+   * This lets artists add decorative frames without breaking the engine.
+   */
+  atlases?: string[];
 }
 
 /**
@@ -47,6 +65,13 @@ export class SpriteFactory {
   readonly seasonTiles = new Map<string, Texture[]>();
   readonly structures = new Map<string, Texture>();
   readonly characters = new Map<string, Texture[]>();
+  /**
+   * How many direction rows each character set has.
+   *   1  → procedural sprites (no directional variants; EntityLayer flips for W)
+   *   4  → real sprite sheet with rows S / N / W / E
+   * EntityLayer reads this to compute the correct frame index.
+   */
+  readonly characterDirs = new Map<string, number>();
   readonly props = new Map<string, Texture>();
 
   static readonly TILE_SIZE = 32;
@@ -88,11 +113,18 @@ export class SpriteFactory {
     const roles = ["villager", "courier", "scholar", "blacksmith", "miner", "guard"];
     for (const r of roles) {
       const override = await this.loadCharacterSheet(r);
-      this.characters.set(r, override ?? this.buildCharacterFrames(r));
+      if (override) {
+        this.characters.set(r, override);
+        // characterDirs was set inside loadCharacterSheet
+      } else {
+        this.characters.set(r, this.buildCharacterFrames(r));
+        this.characterDirs.set(r, 1); // procedural = single direction
+      }
     }
     // Monarch starts with a placeholder; real spec is plugged in by the
     // character creator via setSpecCharacter("monarch", spec).
     this.characters.set("monarch", this.buildCharacterFrames("villager"));
+    this.characterDirs.set("monarch", 1);
     // Pets — two builtin breeds, both 24x16 stubby creatures
     this.characters.set("pet_dog", this.buildPetFrames("dog"));
     this.characters.set("pet_cat", this.buildPetFrames("cat"));
@@ -104,6 +136,9 @@ export class SpriteFactory {
     this.props.set("smoke", (await this.loadProp("smoke")) ?? this.buildSmoke());
     this.props.set("firework", (await this.loadProp("firework")) ?? this.buildFirework());
     this.props.set("cloud", (await this.loadProp("cloud")) ?? this.buildCloud());
+
+    // Atlas loading runs last so atlas frames can override individual PNGs.
+    await this.loadAtlases();
   }
 
   private rt(g: Graphics, w: number, h: number): Texture {
@@ -126,6 +161,108 @@ export class SpriteFactory {
 
   private get spritesBase(): string {
     return `${import.meta.env.BASE_URL}sprites/`;
+  }
+
+  /**
+   * Load TexturePacker / Aseprite JSON atlases listed in the manifest and
+   * register their frames using the naming convention described in the manifest
+   * interface. This runs after all individual PNG loaders so atlases win over
+   * procedural fallbacks.
+   */
+  private async loadAtlases(): Promise<void> {
+    const atlases = this.manifest?.atlases;
+    if (!atlases || atlases.length === 0) return;
+
+    // Direction row name → index (matches loadCharacterSheet row order)
+    const DIR_ROW: Record<string, number> = { s: 0, n: 1, w: 2, e: 3 };
+
+    for (const atlasFile of atlases) {
+      const url = `${this.spritesBase}${atlasFile}`;
+      let sheet: Spritesheet | null = null;
+      try {
+        const loaded = await Assets.load<Spritesheet>(url);
+        if (loaded && loaded.textures) sheet = loaded;
+      } catch (err) {
+        console.warn(`[SpriteFactory] atlas load failed: ${url}`, err);
+        continue;
+      }
+      if (!sheet) continue;
+
+      // Group character frames by role so we can build the flat frame array
+      // in the correct row×col order after all frames are collected.
+      const charFrames = new Map<string, Map<number, Map<number, Texture>>>();
+      // charFrames: role → dirRow → colFrame → Texture
+
+      for (const [name, tex] of Object.entries(sheet.textures)) {
+        if (!tex) continue;
+        tex.source.scaleMode = "nearest";
+
+        // ── Tile: tile_<kind>_<variant> ──────────────────────────────────
+        const tileMatch = name.match(/^tile_([a-z]+)_(\d+)$/);
+        if (tileMatch) {
+          const kind = tileMatch[1] as TileKind;
+          const variant = parseInt(tileMatch[2], 10);
+          if (this.tiles.has(kind)) {
+            const arr = this.tiles.get(kind)!;
+            arr[variant] = tex;
+          }
+          continue;
+        }
+
+        // ── Seasonal tile: tile_<season>_<kind>_<variant> ────────────────
+        const seasonTileMatch = name.match(/^tile_(autumn|winter|summer|spring)_([a-z]+)_(\d+)$/);
+        if (seasonTileMatch) {
+          const season = seasonTileMatch[1];
+          const kind   = seasonTileMatch[2];
+          const variant = parseInt(seasonTileMatch[3], 10);
+          const key = `${season}:${kind}`;
+          if (!this.seasonTiles.has(key)) this.seasonTiles.set(key, []);
+          this.seasonTiles.get(key)![variant] = tex;
+          continue;
+        }
+
+        // ── Structure: struct_<kind> ─────────────────────────────────────
+        const structMatch = name.match(/^struct_([a-z_]+)$/);
+        if (structMatch) {
+          this.structures.set(structMatch[1], tex);
+          continue;
+        }
+
+        // ── Prop: prop_<name> ────────────────────────────────────────────
+        const propMatch = name.match(/^prop_([a-z_]+)$/);
+        if (propMatch) {
+          this.props.set(propMatch[1], tex);
+          continue;
+        }
+
+        // ── Character: char_<role>_<dir>_<frame> ─────────────────────────
+        const charMatch = name.match(/^char_([a-z]+)_([nsew])_(\d+)$/);
+        if (charMatch) {
+          const role  = charMatch[1];
+          const dirRow = DIR_ROW[charMatch[2]] ?? 0;
+          const frame  = parseInt(charMatch[3], 10);
+          if (!charFrames.has(role)) charFrames.set(role, new Map());
+          const byDir = charFrames.get(role)!;
+          if (!byDir.has(dirRow)) byDir.set(dirRow, new Map());
+          byDir.get(dirRow)!.set(frame, tex);
+        }
+      }
+
+      // Assemble character frame arrays (S/N/W/E rows × walk frames)
+      for (const [role, byDir] of charFrames) {
+        const dirs = byDir.size; // how many direction rows were found
+        const maxCol = Math.max(...[...byDir.values()].map((m) => Math.max(...m.keys()))) + 1;
+        const flat: Texture[] = [];
+        for (let row = 0; row < dirs; row++) {
+          const byCol = byDir.get(row) ?? new Map<number, Texture>();
+          for (let col = 0; col < maxCol; col++) {
+            flat.push(byCol.get(col) ?? Texture.EMPTY);
+          }
+        }
+        this.characters.set(role, flat);
+        this.characterDirs.set(role, dirs);
+      }
+    }
   }
 
   private async loadManifest(): Promise<void> {
@@ -181,18 +318,23 @@ export class SpriteFactory {
     if (!cfg?.sheet) return null;
     const sheet = await this.loadPng(`characters/${cfg.sheet}`);
     if (!sheet) return null;
-    // Slice into individual frames. We use the south-facing row (row 0) as
-    // the default cycle the entity layer reads; future work can pick per
-    // direction via npc.facing.
+    const { frameW, frameH, frames: cols, directions } = cfg;
+    const dirs = (directions && directions > 1) ? directions : 1;
     const frames: Texture[] = [];
-    const { frameW, frameH, frames: cols } = cfg;
-    for (let i = 0; i < cols; i++) {
-      const sub = new Texture({
-        source: sheet.source,
-        frame: new Rectangle(i * frameW, 0, frameW, frameH),
-      });
-      frames.push(sub);
+    // Load ALL direction rows so EntityLayer can pick by npc.facing.
+    // Row layout convention (matches Aseprite/TexturePacker SNES RPG standard):
+    //   row 0 → south (S), row 1 → north (N), row 2 → west (W), row 3 → east (E)
+    // Each row has `cols` walk frames.
+    for (let row = 0; row < dirs; row++) {
+      for (let col = 0; col < cols; col++) {
+        const sub = new Texture({
+          source: sheet.source,
+          frame: new Rectangle(col * frameW, row * frameH, frameW, frameH),
+        });
+        frames.push(sub);
+      }
     }
+    this.characterDirs.set(role, dirs);
     return frames;
   }
 
