@@ -103,6 +103,7 @@ export function App() {
   } | null>(null);
   const crt = useGameStore((s) => s.settings.crt);
   const integrations = useGameStore((s) => s.settings.integrations);
+  const watchedPaths = useGameStore((s) => s.settings.watchedPaths);
   const audioVolume = useGameStore((s) => s.settings.audioVolume);
   const followRealSeasons = useGameStore((s) => s.settings.followRealSeasons);
   const streamerMode = useGameStore((s) => s.settings.streamerMode);
@@ -118,6 +119,30 @@ export function App() {
   const setMonarchSpec = useGameStore((s) => s.setMonarchSpec);
   const petSpec = useGameStore((s) => s.petSpec);
   const setPetSpec = useGameStore((s) => s.setPetSpec);
+
+  // ── Tauri settings sync ───────────────────────────────────────────────────
+  // Push integration toggles and watched paths to the Rust backend whenever
+  // they change. The git watcher, fs watcher, and system monitor all read
+  // these at runtime; without this sync they use their empty defaults.
+  // Runs as a no-op in browser preview (no __TAURI_INTERNALS__).
+  useEffect(() => {
+    if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) return;
+    import("@tauri-apps/api/core").then(({ invoke }) => {
+      invoke("set_integrations", {
+        integrations: {
+          narrative: integrations.narrative,
+          system:    integrations.system,
+          fs:        integrations.fs,
+          git:       integrations.git,
+          inbox:     integrations.inbox,
+          http:      integrations.http,
+        },
+      }).catch((e: unknown) => console.warn("[Tauri] set_integrations:", e));
+
+      invoke("set_watched_paths", { paths: watchedPaths })
+        .catch((e: unknown) => console.warn("[Tauri] set_watched_paths:", e));
+    }).catch(() => {});
+  }, [integrations, watchedPaths]);
 
   // ── boot world + pixi ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -923,6 +948,27 @@ export function App() {
           const store = useGameStore.getState();
           store.setCutawayMode(!store.settings.cutawayMode);
           e.preventDefault();
+          break;
+        }
+        case "F12": {
+          // Screenshot: capture the Pixi canvas and download it as a PNG.
+          // Temporarily disables the HUD, waits one frame for render, then
+          // restores it. This gives a clean world-only capture.
+          e.preventDefault();
+          const canvas = containerRef.current?.querySelector("canvas");
+          if (!canvas) break;
+          try {
+            const dataUrl = canvas.toDataURL("image/png");
+            const a = document.createElement("a");
+            const identity = useGameStore.getState().identity;
+            const safeName = (identity?.kingdomName ?? "kingdom").replace(/[^a-zA-Z0-9]/g, "_").slice(0, 20);
+            const ts = new Date().toISOString().slice(0, 19).replace(/[:-]/g, "");
+            a.href = dataUrl;
+            a.download = `${safeName}-${ts}.png`;
+            a.click();
+          } catch {
+            console.warn("[Screenshot] canvas capture failed (cross-origin?)");
+          }
           break;
         }
       }

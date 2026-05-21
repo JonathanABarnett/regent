@@ -1,6 +1,6 @@
 [package]
 name = "kingdomos"
-version = "0.1.0"
+version = "0.2.0"
 description = "Ambient SNES-style fantasy kingdom desktop app"
 authors = ["jonat"]
 edition = "2021"
