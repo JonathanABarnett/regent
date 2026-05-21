@@ -18,9 +18,11 @@ export class Camera {
   /** tile-space position of the camera center */
   x: number;
   y: number;
-  zoom = 2;
-  minZoom = 1;
-  maxZoom = 4;
+  zoom = 1;
+  /** Zoom out far enough to survey the whole initial reveal bubble. */
+  minZoom = 0.25;
+  /** "zoomed all the way in" — tiles are large and readable but not huge. */
+  maxZoom = 2;
   private targetX: number;
   private targetY: number;
   private autopilot = true;
