@@ -516,27 +516,9 @@ export function App() {
     };
   }, []);
 
-  // ── Tauri ↔ frontend event bridge ────────────────────────────────────────
-  useEffect(() => {
-    if (!worldRef.current) return;
-    if (!("__TAURI_INTERNALS__" in window)) return;
-    let cancelled = false;
-    let unlisten: (() => void) | null = null;
-    (async () => {
-      const { listen } = await import("@tauri-apps/api/event");
-      const off = await listen<ExternalEvent>("kingdom:event", (e) => {
-        const result = Schema.safeParse(e.payload);
-        if (!result.success || !worldRef.current) return;
-        worldRef.current.publish(result.data);
-      });
-      if (cancelled) off();
-      else unlisten = off;
-    })().catch(() => {});
-    return () => {
-      cancelled = true;
-      unlisten?.();
-    };
-  }, []);
+  // NOTE: the Tauri kingdom:event listener lives in the boot useEffect above
+  // alongside the git watcher. A second listener here was a duplicate that
+  // caused every external event to fire twice (publishRaw + publish).
 
   // ── apply settings to engine ─────────────────────────────────────────────
   useEffect(() => {

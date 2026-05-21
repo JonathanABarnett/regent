@@ -109,9 +109,13 @@ export class Immigration {
 
   // ── private ────────────────────────────────────────────────────────────────
 
-  /** True when an immigration decision is already queued (avoid stacking). */
+  /**
+   * True when ANY decision is queued. Immigration won't stack on top of
+   * war-strategy, usurper, uprising, or construction decisions — the player
+   * should answer one thing at a time.
+   */
   private _hasPendingDecision(): boolean {
-    return this.world.decisions.current()?.id.startsWith("imm_") ?? false;
+    return this.world.decisions.current() !== null;
   }
 
   private _checkNewCamps(): void {

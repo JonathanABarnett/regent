@@ -3,6 +3,7 @@ import { useGameStore } from "../store/useGameStore";
 import { CanvasSurface, drawCharacter } from "../engine/CharacterRenderer";
 import { AboutDialog } from "./AboutDialog";
 import { PastKingdoms } from "./PastKingdoms";
+import pkg from "../../package.json";
 import {
   readSave,
   readAllSlotMeta,
@@ -211,7 +212,7 @@ export function TitleScreen({
           )}
         </div>
 
-        <p className="title-footer">v0.1 · jonat</p>
+        <p className="title-footer">v{pkg.version} · jonat</p>
       </div>
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
       <PastKingdoms open={pastOpen} onClose={() => setPastOpen(false)} />

@@ -2,6 +2,7 @@
  * About / Credits dialog. Lives on top of the title screen.
  * Steam-friendly: a place for version, attributions, and contact.
  */
+import pkg from "../../package.json";
 
 export function AboutDialog({ onClose }: { onClose: () => void }) {
   return (
@@ -10,7 +11,7 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
         <header>
           <div className="about-crest">✦</div>
           <h1>KingdomOS</h1>
-          <p className="about-version">v0.1 — Early Realm</p>
+          <p className="about-version">v{pkg.version} — Early Realm</p>
         </header>
 
         <section>

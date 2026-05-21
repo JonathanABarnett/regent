@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import type { World } from "../sim/World";
 import type { TileKind } from "../sim/types";
 
-const SIZE = 160; // CSS pixels
+const SIZE = 160; // CSS pixels (width); height is computed from map aspect ratio
 const REDRAW_INTERVAL_MS = 500;
 
 /**
@@ -32,16 +32,21 @@ export function MiniMap({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const baseRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Build the static base layer (terrain) once when the world becomes available.
+  // Build (and periodically rebuild) the base terrain layer. Rebuilds every
+  // 3 seconds so newly-explored tiles appear on the minimap without lag.
+  // The explored state changes as the Exploration system expands, so a
+  // one-time build keyed on seed would leave fog forever on the minimap.
   useEffect(() => {
+    let lastRadius = -1;
     const id = window.setInterval(() => {
       const world = getWorld();
       if (!world) return;
-      if (baseRef.current && baseRef.current.dataset.seed === String(world.state.seed)) {
-        // already built for this seed
-        clearInterval(id);
-        return;
-      }
+      const currentRadius = world.exploration?.radius ?? -1;
+      // Rebuild only when the explore radius grows (or on first load).
+      if (baseRef.current &&
+          baseRef.current.dataset.seed === String(world.state.seed) &&
+          currentRadius === lastRadius) return;
+      lastRadius = currentRadius;
       const off = document.createElement("canvas");
       off.width = world.map.width;
       off.height = world.map.height;
@@ -54,14 +59,9 @@ export function MiniMap({
           const i = (y * world.map.width + x) * 4;
           if (t.explored) {
             const [r, g, b] = tileColor(t.kind);
-            img.data[i] = r;
-            img.data[i + 1] = g;
-            img.data[i + 2] = b;
+            img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = b;
           } else {
-            // Fog of war — very dark navy, matching the TileRenderer tint.
-            img.data[i] = 13;
-            img.data[i + 1] = 13;
-            img.data[i + 2] = 26;
+            img.data[i] = 13; img.data[i + 1] = 13; img.data[i + 2] = 26;
           }
           img.data[i + 3] = 255;
         }
@@ -69,8 +69,7 @@ export function MiniMap({
       ctx.putImageData(img, 0, 0);
       off.dataset.seed = String(world.state.seed);
       baseRef.current = off;
-      clearInterval(id);
-    }, 200);
+    }, 3000);
     return () => clearInterval(id);
   }, [getWorld]);
 
@@ -137,12 +136,17 @@ export function MiniMap({
     onJumpTo(px * world.map.width, py * world.map.height);
   };
 
+  // Compute height to match the map's actual aspect ratio (e.g. 320×200 → 100px tall).
+  const world = getWorld();
+  const mapAspect = world ? world.map.height / world.map.width : 0.625;
+  const canvasH = Math.round(SIZE * mapAspect);
+
   return (
     <div className="mini-map">
       <canvas
         ref={canvasRef}
         width={SIZE}
-        height={SIZE}
+        height={canvasH || SIZE}
         onClick={handleClick}
         title="Click to jump the camera"
       />

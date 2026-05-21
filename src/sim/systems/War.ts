@@ -143,6 +143,8 @@ export interface WarSnapshot {
   totalCasualties: number;
   lastBattleDay: number;
   lastCheckedDay: number;
+  /** Day the last war ENDED — used for cooldown so it's not confused with lastCheckedDay. */
+  lastWarEndedDay: number;
   totalWars: number;
   strategy: "defend" | "counter" | "terms" | null;
   phase: "opening" | "ongoing" | "final";
@@ -157,6 +159,7 @@ function freshState(): WarSnapshot {
     totalCasualties: 0,
     lastBattleDay: 0,
     lastCheckedDay: -1,
+    lastWarEndedDay: -WAR_COOLDOWN_DAYS, // allow a war to start right at year 2
     totalWars: 0,
     strategy: null,
     phase: "opening",
@@ -187,7 +190,7 @@ export class War {
     this.state.lastCheckedDay = day;
 
     if (!this.state.active) {
-      this._maybeDeclarWar(day);
+      this._maybeDeclareWar(day);
       return;
     }
 
@@ -220,11 +223,11 @@ export class War {
 
   // ── private ──────────────────────────────────────────────────────────────
 
-  private _maybeDeclarWar(day: number): void {
+  private _maybeDeclareWar(day: number): void {
     if (this.world.state.year < 2) return;
-    // Cooldown: no back-to-back wars.
-    if (day - this.state.lastCheckedDay < WAR_COOLDOWN_DAYS &&
-        this.state.totalWars > 0) return;
+    // Cooldown: use lastWarEndedDay so the check isn't confused with
+    // lastCheckedDay (which is reset every tick and would always read 0).
+    if (day - this.state.lastWarEndedDay < WAR_COOLDOWN_DAYS) return;
 
     let chance = WAR_BASE_CHANCE;
     // Feared kingdoms attract aggression.
@@ -367,6 +370,7 @@ export class War {
     }
 
     this.state.active = false;
+    this.state.lastWarEndedDay = this.world.state.day;
   }
 
   private _victory(faction: string, days: number, dead: number): void {
@@ -436,6 +440,7 @@ export class War {
       .replace("{gold}", String(Math.floor(goldPaid)));
     this.journal.write(line, "event");
     this.state.active = false;
+    this.state.lastWarEndedDay = this.world.state.day;
   }
 
   private _buildPrisoner(role: NPCRole, name: string, seed: number): NPC {

@@ -236,6 +236,7 @@ export interface SaveData {
     totalCasualties: number;
     lastBattleDay: number;
     lastCheckedDay: number;
+    lastWarEndedDay: number;
     totalWars: number;
     strategy: "defend" | "counter" | "terms" | null;
     phase: "opening" | "ongoing" | "final";
@@ -638,6 +639,7 @@ function validateWar(raw: unknown): SaveData["war"] {
     totalCasualties: safeInt(raw.totalCasualties, 0, 0, 10_000),
     lastBattleDay: safeInt(raw.lastBattleDay, 0, 0, 1_000_000),
     lastCheckedDay: safeInt(raw.lastCheckedDay, -1, -1, 1_000_000),
+    lastWarEndedDay: safeInt(raw.lastWarEndedDay, -42, -10_000, 1_000_000),
     totalWars: safeInt(raw.totalWars, 0, 0, 10_000),
     strategy: VALID_WAR_STRATEGIES.has(strategy as string | null)
       ? (strategy as "defend" | "counter" | "terms" | null)
