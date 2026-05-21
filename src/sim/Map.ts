@@ -108,8 +108,18 @@ export function generateMap(cfg: MapConfig): OverworldMap {
     { kind: "mine", name: "Deeprock", key: "deeprock", size: { x: 2, y: 2 } },
   ];
 
+  // After placing the castle, keep all other structures within MAX_CLUSTER_DIST
+  // tiles so NPCs can always reach their workplaces. On large maps (320×200)
+  // unconstrained placement can scatter the forge/mine 100+ tiles away.
+  const MAX_CLUSTER_DIST = 45;
+  let castleAnchor: { x: number; y: number } | null = null;
+
   for (const p of placements) {
-    const spot = findFlatSpot(tiles, width, height, p.size, rand, structures);
+    const spot = findFlatSpot(
+      tiles, width, height, p.size, rand, structures,
+      p.kind === "castle" ? null : castleAnchor,
+      MAX_CLUSTER_DIST,
+    );
     if (!spot) continue;
     // mark footprint as walkable (interior counts as path entrance)
     for (let dy = 0; dy < p.size.y; dy++) {
@@ -120,10 +130,10 @@ export function generateMap(cfg: MapConfig): OverworldMap {
     }
     const id = p.key;
     structures.push({ id, kind: p.kind, name: p.name, pos: spot, size: p.size });
-    landmarks.set(id, {
-      x: spot.x + Math.floor(p.size.x / 2),
-      y: spot.y + Math.floor(p.size.y / 2),
-    });
+    const cx = spot.x + Math.floor(p.size.x / 2);
+    const cy = spot.y + Math.floor(p.size.y / 2);
+    landmarks.set(id, { x: cx, y: cy });
+    if (p.kind === "castle") castleAnchor = { x: cx, y: cy };
   }
 
   return { width, height, tiles, structures, landmarks };
@@ -151,6 +161,11 @@ function carveRiver(
   }
 }
 
+/**
+ * Find a flat walkable spot for a structure. When `anchor` + `maxDist` are
+ * provided the spot must be within that radius (tries constrained first,
+ * then falls back to unconstrained so we never silently drop a structure).
+ */
 function findFlatSpot(
   tiles: Tile[],
   w: number,
@@ -158,27 +173,48 @@ function findFlatSpot(
   size: Vec2,
   rand: () => number,
   existing: Structure[],
+  anchor: { x: number; y: number } | null = null,
+  maxDist = Infinity,
   attempts = 800,
 ): Vec2 | null {
   const minDistSq = 9 * 9;
-  for (let i = 0; i < attempts; i++) {
-    const x = 2 + Math.floor(rand() * (w - size.x - 4));
-    const y = 2 + Math.floor(rand() * (h - size.y - 4));
-    let ok = true;
-    outer: for (let dy = 0; dy < size.y; dy++) {
+  const maxDistSq = maxDist * maxDist;
+
+  const isValid = (x: number, y: number): boolean => {
+    // footprint tiles must all be plain or hill
+    for (let dy = 0; dy < size.y; dy++) {
       for (let dx = 0; dx < size.x; dx++) {
         const t = tiles[(y + dy) * w + (x + dx)];
-        if (!t) { ok = false; break outer; }
-        if (t.kind !== "plain" && t.kind !== "hill") { ok = false; break outer; }
+        if (!t) return false;
+        if (t.kind !== "plain" && t.kind !== "hill") return false;
       }
     }
-    if (!ok) continue;
+    // must not be too close to existing structures
     for (const s of existing) {
       const dx = s.pos.x - x;
       const dy = s.pos.y - y;
-      if (dx * dx + dy * dy < minDistSq) { ok = false; break; }
+      if (dx * dx + dy * dy < minDistSq) return false;
     }
-    if (ok) return { x, y };
+    return true;
+  };
+
+  // First pass: constrained (within maxDist of anchor).
+  if (anchor && isFinite(maxDist)) {
+    for (let i = 0; i < attempts; i++) {
+      const x = 2 + Math.floor(rand() * (w - size.x - 4));
+      const y = 2 + Math.floor(rand() * (h - size.y - 4));
+      const ax = anchor.x - (x + size.x / 2);
+      const ay = anchor.y - (y + size.y / 2);
+      if (ax * ax + ay * ay > maxDistSq) continue;
+      if (isValid(x, y)) return { x, y };
+    }
+  }
+
+  // Unconstrained fallback (always try so structures don't silently vanish).
+  for (let i = 0; i < attempts; i++) {
+    const x = 2 + Math.floor(rand() * (w - size.x - 4));
+    const y = 2 + Math.floor(rand() * (h - size.y - 4));
+    if (isValid(x, y)) return { x, y };
   }
   return null;
 }

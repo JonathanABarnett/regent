@@ -21,7 +21,7 @@ export function findPath(
   map: OverworldMap,
   start: Vec2,
   goal: Vec2,
-  maxIter = 4000,
+  maxIter = 15_000,
 ): Vec2[] | null {
   if (start.x === goal.x && start.y === goal.y) return [];
   const open = new Map<number, Node>();

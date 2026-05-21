@@ -10,13 +10,23 @@ const REDRAW_INTERVAL_MS = 500;
  * canvas, then overlays NPC dots + the camera viewport rectangle on each
  * redraw (500ms). Click to recenter the camera.
  */
+export interface MiniMapCamera {
+  x: number;
+  y: number;
+  zoom: number;
+  /** Viewport width in tiles — passed from PixiApp renderer dimensions. */
+  viewW: number;
+  /** Viewport height in tiles. */
+  viewH: number;
+}
+
 export function MiniMap({
   getWorld,
   getCamera,
   onJumpTo,
 }: {
   getWorld: () => World | null;
-  getCamera: () => { x: number; y: number; zoom: number } | null;
+  getCamera: () => MiniMapCamera | null;
   onJumpTo: (x: number, y: number) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -41,11 +51,18 @@ export function MiniMap({
       for (let y = 0; y < world.map.height; y++) {
         for (let x = 0; x < world.map.width; x++) {
           const t = world.map.tiles[y * world.map.width + x];
-          const [r, g, b] = tileColor(t.kind);
           const i = (y * world.map.width + x) * 4;
-          img.data[i] = r;
-          img.data[i + 1] = g;
-          img.data[i + 2] = b;
+          if (t.explored) {
+            const [r, g, b] = tileColor(t.kind);
+            img.data[i] = r;
+            img.data[i + 1] = g;
+            img.data[i + 2] = b;
+          } else {
+            // Fog of war — very dark navy, matching the TileRenderer tint.
+            img.data[i] = 13;
+            img.data[i + 1] = 13;
+            img.data[i + 2] = 26;
+          }
           img.data[i + 3] = 255;
         }
       }
@@ -96,15 +113,15 @@ export function MiniMap({
         ctx.fillStyle = "#f472b6";
         ctx.fillRect(p.pos.x * sx, p.pos.y * sy, 2, 2);
       }
-      // camera viewport rectangle
-      const view = 16 / cam.zoom; // approx tiles in view at zoom
-      ctx.strokeStyle = "rgba(251, 191, 36, 0.9)";
-      ctx.lineWidth = 1;
+      // Viewport rectangle — uses actual tile dimensions from the renderer
+      // so the box is always accurate regardless of zoom or map size.
+      ctx.strokeStyle = "rgba(251, 191, 36, 0.95)";
+      ctx.lineWidth = 1.5;
       ctx.strokeRect(
-        (cam.x - view / 2) * sx,
-        (cam.y - view / 2) * sy,
-        view * sx,
-        view * sy,
+        (cam.x - cam.viewW / 2) * sx,
+        (cam.y - cam.viewH / 2) * sy,
+        cam.viewW * sx,
+        cam.viewH * sy,
       );
     }, REDRAW_INTERVAL_MS);
     return () => clearInterval(id);

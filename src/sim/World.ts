@@ -744,9 +744,21 @@ export class World {
               }
             }
           } else {
-            // wander locally
-            npc.activity = "idle";
-            npc.activityTimer = 3 + this.rand() * 6;
+            // Path to work/home failed (blocked terrain or too far).
+            // Wander a few tiles in a random direction so the world still
+            // feels alive rather than a tableau of frozen NPCs.
+            const wx = Math.max(0, Math.min(this.map.width - 1,
+              cur.x + Math.round((this.rand() - 0.5) * 8)));
+            const wy = Math.max(0, Math.min(this.map.height - 1,
+              cur.y + Math.round((this.rand() - 0.5) * 8)));
+            const wander = findPath(this.map, cur, { x: wx, y: wy });
+            if (wander && wander.length > 0) {
+              npc.path = wander;
+              npc.activity = "walking";
+            } else {
+              npc.activity = "idle";
+              npc.activityTimer = 4 + this.rand() * 6;
+            }
           }
         } else {
           // already there → work or idle

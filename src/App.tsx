@@ -1089,8 +1089,19 @@ export function App() {
         <MiniMap
           getWorld={() => worldRef.current}
           getCamera={() => {
-            const c = pixiRef.current?.camera;
-            return c ? { x: c.x, y: c.y, zoom: c.zoom } : null;
+            const pixi = pixiRef.current;
+            const c = pixi?.camera;
+            if (!c || !pixi) return null;
+            // Use actual renderer dimensions so the viewport box is accurate
+            // at every zoom level and in both retro and high-res modes.
+            const T = 32;
+            const rw = pixi.app.renderer.width;
+            const rh = pixi.app.renderer.height;
+            return {
+              x: c.x, y: c.y, zoom: c.zoom,
+              viewW: rw / (T * c.zoom),
+              viewH: rh / (T * c.zoom),
+            };
           }}
           onJumpTo={(x, y) => pixiRef.current?.camera?.snapTo(x, y)}
         />
