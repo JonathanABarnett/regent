@@ -39,6 +39,12 @@ export class Camera {
     this.y = start.y;
     this.targetX = start.x;
     this.targetY = start.y;
+    // Pin on the starting position (castle) for 12 seconds before the
+    // autopilot starts drifting. Without this, the very first tick
+    // immediately picks a new POI and the camera flies away before the
+    // player has seen the kingdom.
+    this.currentTarget = { x: start.x, y: start.y };
+    this.autopilotPause = 12;
     if (start.initialZoom !== undefined) {
       this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, start.initialZoom));
     }
@@ -160,7 +166,18 @@ export class Camera {
   }
 
   private _defaultPOIs(): CinematicPOI[] {
-    return this.map.structures.map((s) => ({
+    // Only drift to structures the player has already discovered (explored tiles).
+    // On large maps many structures start in fog — flying into dark territory
+    // looks like the camera is in the wrong place entirely.
+    const explored = this.map.structures.filter((s) => {
+      const cx = s.pos.x + Math.floor(s.size.x / 2);
+      const cy = s.pos.y + Math.floor(s.size.y / 2);
+      const tile = this.map.tiles[cy * this.map.width + cx];
+      return tile == null || tile.explored !== false;
+    });
+    // Always include at least the first structure (castle) as a fallback.
+    const pool = explored.length > 0 ? explored : this.map.structures.slice(0, 1);
+    return pool.map((s) => ({
       x: s.pos.x + Math.floor(s.size.x / 2),
       y: s.pos.y + Math.floor(s.size.y / 2),
       priority: s.kind === "castle" ? 3 : s.kind === "forge" ? 2 : 1,

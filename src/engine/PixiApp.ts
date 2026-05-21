@@ -232,18 +232,34 @@ export class PixiApp {
       pois.push({ x: c.pos.x, y: c.pos.y, priority: 3, label: c.label });
     }
 
-    // Fallback to structures if no active events.
+    // Fallback to structures if no active events — but only explored ones.
+    // On large maps many structures start in fog; flying into dark territory
+    // looks wrong and disorienting.
     if (pois.length === 0) {
       for (const s of world.map.structures) {
+        const cx = s.pos.x + Math.floor(s.size.x / 2);
+        const cy = s.pos.y + Math.floor(s.size.y / 2);
+        const tile = world.map.tiles[cy * world.map.width + cx];
+        if (tile && !tile.explored) continue; // skip fog territory
         const p =
           s.kind === "castle" ? 3 :
           s.kind === "forge"  ? 2 :
           s.kind === "library" || s.kind === "mine" ? 2 : 1;
         pois.push({
-          x: s.pos.x + Math.floor(s.size.x / 2),
-          y: s.pos.y + Math.floor(s.size.y / 2),
+          x: cx,
+          y: cy,
           priority: p,
           label: s.name,
+        });
+      }
+      // Safety: if nothing is explored yet, always include the castle.
+      if (pois.length === 0 && world.map.structures.length > 0) {
+        const castle = world.map.structures[0];
+        pois.push({
+          x: castle.pos.x + Math.floor(castle.size.x / 2),
+          y: castle.pos.y + Math.floor(castle.size.y / 2),
+          priority: 3,
+          label: castle.name,
         });
       }
     }
