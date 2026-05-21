@@ -190,7 +190,9 @@ export class World {
   readonly bus = new EventBus();
   readonly state: WorldState;
   readonly economy = new Economy();
-  readonly dayNight = new DayNight();
+  // dayNight is constructed in the constructor so it can use opts.minutesPerDay.
+  // Declared here for TypeScript; assigned below with definite assignment.
+  readonly dayNight!: DayNight;
   readonly weather: Weather;
   readonly director: NarrativeDirector;
   readonly calendar: Calendar;
@@ -280,6 +282,11 @@ export class World {
       height: opts.height ?? 64,
       seed,
     });
+    // Sync day/night cycle duration to the calendar day length so one visual
+    // day/night cycle matches one calendar day. Start at 10am so a new
+    // kingdom opens in bright midday light, not at the dark edge of dawn.
+    (this as { dayNight: DayNight }).dayNight =
+      new DayNight((opts.minutesPerDay ?? 48) * 60, 10);
     this.weather = new Weather(this.rand);
     this.director = new NarrativeDirector(this.bus, this.map, this.rand);
     this.calendar = new Calendar({

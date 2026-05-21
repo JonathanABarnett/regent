@@ -134,11 +134,11 @@ export class PixiApp {
     this.camera = new Camera(this.opts.world.map, {
       x: startStruct ? startStruct.pos.x + startStruct.size.x / 2 : this.opts.world.map.width / 2,
       y: startStruct ? startStruct.pos.y + startStruct.size.y / 2 : this.opts.world.map.height / 2,
-      // Low-res: 0.5 → 30 tiles visible across the 480px virtual canvas — a
-      //   comfortable overview of the initial reveal bubble. Scroll/pinch zooms
-      //   in up to 2× (current tile size) or out to 0.25× (bird's-eye, ~60 tiles).
-      // High-res: 1 → 32px tiles; same 0.25–2× zoom range applies.
-      initialZoom: lowRes ? 0.5 : 1,
+      // Low-res: 1.0 → 15 tiles visible across the 480px virtual canvas.
+      //   Castle + starting structures fill the screen comfortably.
+      //   Scroll/pinch out to 0.25× (60-tile bird's-eye) or in to 2× (close detail).
+      // High-res: 2.0 → same apparent tile size on large monitors.
+      initialZoom: lowRes ? 1.0 : 2.0,
     });
 
     this.tileRenderer = new TileRenderer(this.opts.world.map, this.factory);
