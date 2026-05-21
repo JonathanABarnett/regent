@@ -713,6 +713,9 @@ export class World {
         // difference between a still villager and a vibrating one.
         npc.prevPos.x = npc.pos.x;
         npc.prevPos.y = npc.pos.y;
+        // Even stationary NPCs reveal a small area around themselves —
+        // a guard standing watch lights up where they stand (2-tile radius).
+        this.exploration.revealAround(npc.pos.x, npc.pos.y, 2);
         npc.activityTimer -= dt;
         if (npc.activityTimer > 0) continue;
         // pick a new destination based on schedule
@@ -769,6 +772,13 @@ export class World {
     }
   }
 
+  /**
+   * How many tiles around a walking NPC are revealed. 4 tiles creates a
+   * comfortable ~9-tile-wide corridor of visibility as characters travel,
+   * without revealing huge swaths of map all at once.
+   */
+  private static readonly NPC_EXPLORE_RADIUS = 4;
+
   private advanceAlongPath(npc: NPC, dt: number) {
     const speed = 2.2; // tiles/sec
     let remaining = speed * dt;
@@ -794,6 +804,12 @@ export class World {
         npc.path.shift();
       }
     }
+    // Peel back fog around the NPC's current position so the map reveals
+    // as characters physically walk through the world.
+    this.exploration.revealAround(
+      npc.pos.x, npc.pos.y,
+      World.NPC_EXPLORE_RADIUS,
+    );
     if (npc.path.length === 0) {
       npc.activity = "working";
       npc.activityTimer = 6 + this.rand() * 8;

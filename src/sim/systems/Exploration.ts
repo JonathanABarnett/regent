@@ -83,6 +83,30 @@ export class Exploration {
 
   snapshot(): number { return this._radius; }
 
+  /**
+   * Reveal tiles within `radius` tiles of (x, y). Called every tick by
+   * walking NPCs so the fog peels back as characters travel the world.
+   * Cheap — scans only the bounding box of the reveal circle.
+   */
+  revealAround(x: number, y: number, radius: number): void {
+    const { width, height, tiles } = this.world.map;
+    const r2 = radius * radius;
+    const x0 = Math.max(0, Math.floor(x - radius));
+    const x1 = Math.min(width - 1, Math.ceil(x + radius));
+    const y0 = Math.max(0, Math.floor(y - radius));
+    const y1 = Math.min(height - 1, Math.ceil(y + radius));
+    for (let ty = y0; ty <= y1; ty++) {
+      for (let tx = x0; tx <= x1; tx++) {
+        const dx = tx - x;
+        const dy = ty - y;
+        if (dx * dx + dy * dy <= r2) {
+          const t = tiles[ty * width + tx];
+          if (t) t.explored = true;
+        }
+      }
+    }
+  }
+
   /** Called once per in-world day from World.tick(). */
   tick(): void {
     const day = this.world.state.day;
