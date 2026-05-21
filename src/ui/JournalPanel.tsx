@@ -68,6 +68,17 @@ export function JournalPanel({
   const npcNames = useGameStore((s) => s.worldStats.npcNames);
 
   const [filter, setFilter] = useState<JournalFilter>(DEFAULT_FILTER);
+  // Keys of collapsed day sections. Format: "year-day".
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const toggleDay = (key: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const filtered = useMemo(() => filterEntries(journal, filter), [journal, filter]);
   const grouped = useMemo(() => groupByDay(filtered), [filtered]);
@@ -146,15 +157,30 @@ export function JournalPanel({
               : "Nothing matches the current filter."}
           </p>
         ) : (
-          grouped.map((group) => (
-            <section key={`${group.year}-${group.day}`} className="journal-day">
+          grouped.map((group) => {
+            const dayKey = `${group.year}-${group.day}`;
+            const isCollapsed = collapsed.has(dayKey);
+            return (
+            <section key={dayKey} className={`journal-day${isCollapsed ? " collapsed" : ""}`}>
               <h3>
-                <span className="day-num">Day {group.day}</span>
-                <span className="day-sub">
-                  {seasonIcon[group.season] ?? ""} {group.season} · Y{group.year}
-                </span>
+                <button
+                  type="button"
+                  className="day-toggle"
+                  onClick={() => toggleDay(dayKey)}
+                  aria-expanded={!isCollapsed}
+                  aria-label={`${isCollapsed ? "Expand" : "Collapse"} Day ${group.day}`}
+                >
+                  <span className="day-chevron">{isCollapsed ? "▶" : "▼"}</span>
+                  <span className="day-num">Day {group.day}</span>
+                  <span className="day-sub">
+                    {seasonIcon[group.season] ?? ""} {group.season} · Y{group.year}
+                  </span>
+                  {isCollapsed && (
+                    <span className="day-count">{group.entries.length}</span>
+                  )}
+                </button>
               </h3>
-              <ul>
+              {!isCollapsed && <ul>
                 {group.entries.map((e) => (
                   <li key={e.id} className={`entry kind-${e.kind}`}>
                     <span className="entry-icon" aria-hidden="true">{kindIcon[e.kind]}</span>
@@ -186,9 +212,9 @@ export function JournalPanel({
                     </button>
                   </li>
                 ))}
-              </ul>
+              </ul>}
             </section>
-          ))
+          );})
         )}
       </div>
       <footer className="journal-footer">

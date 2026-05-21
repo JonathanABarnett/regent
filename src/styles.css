@@ -675,15 +675,41 @@ html, body, #root, .app-root {
 .journal-day h3 {
   margin: 8px 0 6px;
   font-size: 11px;
+  color: var(--accent);
+}
+/* The toggle button carries the visual weight of the old h3 content */
+.day-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 11px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--accent);
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+  cursor: pointer;
+  padding: 2px 0;
+  text-align: left;
 }
-.journal-day h3 .day-num { font-weight: bold; }
-.journal-day h3 .day-sub { color: var(--panel-muted); font-size: 10px; }
+.day-toggle:hover { opacity: 0.8; }
+.day-toggle:focus-visible { outline: 1px solid var(--accent); border-radius: 2px; }
+.day-chevron { font-size: 8px; opacity: 0.55; flex-shrink: 0; }
+.day-num { font-weight: bold; }
+.day-sub { color: var(--panel-muted); font-size: 10px; flex: 1; text-transform: none; letter-spacing: 0; }
+/* Entry count shown while collapsed */
+.day-count {
+  background: rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 9px;
+  color: var(--panel-muted);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.journal-day.collapsed { margin-bottom: 4px; }
 .journal-day ul {
   list-style: none;
   margin: 0;
