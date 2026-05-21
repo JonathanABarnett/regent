@@ -17,6 +17,8 @@ export class WeatherLayer {
   private pollen: Particle[] = [];
   private fireflies: Particle[] = [];
   private leaves: Particle[] = [];
+  /** Ambient ember sparks rising from active forge structures. */
+  private embers: Particle[] = [];
 
   constructor(private world: World, private factory: SpriteFactory) {
     this.container.label = "weather";
@@ -93,6 +95,7 @@ export class WeatherLayer {
     this.updatePollen(_dt, viewport);
     this.updateFireflies(_dt, viewport);
     this.updateLeaves(_dt, viewport);
+    this.updateEmbers(_dt, viewport);
   }
 
   private spawnParticle(kind: string, vp: { minX: number; minY: number; maxX: number; maxY: number; }): Particle {
@@ -263,6 +266,78 @@ export class WeatherLayer {
       vy: (0.8 + Math.random() * 0.5) * T * 0.016,
       life: 2 + Math.random() * 2,
     };
+  }
+
+  // ── Forge embers ─────────────────────────────────────────────────────────
+  // A small cluster of orange/red sparks rises from each forge structure
+  // continuously. The effect is subtle — 4–6 embers per forge, short life,
+  // tight origin point — but makes the forge feel alive even when no
+  // explicit forge event is running.
+
+  private updateEmbers(dt: number, vp: { minX: number; minY: number; maxX: number; maxY: number; }) {
+    const T = 32;
+    const forges = this.world.map.structures.filter((s) => s.kind === "forge");
+    const target = forges.length * 5; // 5 embers per forge
+
+    while (this.embers.length < target) {
+      // Pick a random forge as the origin for this ember.
+      const forge = forges[Math.floor(Math.random() * forges.length)];
+      if (!forge) break;
+      const sprite = new Sprite(Texture.WHITE);
+      sprite.width  = 1 + (Math.random() > 0.6 ? 1 : 0);
+      sprite.height = sprite.width;
+      sprite.tint   = Math.random() > 0.5 ? 0xf97316 : 0xfbbf24; // orange or amber
+      sprite.alpha  = 0.7 + Math.random() * 0.25;
+      sprite.zIndex = 5010;
+      // Spawn at the chimney position (top-centre of the forge footprint)
+      const ox = (forge.pos.x + forge.size.x * 0.5) * T + (Math.random() - 0.5) * 8;
+      const oy = forge.pos.y * T - 4;
+      sprite.x = ox;
+      sprite.y = oy;
+      this.container.addChild(sprite);
+      this.embers.push({
+        sprite,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: -(1.5 + Math.random() * 1.5),  // drift upward
+        life: 0.8 + Math.random() * 0.8,
+      });
+    }
+
+    while (this.embers.length > target) {
+      const p = this.embers.pop();
+      if (p) p.sprite.parent?.removeChild(p.sprite);
+    }
+
+    for (const p of this.embers) {
+      // Gentle sideways wobble + upward drift; fade out toward end of life
+      p.vx += (Math.random() - 0.5) * 0.15;
+      p.sprite.x += p.vx;
+      p.sprite.y += p.vy;
+      p.vy *= 0.97; // decelerate slightly as hot air cools
+      p.life -= dt;
+      p.sprite.alpha = Math.max(0, p.life / 0.8) * 0.9;
+
+      // Respawn when the ember burns out — but only if the forge is still visible
+      if (p.life <= 0) {
+        const forge = forges[Math.floor(Math.random() * forges.length)];
+        if (!forge) { p.life = 99; continue; }
+        const cx = (forge.pos.x + forge.size.x * 0.5) * T;
+        const cy = forge.pos.y * T - 4;
+        // Only respawn if the forge is within the current viewport
+        if (cx < vp.minX * T || cx > vp.maxX * T || cy < vp.minY * T || cy > vp.maxY * T) {
+          p.life = 99; // park it off-screen until next viewport scroll
+          p.sprite.alpha = 0;
+          continue;
+        }
+        p.sprite.x = cx + (Math.random() - 0.5) * 8;
+        p.sprite.y = cy;
+        p.vx = (Math.random() - 0.5) * 0.4;
+        p.vy = -(1.5 + Math.random() * 1.5);
+        p.life = 0.8 + Math.random() * 0.8;
+        p.sprite.tint = Math.random() > 0.5 ? 0xf97316 : 0xfbbf24;
+        p.sprite.alpha = 0.7 + Math.random() * 0.25;
+      }
+    }
   }
 
   private updateLeaves(dt: number, vp: { minX: number; minY: number; maxX: number; maxY: number; }) {

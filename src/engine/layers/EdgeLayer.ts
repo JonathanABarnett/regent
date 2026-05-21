@@ -68,6 +68,13 @@ type Dir = (typeof DIRS)[number]["name"];
 export class EdgeLayer {
   readonly container: Container;
   private g: Graphics;
+  /**
+   * Last viewport used for drawing. Biome edges are static (the map never
+   * changes) so we only need to redraw when the visible region changes.
+   * Resolution: 1 tile — sub-tile camera movement doesn't shift which edges
+   * are on screen, so we skip any pan smaller than 1 tile.
+   */
+  private lastKey = "";
 
   constructor(private map: OverworldMap) {
     this.container = new Container();
@@ -81,12 +88,17 @@ export class EdgeLayer {
   }
 
   /**
-   * Clear and redraw all visible edge effects.
-   * `minX/minY/maxX/maxY` are in tile coordinates, matching the bounds
-   * passed to TileRenderer.update(). A ±1 tile buffer is applied internally
-   * so strips on the outermost visible tiles are never half-drawn.
+   * Clear and redraw all visible edge effects — but ONLY when the tile-snapped
+   * viewport has changed since the last draw. Biome edges are derived from the
+   * static tile map, so the same visible region always produces the same pixels.
+   * At 60 fps this avoids ~59 wasted g.clear()+redraw cycles per second.
    */
   update(minX: number, minY: number, maxX: number, maxY: number): void {
+    // Snap to integer tiles so minor sub-tile camera drift doesn't retrigger.
+    const key = `${Math.floor(minX)},${Math.floor(minY)},${Math.ceil(maxX)},${Math.ceil(maxY)}`;
+    if (key === this.lastKey) return;
+    this.lastKey = key;
+
     this.g.clear();
 
     const x0 = Math.max(0, Math.floor(minX) - 1);

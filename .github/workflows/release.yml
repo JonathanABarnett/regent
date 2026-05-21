@@ -4,54 +4,97 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:   # manual dispatch for pipeline testing
 
 jobs:
-  itch-deploy:
-    name: Build + deploy to itch.io
+  # ── 1. TypeScript check + unit tests ───────────────────────────────────────
+  test:
+    name: Test
     runs-on: ubuntu-latest
-    # Required secrets (set in repo Settings → Secrets and variables → Actions):
-    #   BUTLER_API_KEY   — from https://itch.io/user/settings/api-keys
-    #   ITCH_USER        — your itch.io username (or "jonat" by default)
-    #   ITCH_GAME        — the project slug (e.g. "kingdomos")
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
 
-      - name: Install
-        run: npm ci
-
-      - name: Type-check
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test
-
-      - name: Build
-        run: npm run build
-
-      - name: Setup Butler
+  # ── 2. Web build → itch.io HTML5 upload (butler) ──────────────────────────
+  # Required secrets:
+  #   BUTLER_API_KEY  — https://itch.io/user/settings/api-keys
+  #   ITCH_USER       — itch.io username
+  #   ITCH_GAME       — itch.io project slug (e.g. kingdomos)
+  itch-html5:
+    name: itch.io HTML5
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'   # skip on manual dispatch unless you want to force
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build
+      - name: Install Butler
         run: |
           curl -L -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
           unzip butler.zip
           chmod +x butler
           ./butler -V
-
-      - name: Push to itch.io (HTML5)
+      - name: Push to itch.io
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
-          ITCH_USER: ${{ secrets.ITCH_USER }}
-          ITCH_GAME: ${{ secrets.ITCH_GAME }}
+          ITCH_USER:      ${{ secrets.ITCH_USER }}
+          ITCH_GAME:      ${{ secrets.ITCH_GAME }}
         run: |
-          ./butler push dist/ "$ITCH_USER/$ITCH_GAME:html5" --userversion "${GITHUB_REF#refs/tags/v}"
-
-      - name: Upload dist artifact
-        uses: actions/upload-artifact@v4
+          ./butler push dist/ "$ITCH_USER/$ITCH_GAME:html5" \
+            --userversion "${GITHUB_REF#refs/tags/v}"
+      - uses: actions/upload-artifact@v4
         with:
-          name: kingdomos-release-${{ github.ref_name }}
+          name: web-${{ github.ref_name }}
           path: dist/
           retention-days: 90
+
+  # ── 3. Windows desktop installer (Tauri) ──────────────────────────────────
+  build-windows:
+    name: Windows installer
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+      - name: Build Tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName:     ${{ github.ref_name }}
+          releaseName: "KingdomOS ${{ github.ref_name }}"
+          releaseBody: |
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for what's new.
+          releaseDraft: true
+          prerelease:   false
+          args: "--target x86_64-pc-windows-msvc"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-installer-${{ github.sha }}
+          path: |
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
+          if-no-files-found: warn
+          retention-days: 30

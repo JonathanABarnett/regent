@@ -108,6 +108,8 @@ export interface NPC {
   age?: number;
   /** id of another NPC this one is paired with (optional) */
   partnerId?: string;
+  /** In-world day when this NPC was married. Used for anniversary events. */
+  partneredOnDay?: number;
   /**
    * Ids of this NPC's parents, if known. Only set on NPCs born through
    * LifeEvents.tryBirth — initial-spawn NPCs leave this undefined since they

@@ -274,6 +274,8 @@ export interface SavedNpc {
   /** Optional persistent stats — relationships, age, etc. */
   age?: number;
   partnerId?: string;
+  /** In-world day when this NPC was married (for anniversary events). */
+  partneredOnDay?: number;
   /** Ids of this NPC's parents (set only for in-sim newborns). */
   parentIds?: string[];
   /** Personality trait — restored on load, generated from seed on first spawn. */
@@ -321,6 +323,7 @@ export function serialize(
       seed: n.seed,
       age: n.age,
       partnerId: n.partnerId,
+      partneredOnDay: n.partneredOnDay,
       parentIds: n.parentIds,
       trait: n.trait,
     })),
@@ -443,6 +446,7 @@ export function validateSave(rawInput: unknown): SaveData | null {
       seed: safeInt(item.seed, 0, 0, 2 ** 31 - 1),
       age: item.age === undefined ? undefined : Math.max(0, Math.min(200, safeNumber(item.age, 30))),
       partnerId: item.partnerId === undefined ? undefined : safeString(item.partnerId, 80),
+      partneredOnDay: item.partneredOnDay === undefined ? undefined : safeInt(item.partneredOnDay, 0, 0, 1_000_000),
       parentIds,
       trait: item.trait === undefined ? undefined : safeString(item.trait, 32),
     });
@@ -787,6 +791,7 @@ export function applySave(world: World, save: SaveData): void {
       if (saved.name) live.name = saved.name;
       if (saved.age !== undefined) live.age = saved.age;
       if (saved.partnerId) live.partnerId = saved.partnerId;
+      if (saved.partneredOnDay !== undefined) live.partneredOnDay = saved.partneredOnDay;
       if (saved.parentIds && saved.parentIds.length) live.parentIds = [...saved.parentIds];
       if (saved.trait) live.trait = saved.trait as typeof live.trait;
     } else {
@@ -798,6 +803,7 @@ export function applySave(world: World, save: SaveData): void {
         name: saved.name,
         age: saved.age,
         partnerId: saved.partnerId,
+        partneredOnDay: saved.partneredOnDay,
         parentIds: saved.parentIds ? [...saved.parentIds] : undefined,
         trait: saved.trait as NPC["trait"] | undefined,
         pos: { ...saved.pos },

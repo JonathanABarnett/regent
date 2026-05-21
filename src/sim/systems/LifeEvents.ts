@@ -65,6 +65,9 @@ export class LifeEvents {
 
     // Deaths — very rare and only for old NPCs
     if (this.rand() < 0.04) this.tryDeath();
+
+    // Anniversaries — check once per day; fire at every 90-day milestone
+    this.checkAnniversaries(day);
   }
 
   private tryMarriage() {
@@ -81,6 +84,10 @@ export class LifeEvents {
     const b = candidates[Math.floor(this.rand() * candidates.length)];
     a.partnerId = b.id;
     b.partnerId = a.id;
+    // Record the wedding day for anniversary tracking.
+    const today = this.world.state.day;
+    a.partneredOnDay = today;
+    b.partneredOnDay = today;
     // The wedding happens at the shared home — anchor the journal entry there.
     this.journal.write(this.marriageLine(a, b), "life", a.homeId);
   }
@@ -154,6 +161,26 @@ export class LifeEvents {
       .replaceAll("{b}", b.name ?? "the father")
       .replaceAll("{place}", place)
       .replaceAll("{blessing}", blessing);
+  }
+
+  private checkAnniversaries(today: number) {
+    // Only scan once: track pairs already seen this day to avoid double-firing
+    // (both partners share the same partneredOnDay, so we'd otherwise fire twice).
+    const fired = new Set<string>();
+    for (const npc of this.world.npcs) {
+      if (!npc.partnerId || npc.partneredOnDay === undefined) continue;
+      const pairKey = [npc.id, npc.partnerId].sort().join("|");
+      if (fired.has(pairKey)) continue;
+      const daysTogether = today - npc.partneredOnDay;
+      // Fire at every 90-day milestone (≈ 1 NPC year).
+      if (daysTogether <= 0 || daysTogether % 90 !== 0) continue;
+      const partner = this.world.npcs.find((n) => n.id === npc.partnerId);
+      if (!partner) continue;
+      fired.add(pairKey);
+      const years = Math.floor(daysTogether / 90);
+      const text = anniversaryLine(npc, partner, years, this.rand);
+      this.journal.write(text, "life", npc.homeId);
+    }
   }
 
   private tryDeath() {
@@ -383,6 +410,37 @@ function traitMarriagePool(
   // Build a normalized key (sorted so order doesn't matter).
   const sorted = [String(traitA), String(traitB)].sort().join("+");
   return PAIR_POOLS[sorted] ?? MARRIAGE_LINES;
+}
+
+// ── Anniversary prose ─────────────────────────────────────────────────────
+
+const ANNIVERSARY_LINES: readonly string[] = [
+  "{a} and {b} marked {years} year{s} together today. The occasion was noted in the chronicle without much ceremony, which is exactly how they would have wanted it.",
+  "It has been {years} year{s} since {a} and {b} were wed at {place}. The town remembered the date before either of them did.",
+  "{years} year{s} of {a} and {b}. The children gave them a bunch of wildflowers picked from the south meadow. The flowers were slightly wilted. Nobody mentioned it.",
+  "The {years}{ord} anniversary of the wedding of {a} and {b}. They sat in the same spot they sat after the ceremony, and said roughly the same things, and were satisfied with that.",
+  "{a} woke {b} up at dawn to remind them. Neither of them could believe it had been {years} year{s}. The kingdom's records confirmed it.",
+];
+
+function anniversaryLine(
+  a: import("../types").NPC,
+  b: import("../types").NPC,
+  years: number,
+  rand: () => number,
+): string {
+  const ord = (n: number) => {
+    const v = n % 100;
+    if (v >= 11 && v <= 13) return "th";
+    switch (n % 10) { case 1: return "st"; case 2: return "nd"; case 3: return "rd"; default: return "th"; }
+  };
+  const place = b.homeId ? b.homeId.charAt(0).toUpperCase() + b.homeId.slice(1) : "the town";
+  return pickFrom(ANNIVERSARY_LINES, rand)
+    .replace("{a}", a.name ?? "they")
+    .replace("{b}", b.name ?? "their partner")
+    .replace("{years}", String(years))
+    .replace("{s}", years === 1 ? "" : "s")
+    .replace("{ord}", ord(years))
+    .replace("{place}", place);
 }
 
 function pickFrom<T>(arr: readonly T[], rand: () => number): T {

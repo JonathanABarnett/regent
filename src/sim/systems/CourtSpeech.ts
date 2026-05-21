@@ -25,6 +25,13 @@ const ADVISOR_LINES: readonly string[] = [
   "{name} returned an unsigned petition to its author with a brief note pinned to it: \"sign your name and I will sign mine.\"",
   "{name} declined a gift of wine from a visiting merchant; the court took note, and so did the merchant.",
   "{name} closed council a full hour early, citing that no one in the room could remember what the third item had been.",
+  "{name} read every open petition before bed. That is their entire personality, and it is sufficient.",
+  "{name} spent three hours with a family whose complaint turned out not to be about the fence at all.",
+  "{name} said, at the end of a long day: \"the right answer and the popular answer are rarely neighbours.\" No one disagreed.",
+  "{name} asked the court a question no one had thought to ask, then sat back and waited.",
+  "{name} compiled a list of every decision made this year. The list was shorter than expected. That troubled them.",
+  "{name} sat in the market for an afternoon without identifying themselves. They came back knowing three things the court did not.",
+  "{name} refused to raise their voice in council, even when the room was loud. Especially when the room was loud.",
 ];
 
 const CAPTAIN_LINES: readonly string[] = [
@@ -38,6 +45,12 @@ const CAPTAIN_LINES: readonly string[] = [
   "{name} refused to discipline a guard who had fallen asleep on duty; instead they walked the rest of the shift in her place.",
   "{name} ordered new boots issued to every guard, paid out of their own ration of court silver.",
   "{name} returned a recovered horse to a farmer who had not yet learned it was missing.",
+  "{name} redrawn the watch routes after finding two overlapping blind spots that had existed for years.",
+  "{name} ate in the barracks three nights in a row, without ceremony.",
+  "{name} found a gap in the south wall's footing. It was repaired before noon. No report was filed. There was no need.",
+  "{name} said: \"the best security is people who trust each other.\" Then went back to checking the locks.",
+  "{name} spent an afternoon interviewing everyone who had been on watch the night of the last incident. The incident was a fox.",
+  "{name} marked every weak hinge, loose latch, and uncertain board on the castle's south face. The list was two pages.",
 ];
 
 const SCHOLAR_LINES: readonly string[] = [
@@ -51,6 +64,13 @@ const SCHOLAR_LINES: readonly string[] = [
   "{name} wrote a letter to a scholar three kingdoms away and admitted afterward they did not expect a reply.",
   "{name} found an error in a chronicle written before the founding, corrected it in margin ink, and signed it twice.",
   "{name} sat with a child who could not yet read and named every animal on the page until the child fell asleep.",
+  "{name} started a new index. The existing one was, they noted, technically correct but spiritually wrong.",
+  "{name} asked the chronicle to be re-copied. The handwriting, they explained, was losing nuance.",
+  "{name} translated a word for which no equivalent exists in Common. The new word has been used seventeen times this week.",
+  "{name} observed that the kingdom has made exactly the same mistake three times in fifty years. They looked pleased to have confirmed it.",
+  "{name} added a footnote to a footnote to a footnote and was unreachable for the rest of the afternoon.",
+  "{name} said: \"everything that has happened is still happening, somewhere in a book.\" Then went back to work.",
+  "{name} found a recipe for bread in the margin of a military treatise. They were delighted. The bread was also good.",
 ];
 
 export interface CourtSpeechOptions {
