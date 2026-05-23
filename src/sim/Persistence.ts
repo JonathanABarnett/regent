@@ -229,6 +229,19 @@ export interface SaveData {
   };
   /** Player-named region labels. */
   regions?: { labels: Array<{ id: string; name: string; pos: { x: number; y: number } }> };
+  /** Wildlife entities — deer, fish, hawks, wolves. */
+  wildlife?: {
+    entities: Array<{
+      id: string;
+      kind: "deer" | "fish" | "hawk" | "wolf";
+      pos: { x: number; y: number };
+      prevPos: { x: number; y: number };
+      heading: number;
+      changeTimer: number;
+      seed: number;
+    }>;
+    lastWolfAttackDay: number;
+  };
   /** Visitors system: cooldown + total count. */
   visitors?: { lastVisitDay: number; totalVisits: number };
   /** Trade caravans: cooldown + counters. */
@@ -410,6 +423,7 @@ export function serialize(
     visitors: world.visitors.snapshot(),
     trade: world.tradeCaravans.snapshot(),
     regions: world.regions.snapshot(),
+    wildlife: world.wildlife.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
@@ -657,6 +671,7 @@ export function validateSave(rawInput: unknown): SaveData | null {
         }
       : undefined,
     regions: validateRegions(raw.regions),
+    wildlife: validateWildlife(raw.wildlife),
   };
 }
 
@@ -702,6 +717,33 @@ function validateWar(raw: unknown): SaveData["war"] {
     phase: VALID_WAR_PHASES.has(phase)
       ? (phase as "opening" | "ongoing" | "final")
       : "opening",
+  };
+}
+
+const VALID_WILDLIFE_KINDS = new Set(["deer", "fish", "hawk", "wolf"]);
+function validateWildlife(raw: unknown): SaveData["wildlife"] {
+  if (!isPlainObject(raw)) return undefined;
+  const entitiesRaw = Array.isArray(raw.entities) ? raw.entities : [];
+  const entities: NonNullable<SaveData["wildlife"]>["entities"] = [];
+  for (const item of entitiesRaw.slice(0, 50)) {
+    if (!isPlainObject(item)) continue;
+    const kind = String(item.kind);
+    if (!VALID_WILDLIFE_KINDS.has(kind)) continue;
+    const pos = isPlainObject(item.pos) ? item.pos as Record<string, unknown> : {};
+    const prevPos = isPlainObject(item.prevPos) ? item.prevPos as Record<string, unknown> : pos;
+    entities.push({
+      id: safeString(item.id, 64) || `wild_${entities.length}`,
+      kind: kind as "deer" | "fish" | "hawk" | "wolf",
+      pos: { x: safeNumber(pos.x, 0), y: safeNumber(pos.y, 0) },
+      prevPos: { x: safeNumber(prevPos.x, 0), y: safeNumber(prevPos.y, 0) },
+      heading: safeNumber(item.heading, 0),
+      changeTimer: Math.max(0, Math.min(60, safeNumber(item.changeTimer, 0))),
+      seed: safeInt(item.seed, 0, 0, 2 ** 31 - 1),
+    });
+  }
+  return {
+    entities,
+    lastWolfAttackDay: safeInt(raw.lastWolfAttackDay, -999, -1000, 1_000_000),
   };
 }
 
@@ -1025,6 +1067,9 @@ export function applySave(world: World, save: SaveData): void {
   }
   if (save.regions) {
     world.regions.restore(save.regions);
+  }
+  if (save.wildlife) {
+    world.wildlife.restore(save.wildlife);
   }
   // Restore succession state if present.
   if (save.succession) {

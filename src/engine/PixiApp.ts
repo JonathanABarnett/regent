@@ -12,6 +12,8 @@ import { dayNightTint } from "./Palette";
 import { seasonTint } from "../sim/systems/Calendar";
 import { StructureLayer } from "./layers/StructureLayer";
 import { EntityLayer } from "./layers/EntityLayer";
+import { WildlifeLayer } from "./layers/WildlifeLayer";
+import { SmokeLayer } from "./layers/SmokeLayer";
 import { WeatherLayer } from "./layers/WeatherLayer";
 import { ParallaxBackground } from "./layers/ParallaxBackground";
 import { CrtOverlay } from "./layers/CrtOverlay";
@@ -51,6 +53,8 @@ export class PixiApp {
   camera!: Camera;
   tileRenderer!: TileRenderer;
   entityLayer!: EntityLayer;
+  wildlifeLayer!: WildlifeLayer;
+  smokeLayer!: SmokeLayer;
   structureLayer!: StructureLayer;
   borderLayer!: BorderLayer;
   cutawayLayer!: CutawayLayer;
@@ -151,6 +155,8 @@ export class PixiApp {
     this.cutawayLayer = new CutawayLayer(this.opts.world);
     this.entityLayer = new EntityLayer(this.opts.world, this.factory);
     this.weatherLayer = new WeatherLayer(this.opts.world, this.factory);
+    this.wildlifeLayer = new WildlifeLayer(this.opts.world);
+    this.smokeLayer = new SmokeLayer(this.opts.world);
     // EntityLayer reads from the CutawayLayer to relocate "inside" NPCs to
     // their stations within their associated building.
     this.entityLayer.cutawayLayer = this.cutawayLayer;
@@ -168,7 +174,12 @@ export class PixiApp {
     this.worldStage.addChild(this.nightLightsLayer.container);
     // Cutaway sits OVER the (faded) structure sprite, UNDER the NPCs
     this.worldStage.addChild(this.cutawayLayer.container);
+    // Wildlife under entities so NPCs (and their indicators) draw over the
+    // little deer/wolves/etc.
+    this.worldStage.addChild(this.wildlifeLayer.container);
     this.worldStage.addChild(this.entityLayer.container);
+    // Smoke draws over entities (rising past characters) but under weather.
+    this.worldStage.addChild(this.smokeLayer.container);
     this.worldStage.addChild(this.weatherLayer.container);
     this.worldStage.sortableChildren = false;
 
@@ -359,6 +370,8 @@ export class PixiApp {
     this.borderLayer.update();
     this.cutawayLayer.update();
     this.entityLayer.update(dt, this.alpha, simTime);
+    this.wildlifeLayer.update(this.alpha, simTime);
+    this.smokeLayer.update(dt);
     this.weatherLayer.update(dt, { minX, minY, maxX, maxY });
 
     // day/night + season tint (multiplied)

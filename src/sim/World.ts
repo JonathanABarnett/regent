@@ -51,6 +51,8 @@ import { TradeCaravans } from "./systems/TradeCaravans";
 import type { TradeSnapshot } from "./systems/TradeCaravans";
 import { Regions } from "./systems/Regions";
 import type { RegionsSnapshot } from "./systems/Regions";
+import { Wildlife } from "./systems/Wildlife";
+import type { WildlifeSnapshot } from "./systems/Wildlife";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -231,6 +233,7 @@ export class World {
   readonly visitors: Visitors;
   readonly tradeCaravans: TradeCaravans;
   readonly regions: Regions;
+  readonly wildlife: Wildlife;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -336,6 +339,7 @@ export class World {
     this.visitors = new Visitors(this, this.journal, this.rand);
     this.tradeCaravans = new TradeCaravans(this, this.journal, this.rand);
     this.regions = new Regions(this);
+    this.wildlife = new Wildlife(this, this.rand);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -464,6 +468,7 @@ export class World {
     this.tickPets(dt);
     this.tickCouriers(dt);
     this.tickEffects(dt);
+    this.wildlife.tick(dt);
   }
 
   /**
