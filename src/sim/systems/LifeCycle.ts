@@ -108,6 +108,24 @@ const BOND_LINES: readonly string[] = [
   "Three people have now described {a} and {b} as 'inseparable.' {a} and {b} both claim this is an exaggeration. They are wrong.",
 ];
 
+const RIVALRY_LINES: readonly string[] = [
+  "{a} and {b} have stopped speaking. No one is sure exactly what was said. Everyone is sure something was.",
+  "The smithy is unusually quiet whenever both {a} and {b} are working it. They are not friends.",
+  "{a} took the long route home today to avoid passing {b}'s door. They have been doing this for a week.",
+  "{a} and {b} agree on one thing only: they would prefer the other was somewhere else.",
+  "Two of the older guards say {a} and {b} will work it out eventually. The younger guards are taking bets.",
+  "{a} was overheard saying something about {b} that is best not repeated. {b} heard it second-hand by sundown.",
+  "The town has divided itself, gently and without quite meaning to, into people who are friendly with {a} and people who are friendly with {b}.",
+];
+
+const MENTORSHIP_LINES: readonly string[] = [
+  "{a} has taken {b} on as an apprentice. {b} is too proud to call it that yet, but they show up early every morning.",
+  "{a} watches {b} work and corrects them with the smallest gestures. {b} is learning faster than they realise.",
+  "{a} handed {b} a tool today and said \"this one's yours now.\" {b} has not let it out of their sight since.",
+  "{a} and {b} can be heard talking shop late into the evening. {b} asks questions; {a} answers more than they used to.",
+  "The senior {a_role} {a} has been showing the younger {b} how it's done. The work is better for it.",
+];
+
 // ── System ───────────────────────────────────────────────────────────────────
 
 export interface LifeCycleState {
@@ -117,6 +135,10 @@ export interface LifeCycleState {
   retiredIds: string[];
   /** NPC id pairs who have had a bond journal entry (sorted "a|b" key). */
   bondKeys: string[];
+  /** NPC id pairs who have formed a rivalry. */
+  rivalryKeys?: string[];
+  /** NPC id pairs in a mentor/apprentice relationship. */
+  mentorshipKeys?: string[];
   /** Last in-world day this system ran. */
   lastCheckedDay: number;
 }
@@ -132,6 +154,8 @@ export class LifeCycle {
   private cameOfAgeSet = new Set<string>();
   private retiredSet = new Set<string>();
   private bondSet = new Set<string>();
+  private rivalrySet = new Set<string>();
+  private mentorshipSet = new Set<string>();
 
   constructor(
     private world: World,
@@ -148,6 +172,8 @@ export class LifeCycle {
     this.checkComingOfAge();
     this.checkRetirement();
     if (this.rand() < 0.01) this.checkBond();
+    if (this.rand() < 0.006) this.checkRivalry();
+    if (this.rand() < 0.008) this.checkMentorship();
   }
 
   // ── Coming-of-age ──────────────────────────────────────────────────────────
@@ -285,6 +311,74 @@ export class LifeCycle {
     this.journal.write(text, "life", a.homeId);
   }
 
+  /**
+   * Pick two co-located NPCs who are unaligned (no partner, no bond, no
+   * existing rivalry) and mark a rivalry. The world feels deeper with a
+   * little friction in it.
+   */
+  private checkRivalry(): void {
+    const adults = this.world.npcs.filter(
+      (n) => (n.age ?? 0) >= ADULT_AGE && n.role !== "monarch",
+    );
+    if (adults.length < 2) return;
+
+    const a = adults[Math.floor(this.rand() * adults.length)];
+    const candidates = adults.filter(
+      (b) =>
+        b.id !== a.id &&
+        b.id !== a.partnerId &&
+        (b.homeId === a.homeId || b.workId === a.workId),
+    );
+    if (!candidates.length) return;
+    const b = candidates[Math.floor(this.rand() * candidates.length)];
+
+    const key = [a.id, b.id].sort().join("|");
+    // Don't rival someone you already bonded with — that's just complicated.
+    if (this.bondSet.has(key) || this.rivalrySet.has(key) || this.mentorshipSet.has(key)) return;
+    this.rivalrySet.add(key);
+
+    const text = pickFrom(RIVALRY_LINES, this.rand)
+      .replaceAll("{a}", a.name ?? "one")
+      .replaceAll("{b}", b.name ?? "another");
+    this.journal.write(text, "life", a.homeId);
+  }
+
+  /**
+   * Mentorship: a senior NPC (age 45+) takes on a younger NPC (18-30) who
+   * shares their workplace. Skill is being passed down.
+   */
+  private checkMentorship(): void {
+    const seniors = this.world.npcs.filter(
+      (n) =>
+        (n.age ?? 0) >= 45 &&
+        n.role !== "monarch" && n.role !== "villager",
+    );
+    if (!seniors.length) return;
+
+    const mentor = seniors[Math.floor(this.rand() * seniors.length)];
+    const candidates = this.world.npcs.filter(
+      (n) => {
+        const age = n.age ?? 0;
+        return n.id !== mentor.id &&
+          age >= ADULT_AGE && age <= 30 &&
+          n.role === mentor.role &&
+          n.workId === mentor.workId;
+      },
+    );
+    if (!candidates.length) return;
+    const apprentice = candidates[Math.floor(this.rand() * candidates.length)];
+
+    const key = [mentor.id, apprentice.id].sort().join("|");
+    if (this.mentorshipSet.has(key) || this.bondSet.has(key) || this.rivalrySet.has(key)) return;
+    this.mentorshipSet.add(key);
+
+    const text = pickFrom(MENTORSHIP_LINES, this.rand)
+      .replaceAll("{a}", mentor.name ?? "the elder")
+      .replaceAll("{b}", apprentice.name ?? "the apprentice")
+      .replaceAll("{a_role}", mentor.role);
+    this.journal.write(text, "life", mentor.workId);
+  }
+
   // ── Persistence ────────────────────────────────────────────────────────────
 
   snapshot(): LifeCycleState {
@@ -292,6 +386,8 @@ export class LifeCycle {
       cameOfAgeIds: [...this.cameOfAgeSet],
       retiredIds: [...this.retiredSet],
       bondKeys: [...this.bondSet],
+      rivalryKeys: [...this.rivalrySet],
+      mentorshipKeys: [...this.mentorshipSet],
       lastCheckedDay: this.state.lastCheckedDay,
     };
   }
@@ -299,21 +395,19 @@ export class LifeCycle {
   hydrate(raw: unknown): void {
     if (!raw || typeof raw !== "object") return;
     const r = raw as Record<string, unknown>;
-    if (Array.isArray(r.cameOfAgeIds)) {
-      for (const id of r.cameOfAgeIds as unknown[]) {
-        if (typeof id === "string") this.cameOfAgeSet.add(id);
+    const fill = (set: Set<string>, key: string) => {
+      const arr = r[key];
+      if (Array.isArray(arr)) {
+        for (const id of arr as unknown[]) {
+          if (typeof id === "string") set.add(id);
+        }
       }
-    }
-    if (Array.isArray(r.retiredIds)) {
-      for (const id of r.retiredIds as unknown[]) {
-        if (typeof id === "string") this.retiredSet.add(id);
-      }
-    }
-    if (Array.isArray(r.bondKeys)) {
-      for (const k of r.bondKeys as unknown[]) {
-        if (typeof k === "string") this.bondSet.add(k);
-      }
-    }
+    };
+    fill(this.cameOfAgeSet, "cameOfAgeIds");
+    fill(this.retiredSet, "retiredIds");
+    fill(this.bondSet, "bondKeys");
+    fill(this.rivalrySet, "rivalryKeys");
+    fill(this.mentorshipSet, "mentorshipKeys");
     if (typeof r.lastCheckedDay === "number") {
       this.state.lastCheckedDay = r.lastCheckedDay;
     }

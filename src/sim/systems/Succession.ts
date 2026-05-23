@@ -191,25 +191,44 @@ export class Succession {
     });
   }
 
+  /**
+   * Returns the current heir apparent (if any) — used by the HUD and
+   * Family Tree panel. Biological children of the monarch, eldest first.
+   */
+  currentHeir(): NPC | null {
+    const monarch = this.world.npcs.find((n) => n.role === "monarch");
+    if (!monarch) return null;
+    const children = this.world.npcs.filter(
+      (n) => n.parentIds?.includes(monarch.id) && (n.age ?? 0) >= 16,
+    );
+    if (!children.length) return null;
+    children.sort((a, b) => (b.age ?? 0) - (a.age ?? 0)); // eldest first
+    return children[0];
+  }
+
   private pickHeir(monarch: NPC): NPC | null {
     const adults = this.world.npcs.filter(
-      (n) => n !== monarch && (n.age ?? 30) >= 18 && n.role !== "monarch",
+      (n) => n !== monarch && (n.age ?? 30) >= 16 && n.role !== "monarch",
     );
-    // 1. Born in castle (homeId === monarch's home)
+    // 1. Biological children of the monarch (named heirs) — eldest first.
+    const bloodline = adults
+      .filter((n) => n.parentIds?.includes(monarch.id))
+      .sort((a, b) => (b.age ?? 0) - (a.age ?? 0));
+    if (bloodline.length) return bloodline[0];
+    // 2. Anyone who lives in the castle (close associate of the crown).
     const inCastle = adults.filter((n) => n.homeId === monarch.homeId);
     if (inCastle.length) {
-      // prefer youngest adult (a child of the realm)
       inCastle.sort((a, b) => (a.age ?? 99) - (b.age ?? 99));
       return inCastle[0];
     }
-    // 2. Villager or guard
+    // 3. Villager or guard from anywhere.
     const civicCandidates = adults.filter(
       (n) => n.role === "villager" || n.role === "guard",
     );
     if (civicCandidates.length) {
       return civicCandidates[Math.floor(Math.random() * civicCandidates.length)];
     }
-    // 3. Anyone
+    // 4. Anyone.
     if (adults.length) {
       return adults[Math.floor(Math.random() * adults.length)];
     }

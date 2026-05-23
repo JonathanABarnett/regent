@@ -227,6 +227,15 @@ export interface SaveData {
     lastWandererDay: number;
     processedCampIds: string[];
   };
+  /** Disasters system snapshot. */
+  disasters?: {
+    active: "plague" | "famine" | "flood" | null;
+    startedDay: number;
+    lastCheckedDay: number;
+    lastDisasterEndedDay: number;
+    daysRemaining: number;
+    victimNames: string[];
+  };
   /** War system snapshot. */
   war?: {
     active: boolean;
@@ -389,6 +398,7 @@ export function serialize(
     edicts: world.edicts.snapshot(),
     immigration: world.immigration.snapshot(),
     war: world.war.snapshot(),
+    disasters: world.disasters.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
@@ -621,6 +631,26 @@ export function validateSave(rawInput: unknown): SaveData | null {
     lifeCycle: validateLifeCycle(raw.lifeCycle),
     immigration: validateImmigration(raw.immigration),
     war: validateWar(raw.war),
+    disasters: validateDisasters(raw.disasters),
+  };
+}
+
+const VALID_DISASTER_KINDS = new Set(["plague", "famine", "flood", null]);
+
+function validateDisasters(raw: unknown): SaveData["disasters"] {
+  if (!isPlainObject(raw)) return undefined;
+  const active = raw.active;
+  return {
+    active: VALID_DISASTER_KINDS.has(active as string | null)
+      ? (active as "plague" | "famine" | "flood" | null)
+      : null,
+    startedDay: safeInt(raw.startedDay, 0, 0, 1_000_000),
+    lastCheckedDay: safeInt(raw.lastCheckedDay, -1, -1, 1_000_000),
+    lastDisasterEndedDay: safeInt(raw.lastDisasterEndedDay, -35, -10_000, 1_000_000),
+    daysRemaining: safeInt(raw.daysRemaining, 0, 0, 100),
+    victimNames: Array.isArray(raw.victimNames)
+      ? (raw.victimNames as unknown[]).slice(0, 50).filter((v): v is string => typeof v === "string")
+      : [],
   };
 }
 
@@ -679,6 +709,8 @@ function validateLifeCycle(raw: unknown): SaveData["lifeCycle"] {
     cameOfAgeIds: toStrArr(raw.cameOfAgeIds, 500),
     retiredIds: toStrArr(raw.retiredIds, 200),
     bondKeys: toStrArr(raw.bondKeys, 500),
+    rivalryKeys: toStrArr(raw.rivalryKeys, 500),
+    mentorshipKeys: toStrArr(raw.mentorshipKeys, 500),
     lastCheckedDay: safeInt(raw.lastCheckedDay, -1, -1, 100_000),
   };
 }
@@ -937,6 +969,9 @@ export function applySave(world: World, save: SaveData): void {
   // Restore war state (may re-enter an active war mid-battle).
   if (save.war) {
     world.war.restore(save.war);
+  }
+  if (save.disasters) {
+    world.disasters.restore(save.disasters);
   }
   // Restore succession state if present.
   if (save.succession) {

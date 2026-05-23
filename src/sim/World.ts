@@ -43,6 +43,8 @@ import { Immigration } from "./systems/Immigration";
 import type { ImmigrationSnapshot } from "./systems/Immigration";
 import { War } from "./systems/War";
 import type { WarSnapshot } from "./systems/War";
+import { Disasters } from "./systems/Disasters";
+import type { DisasterSnapshot } from "./systems/Disasters";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -219,6 +221,7 @@ export class World {
   readonly exploration: Exploration;
   readonly immigration: Immigration;
   readonly war: War;
+  readonly disasters: Disasters;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -320,6 +323,7 @@ export class World {
     this.exploration = new Exploration(this, this.journal, INITIAL_REVEAL_RADIUS);
     this.immigration = new Immigration(this, this.journal, this.rand);
     this.war = new War(this, this.journal, this.rand);
+    this.disasters = new Disasters(this, this.journal, this.rand);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -390,6 +394,8 @@ export class World {
       this.immigration.tick();
       // War: may declare a war, advance an active battle, or resolve it.
       this.war.tick();
+      // Disasters: plague / famine / flood with named NPC consequences.
+      this.disasters.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {
