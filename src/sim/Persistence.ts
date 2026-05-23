@@ -231,6 +231,10 @@ export interface SaveData {
   regions?: { labels: Array<{ id: string; name: string; pos: { x: number; y: number } }> };
   /** Old Days mythos prose cooldown. */
   oldDays?: { lastFiredDay: number };
+  /** Year-marks already celebrated (25, 50, 100…). */
+  greatAnniversaries?: { firedYears: number[] };
+  /** Refugees system cooldown. */
+  refugees?: { lastEventDay: number; totalAccepted: number };
   /** Comet — rare decade-scale celestial event. */
   comet?: {
     active: boolean;
@@ -255,8 +259,15 @@ export interface SaveData {
   };
   /** Visitors system: cooldown + total count. */
   visitors?: { lastVisitDay: number; totalVisits: number };
-  /** Trade caravans: cooldown + counters. */
-  trade?: { lastCaravanDay: number; totalCaravans: number; totalAccepted: number };
+  /** Trade caravans: cooldown + counters + diplomatic-marriage tracking. */
+  trade?: {
+    lastCaravanDay: number;
+    totalCaravans: number;
+    totalAccepted: number;
+    partnerGoodwill?: Record<string, number>;
+    marriedPartners?: string[];
+    lastMarriageDay?: number;
+  };
   /** Disasters system snapshot. */
   disasters?: {
     active: "plague" | "famine" | "flood" | null;
@@ -437,6 +448,8 @@ export function serialize(
     wildlife: world.wildlife.snapshot(),
     comet: world.comet.snapshot(),
     oldDays: world.oldDays.snapshot(),
+    greatAnniversaries: world.greatAnniversaries.snapshot(),
+    refugees: world.refugees.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
@@ -677,16 +690,46 @@ export function validateSave(rawInput: unknown): SaveData | null {
         }
       : undefined,
     trade: isPlainObject(raw.trade)
-      ? {
-          lastCaravanDay: safeInt((raw.trade as Record<string, unknown>).lastCaravanDay, 0, 0, 1_000_000),
-          totalCaravans: safeInt((raw.trade as Record<string, unknown>).totalCaravans, 0, 0, 100_000),
-          totalAccepted: safeInt((raw.trade as Record<string, unknown>).totalAccepted, 0, 0, 100_000),
-        }
+      ? (() => {
+          const t = raw.trade as Record<string, unknown>;
+          const goodwill: Record<string, number> = {};
+          if (isPlainObject(t.partnerGoodwill)) {
+            for (const [k, v] of Object.entries(t.partnerGoodwill as Record<string, unknown>)) {
+              if (typeof v === "number" && isFinite(v)) goodwill[k] = Math.max(0, Math.min(50, v));
+            }
+          }
+          const marriedPartners = Array.isArray(t.marriedPartners)
+            ? (t.marriedPartners as unknown[]).filter((s): s is string => typeof s === "string").slice(0, 20)
+            : [];
+          return {
+            lastCaravanDay: safeInt(t.lastCaravanDay, 0, 0, 1_000_000),
+            totalCaravans: safeInt(t.totalCaravans, 0, 0, 100_000),
+            totalAccepted: safeInt(t.totalAccepted, 0, 0, 100_000),
+            partnerGoodwill: goodwill,
+            marriedPartners,
+            lastMarriageDay: safeInt(t.lastMarriageDay, -90, -10_000, 1_000_000),
+          };
+        })()
       : undefined,
     regions: validateRegions(raw.regions),
     wildlife: validateWildlife(raw.wildlife),
     oldDays: isPlainObject(raw.oldDays)
       ? { lastFiredDay: safeInt((raw.oldDays as Record<string, unknown>).lastFiredDay, -25, -1000, 1_000_000) }
+      : undefined,
+    greatAnniversaries: isPlainObject(raw.greatAnniversaries)
+      ? {
+          firedYears: Array.isArray((raw.greatAnniversaries as Record<string, unknown>).firedYears)
+            ? ((raw.greatAnniversaries as Record<string, unknown>).firedYears as unknown[])
+                .filter((y): y is number => typeof y === "number" && y > 0 && y < 10_000)
+                .slice(0, 50)
+            : [],
+        }
+      : undefined,
+    refugees: isPlainObject(raw.refugees)
+      ? {
+          lastEventDay: safeInt((raw.refugees as Record<string, unknown>).lastEventDay, -30, -1000, 1_000_000),
+          totalAccepted: safeInt((raw.refugees as Record<string, unknown>).totalAccepted, 0, 0, 100_000),
+        }
       : undefined,
     comet: isPlainObject(raw.comet)
       ? {
@@ -1102,6 +1145,12 @@ export function applySave(world: World, save: SaveData): void {
   }
   if (save.oldDays) {
     world.oldDays.restore(save.oldDays);
+  }
+  if (save.greatAnniversaries) {
+    world.greatAnniversaries.restore(save.greatAnniversaries);
+  }
+  if (save.refugees) {
+    world.refugees.restore(save.refugees);
   }
   // Restore succession state if present.
   if (save.succession) {

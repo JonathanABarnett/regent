@@ -119,6 +119,28 @@ html, body, #root, .app-root {
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
 }
 .hud-left, .hud-right { display: flex; gap: 14px; align-items: center; }
+.stats-actions {
+  padding: 6px 10px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.kingdom-action-btn {
+  padding: 6px 12px;
+  border: 1px solid rgba(253, 230, 138, 0.4);
+  background: rgba(253, 230, 138, 0.06);
+  color: #fde68a;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  transition: background 0.1s;
+}
+.kingdom-action-btn:hover:not(:disabled) {
+  background: rgba(253, 230, 138, 0.15);
+}
+.kingdom-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 .hud-quote {
   position: absolute;
   top: 38px;

@@ -57,6 +57,23 @@ export function StatsDashboard({
         <button onClick={onClose} title="Close">×</button>
       </div>
       <div className="stats-body">
+        <section className="stats-actions">
+          <button
+            className="kingdom-action-btn"
+            disabled={world.economy.state.gold < 30}
+            title={
+              world.economy.state.gold < 30
+                ? "Needs 30 gold to throw a festival."
+                : "Order a royal festival — 30 gold · rep +2 · all factions +1"
+            }
+            onClick={() => {
+              if (world.orderFestival()) setTick((n) => n + 1);
+            }}
+          >
+            ✦ Hold a festival (30g)
+          </button>
+        </section>
+
         <section>
           <h3>Reign</h3>
           <div className="stats-grid">

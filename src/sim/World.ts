@@ -57,6 +57,10 @@ import { Comet } from "./systems/Comet";
 import type { CometSnapshot } from "./systems/Comet";
 import { OldDays } from "./systems/OldDays";
 import type { OldDaysSnapshot } from "./systems/OldDays";
+import { GreatAnniversaries } from "./systems/GreatAnniversaries";
+import type { GreatAnniversariesSnapshot } from "./systems/GreatAnniversaries";
+import { Refugees } from "./systems/Refugees";
+import type { RefugeesSnapshot } from "./systems/Refugees";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -240,6 +244,8 @@ export class World {
   readonly wildlife: Wildlife;
   readonly comet: Comet;
   readonly oldDays: OldDays;
+  readonly greatAnniversaries: GreatAnniversaries;
+  readonly refugees: Refugees;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -348,6 +354,8 @@ export class World {
     this.wildlife = new Wildlife(this, this.rand);
     this.comet = new Comet(this, this.journal, this.rand);
     this.oldDays = new OldDays(this, this.journal, this.rand);
+    this.greatAnniversaries = new GreatAnniversaries(this, this.journal, this.rand);
+    this.refugees = new Refugees(this, this.journal, this.rand);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -369,6 +377,36 @@ export class World {
 
   structureById(id: string): Structure | undefined {
     return this.map.structures.find((s) => s.id === id);
+  }
+
+  /**
+   * Player-ordered festival. Costs gold, raises reputation, lifts every
+   * faction, fires a festival event for the visual layer + audio. Returns
+   * true if the order went through; false if the kingdom can't afford it.
+   */
+  orderFestival(): boolean {
+    const COST = 30;
+    if (this.economy.state.gold < COST) return false;
+    this.economy.state.gold -= COST;
+    this.reputation.adjust(2);
+    this.factions.adjust("merchants", 1);
+    this.factions.adjust("scholars", 1);
+    this.factions.adjust("guard", 1);
+    const castle = this.map.structures.find((s) => s.kind === "castle");
+    this.bus.publish(
+      makeEvent("festival", {
+        source: "internal",
+        intensity: 0.9,
+        duration_ms: 30_000,
+        payload: { label: "royal festival", structure: castle?.id },
+      }),
+    );
+    this.journal.write(
+      "By royal order, a festival was held at the keep. The streets were thrown open and the kitchens did not close. The kingdom remembered how to celebrate.",
+      "milestone",
+      castle?.id,
+    );
+    return true;
   }
 
   /** Step the world forward by `dt` real seconds. */
@@ -428,6 +466,10 @@ export class World {
       this.comet.tick();
       // Old Days — myth-toned prose once the kingdom is 20+ years old.
       this.oldDays.tick();
+      // Great Anniversaries — year 25/50/100/150/200 milestones.
+      this.greatAnniversaries.tick();
+      // Refugees — fleeing parties from off-map kingdoms.
+      this.refugees.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {
