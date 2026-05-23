@@ -9,6 +9,9 @@ import type { PendingDecision } from "../sim/systems/Decisions";
  */
 export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
   const [current, setCurrent] = useState<PendingDecision | null>(null);
+  // Independent 1-second tick so the timer counts down visibly even when
+  // the decision itself doesn't change.
+  const [, setNow] = useState(Date.now());
 
   useEffect(() => {
     let off: (() => void) | undefined;
@@ -19,7 +22,6 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
       return true;
     };
     if (!probe()) {
-      // World might not be ready on first render — try again shortly.
       const id = window.setInterval(() => {
         if (probe()) clearInterval(id);
       }, 200);
@@ -31,11 +33,23 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
     return () => off?.();
   }, [getWorld]);
 
+  useEffect(() => {
+    if (!current) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [current]);
+
   if (!current) return null;
   const w = getWorld();
   if (!w) return null;
 
   const secondsLeft = Math.max(0, Math.floor((current.expiresAt - Date.now()) / 1000));
+  const mm = Math.floor(secondsLeft / 60);
+  const ss = secondsLeft % 60;
+  const timeStr = `${mm}:${String(ss).padStart(2, "0")}`;
+  const defaultLabel = current.defaultOnExpire
+    ? `auto-decides in ${timeStr} (${current.options[0]?.label ?? "first option"})`
+    : `expires in ${timeStr}`;
 
   return (
     <div
@@ -46,8 +60,8 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
     >
       <div className="decision-header">
         <span className="decision-title" id="decision-title">{current.title}</span>
-        <span className="decision-timer" aria-label={`${secondsLeft} seconds remaining`}>
-          {secondsLeft}s
+        <span className="decision-timer" title={defaultLabel} aria-label={defaultLabel}>
+          {timeStr}
         </span>
       </div>
       <p className="decision-body" id="decision-body">{current.body}</p>
@@ -63,6 +77,7 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
           </button>
         ))}
       </div>
+      <div className="decision-footer">{defaultLabel}</div>
     </div>
   );
 }

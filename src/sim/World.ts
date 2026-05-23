@@ -67,6 +67,12 @@ import { Expeditions } from "./systems/Expeditions";
 import type { ExpeditionSnapshot } from "./systems/Expeditions";
 import { Wanderer } from "./systems/Wanderer";
 import type { WandererSnapshot } from "./systems/Wanderer";
+import { ReturningBloodline } from "./systems/ReturningBloodline";
+import type { BloodlineSnapshot } from "./systems/ReturningBloodline";
+import { Sagas } from "./systems/Sagas";
+import type { SagasSnapshot } from "./systems/Sagas";
+import { Cult } from "./systems/Cult";
+import type { CultSnapshot } from "./systems/Cult";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -255,6 +261,9 @@ export class World {
   readonly customDecrees: CustomDecrees;
   readonly expeditions: Expeditions;
   readonly wanderer: Wanderer;
+  readonly returningBloodline: ReturningBloodline;
+  readonly sagas: Sagas;
+  readonly cult: Cult;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -368,6 +377,9 @@ export class World {
     this.customDecrees = new CustomDecrees(this, this.journal);
     this.expeditions = new Expeditions(this, this.journal, this.rand);
     this.wanderer = new Wanderer(this, this.journal, this.rand);
+    this.returningBloodline = new ReturningBloodline(this, this.journal, this.rand);
+    this.sagas = new Sagas(this, this.journal, this.rand);
+    this.cult = new Cult(this, this.journal, this.rand);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -490,6 +502,12 @@ export class World {
       this.expeditions.tick();
       // The Wanderer — a recurring named NPC across the kingdom's decades.
       this.wanderer.tick();
+      // Returning bloodline — long-lost claimant after a usurper/uprising broke the line.
+      this.returningBloodline.tick();
+      // Sagas — multi-generation quest arcs that span years.
+      this.sagas.tick();
+      // Cult subplot — quiet religious schism with rumours and a decision.
+      this.cult.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {

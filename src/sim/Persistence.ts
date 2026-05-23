@@ -237,6 +237,21 @@ export interface SaveData {
   refugees?: { lastEventDay: number; totalAccepted: number };
   /** Expeditions: processed landmark IDs + pending day for in-flight expeditions. */
   expeditions?: { processedLandmarkIds: string[]; pending: Record<string, number> };
+  /** Sagas — multi-generation quest arcs (planted seeds + fired payoffs). */
+  sagas?: { planted: Record<string, number>; firedPayoffs: string[] };
+  /** Cult subplot phase + cooldowns. */
+  cult?: {
+    phase: "dormant" | "rumouring" | "resolved";
+    rumoursFired: number;
+    lastRumourDay: number;
+    lastResolvedDay: number;
+  };
+  /** Returning bloodline claimant tracking. */
+  bloodline?: {
+    lastFiredYear: number;
+    totalFired: number;
+    testPending: { name: string; proof: string; resolveDay: number } | null;
+  };
   /** The Wanderer — a single recurring named NPC across the kingdom's lifetime. */
   wanderer?: {
     name: string;
@@ -473,6 +488,9 @@ export function serialize(
     customDecree: world.customDecrees.snapshot(),
     expeditions: world.expeditions.snapshot(),
     wanderer: world.wanderer.snapshot(),
+    bloodline: world.returningBloodline.snapshot(),
+    sagas: world.sagas.snapshot(),
+    cult: world.cult.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
@@ -761,6 +779,53 @@ export function validateSave(rawInput: unknown): SaveData | null {
           lastEventDay: safeInt((raw.refugees as Record<string, unknown>).lastEventDay, -30, -1000, 1_000_000),
           totalAccepted: safeInt((raw.refugees as Record<string, unknown>).totalAccepted, 0, 0, 100_000),
         }
+      : undefined,
+    cult: isPlainObject(raw.cult)
+      ? (() => {
+          const c = raw.cult as Record<string, unknown>;
+          const validPhases = new Set(["dormant", "rumouring", "resolved"]);
+          const phase = typeof c.phase === "string" && validPhases.has(c.phase)
+            ? c.phase as "dormant" | "rumouring" | "resolved"
+            : "dormant";
+          return {
+            phase,
+            rumoursFired: safeInt(c.rumoursFired, 0, 0, 100),
+            lastRumourDay: safeInt(c.lastRumourDay, 0, 0, 1_000_000),
+            lastResolvedDay: safeInt(c.lastResolvedDay, -60, -10_000, 1_000_000),
+          };
+        })()
+      : undefined,
+    sagas: isPlainObject(raw.sagas)
+      ? (() => {
+          const s = raw.sagas as Record<string, unknown>;
+          const planted: Record<string, number> = {};
+          if (isPlainObject(s.planted)) {
+            for (const [k, v] of Object.entries(s.planted as Record<string, unknown>)) {
+              if (typeof v === "number" && isFinite(v)) planted[k] = Math.floor(v);
+            }
+          }
+          const fired = Array.isArray(s.firedPayoffs)
+            ? (s.firedPayoffs as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 50)
+            : [];
+          return { planted, firedPayoffs: fired };
+        })()
+      : undefined,
+    bloodline: isPlainObject(raw.bloodline)
+      ? (() => {
+          const b = raw.bloodline as Record<string, unknown>;
+          const tp = isPlainObject(b.testPending)
+            ? {
+                name: safeString((b.testPending as Record<string, unknown>).name, 32) || "",
+                proof: safeString((b.testPending as Record<string, unknown>).proof, 120) || "",
+                resolveDay: safeInt((b.testPending as Record<string, unknown>).resolveDay, 0, 0, 1_000_000),
+              }
+            : null;
+          return {
+            lastFiredYear: safeInt(b.lastFiredYear, 0, 0, 100_000),
+            totalFired: safeInt(b.totalFired, 0, 0, 100),
+            testPending: tp,
+          };
+        })()
       : undefined,
     wanderer: isPlainObject(raw.wanderer)
       ? (() => {
@@ -1236,6 +1301,15 @@ export function applySave(world: World, save: SaveData): void {
   }
   if (save.wanderer) {
     world.wanderer.restore(save.wanderer);
+  }
+  if (save.bloodline) {
+    world.returningBloodline.restore(save.bloodline);
+  }
+  if (save.sagas) {
+    world.sagas.restore(save.sagas);
+  }
+  if (save.cult) {
+    world.cult.restore(save.cult);
   }
   // Restore succession state if present.
   if (save.succession) {

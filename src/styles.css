@@ -941,6 +941,14 @@ html, body, #root, .app-root {
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
+.decision-footer {
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--panel-muted);
+  font-style: italic;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 .decision-timer {
   color: var(--panel-muted);
   font-variant-numeric: tabular-nums;
