@@ -4,6 +4,7 @@ import { PixiApp } from "./engine/PixiApp";
 import { useGameStore } from "./store/useGameStore";
 import { HUD } from "./ui/HUD";
 import { EventLog } from "./ui/EventLog";
+import { FamilyTreePanel } from "./ui/FamilyTreePanel";
 import { SettingsPanel } from "./ui/SettingsPanel";
 import { PhotoMode } from "./ui/PhotoMode";
 import { KingdomCard } from "./ui/KingdomCard";
@@ -82,6 +83,7 @@ export function App() {
   const [logOpen, setLogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [journalOpen, setJournalOpen] = useState(false);
+  const [familyTreeOpen, setFamilyTreeOpen] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [petCreatorOpen, setPetCreatorOpen] = useState(false);
   const [inspected, setInspected] = useState<Structure | null>(null);
@@ -990,6 +992,7 @@ export function App() {
             if (next) useGameStore.getState().markSeenJournal();
           }}
           onToggleStats={() => setStatsOpen((b) => !b)}
+          onToggleFamilyTree={() => setFamilyTreeOpen((b) => !b)}
         />
       )}
       <div ref={containerRef} className="pixi-host" />
@@ -1110,6 +1113,12 @@ export function App() {
       {!streamerMode && <TutorialHints />}
       <StreamerOverlay />
       <AchievementToast onOpenJournal={() => setJournalOpen(true)} />
+      <FamilyTreePanel
+        open={familyTreeOpen && !streamerMode}
+        onClose={() => setFamilyTreeOpen(false)}
+        getWorld={() => worldRef.current}
+        onSelectNpc={(id) => setProfileNpcId(id)}
+      />
       {!streamerMode && (
         <NpcInspect
           getCanvas={() => containerRef.current?.querySelector("canvas") ?? null}

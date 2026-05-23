@@ -158,6 +158,12 @@ export function StatsDashboard({
               stroke="#2dd4bf"
               fill="rgba(45, 212, 191, 0.18)"
             />
+            <Sparkline
+              data={world.history.series("reputation")}
+              label="reputation"
+              stroke="#f472b6"
+              fill="rgba(244, 114, 182, 0.18)"
+            />
           </div>
           {world.history.snapshots.length < 2 && (
             <div className="muted" style={{ fontStyle: "italic", fontSize: 11, marginTop: 4 }}>

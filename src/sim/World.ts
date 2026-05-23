@@ -49,6 +49,8 @@ import { Visitors } from "./systems/Visitors";
 import type { VisitorsSnapshot } from "./systems/Visitors";
 import { TradeCaravans } from "./systems/TradeCaravans";
 import type { TradeSnapshot } from "./systems/TradeCaravans";
+import { Regions } from "./systems/Regions";
+import type { RegionsSnapshot } from "./systems/Regions";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -228,6 +230,7 @@ export class World {
   readonly disasters: Disasters;
   readonly visitors: Visitors;
   readonly tradeCaravans: TradeCaravans;
+  readonly regions: Regions;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -332,6 +335,7 @@ export class World {
     this.disasters = new Disasters(this, this.journal, this.rand);
     this.visitors = new Visitors(this, this.journal, this.rand);
     this.tradeCaravans = new TradeCaravans(this, this.journal, this.rand);
+    this.regions = new Regions(this);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,

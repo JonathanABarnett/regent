@@ -20,11 +20,13 @@ export function HUD({
   onToggleSettings,
   onToggleJournal,
   onToggleStats,
+  onToggleFamilyTree,
 }: {
   onToggleLog: () => void;
   onToggleSettings: () => void;
   onToggleJournal: () => void;
   onToggleStats: () => void;
+  onToggleFamilyTree?: () => void;
 }) {
   const stats = useGameStore((s) => s.worldStats);
   const identity = useGameStore((s) => s.identity);
@@ -51,6 +53,9 @@ export function HUD({
         </span>
       </div>
       <div className="hud-right">
+        {onToggleFamilyTree && (
+          <button onClick={onToggleFamilyTree} title="Family tree of the kingdom">Family</button>
+        )}
         <button onClick={onToggleStats} title="Kingdom stats">Stats</button>
         <button onClick={onToggleJournal} className={unseenJournal > 0 ? "has-badge" : ""}>
           Journal ({journalCount})

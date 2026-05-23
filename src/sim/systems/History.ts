@@ -23,6 +23,8 @@ export interface DaySnapshot {
   gold: number;
   vault: number;
   tomes: number;
+  /** Reputation score (-10..+10). Optional for back-compat with old saves. */
+  reputation?: number;
 }
 
 /** Cap on retained days. Tuned so the sparkline visually fits ~60-90px wide. */
@@ -46,6 +48,7 @@ export class History {
       gold: Math.floor(world.economy.state.gold),
       vault: world.treasury.count(),
       tomes: Math.floor(world.economy.state.tomes),
+      reputation: world.reputation.score,
     });
     while (this.snapshots.length > HISTORY_MAX_DAYS) {
       this.snapshots.shift();
@@ -71,13 +74,17 @@ export class History {
         // tomes added later — old snapshots without the field default to 0
         // and the sparkline simply starts flat for those days.
         tomes: clamp(num(i.tomes, 0), 0, 999_999),
+        reputation: clamp(num(i.reputation, 0), -10, 10),
       });
     }
     this.snapshots = out;
   }
 
   /** Series of values for a given metric, oldest first. */
-  series(metric: "population" | "gold" | "vault" | "tomes"): number[] {
+  series(metric: "population" | "gold" | "vault" | "tomes" | "reputation"): number[] {
+    if (metric === "reputation") {
+      return this.snapshots.map((s) => s.reputation ?? 0);
+    }
     return this.snapshots.map((s) => s[metric]);
   }
 }

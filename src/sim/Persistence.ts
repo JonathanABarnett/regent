@@ -227,6 +227,8 @@ export interface SaveData {
     lastWandererDay: number;
     processedCampIds: string[];
   };
+  /** Player-named region labels. */
+  regions?: { labels: Array<{ id: string; name: string; pos: { x: number; y: number } }> };
   /** Visitors system: cooldown + total count. */
   visitors?: { lastVisitDay: number; totalVisits: number };
   /** Trade caravans: cooldown + counters. */
@@ -263,6 +265,8 @@ export interface SaveData {
     vault: number;
     /** Added later; back-compat default is 0 on validate. */
     tomes: number;
+    /** Added later; -10..10 reputation score, optional. */
+    reputation?: number;
   }>;
   /**
    * Spontaneous map landmarks discovered by the NarrativeDirector's
@@ -405,6 +409,7 @@ export function serialize(
     disasters: world.disasters.snapshot(),
     visitors: world.visitors.snapshot(),
     trade: world.tradeCaravans.snapshot(),
+    regions: world.regions.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
@@ -651,6 +656,7 @@ export function validateSave(rawInput: unknown): SaveData | null {
           totalAccepted: safeInt((raw.trade as Record<string, unknown>).totalAccepted, 0, 0, 100_000),
         }
       : undefined,
+    regions: validateRegions(raw.regions),
   };
 }
 
@@ -697,6 +703,22 @@ function validateWar(raw: unknown): SaveData["war"] {
       ? (phase as "opening" | "ongoing" | "final")
       : "opening",
   };
+}
+
+function validateRegions(raw: unknown): SaveData["regions"] {
+  if (!isPlainObject(raw)) return undefined;
+  const labels = Array.isArray(raw.labels) ? raw.labels : [];
+  const out: NonNullable<SaveData["regions"]>["labels"] = [];
+  for (const item of labels.slice(0, 50)) {
+    if (!isPlainObject(item)) continue;
+    const pos = isPlainObject(item.pos) ? item.pos as Record<string, unknown> : {};
+    out.push({
+      id: safeString(item.id, 64) || `region_${out.length}`,
+      name: safeString(item.name, 60) || "Unnamed",
+      pos: { x: safeInt(pos.x, 0, 0, 10_000), y: safeInt(pos.y, 0, 0, 10_000) },
+    });
+  }
+  return { labels: out };
 }
 
 function validateImmigration(raw: unknown): SaveData["immigration"] {
@@ -827,6 +849,9 @@ function validateHistory(raw: unknown): SaveData["history"] {
       // tomes was added after the initial release; old saves without it
       // default to 0 so the sparkline just flats for the pre-upgrade days.
       tomes: safeInt(item.tomes, 0, 0, 999_999),
+      reputation: item.reputation === undefined
+        ? undefined
+        : Math.max(-10, Math.min(10, safeNumber(item.reputation, 0))),
     });
   }
   return out;
@@ -997,6 +1022,9 @@ export function applySave(world: World, save: SaveData): void {
   }
   if (save.trade) {
     world.tradeCaravans.restore(save.trade);
+  }
+  if (save.regions) {
+    world.regions.restore(save.regions);
   }
   // Restore succession state if present.
   if (save.succession) {

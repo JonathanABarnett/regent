@@ -112,6 +112,26 @@ export function MiniMap({
         ctx.fillStyle = "#f472b6";
         ctx.fillRect(p.pos.x * sx, p.pos.y * sy, 2, 2);
       }
+      // Region labels — small text at saved positions, only if the tile is explored.
+      ctx.font = "9px sans-serif";
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "center";
+      for (const label of world.regions.list()) {
+        const tile = world.map.tiles[label.pos.y * world.map.width + label.pos.x];
+        if (!tile?.explored) continue;
+        const x = label.pos.x * sx;
+        const y = label.pos.y * sy;
+        // Dot marker
+        ctx.fillStyle = "rgba(251, 191, 36, 0.9)";
+        ctx.fillRect(x - 1, y - 1, 2, 2);
+        // Outlined text (white outline so it reads on any terrain)
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
+        ctx.strokeText(label.name, x, y - 5);
+        ctx.fillStyle = "#fde68a";
+        ctx.fillText(label.name, x, y - 5);
+      }
+
       // Viewport rectangle — uses actual tile dimensions from the renderer
       // so the box is always accurate regardless of zoom or map size.
       ctx.strokeStyle = "rgba(251, 191, 36, 0.95)";
@@ -136,6 +156,28 @@ export function MiniMap({
     onJumpTo(px * world.map.width, py * world.map.height);
   };
 
+  /** Right-click anywhere on the minimap to drop a named region label. */
+  const handleContext = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const world = getWorld();
+    if (!world) return;
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width;
+    const py = (e.clientY - rect.top) / rect.height;
+    const tx = Math.round(px * world.map.width);
+    const ty = Math.round(py * world.map.height);
+    const tile = world.map.tiles[ty * world.map.width + tx];
+    if (!tile?.explored) {
+      // Don't allow naming places the kingdom hasn't scouted.
+      return;
+    }
+    const name = window.prompt("Name this region:");
+    if (name && name.trim()) {
+      world.regions.add(name, { x: tx, y: ty });
+    }
+  };
+
   // Compute height to match the map's actual aspect ratio (e.g. 320×200 → 100px tall).
   const world = getWorld();
   const mapAspect = world ? world.map.height / world.map.width : 0.625;
@@ -148,7 +190,8 @@ export function MiniMap({
         width={SIZE}
         height={canvasH || SIZE}
         onClick={handleClick}
-        title="Click to jump the camera"
+        onContextMenu={handleContext}
+        title="Click to jump · Right-click to name a region"
       />
     </div>
   );
