@@ -4,6 +4,7 @@ import { Achievements } from "../sim/systems/Achievements";
 import type { World } from "../sim/World";
 import { CourtPicker } from "./CourtPicker";
 import { Sparkline } from "./Sparkline";
+import type { DecreeEffect } from "../sim/systems/CustomDecrees";
 
 /**
  * Kingdom Stats — a single-glance overview of how the kingdom is doing.
@@ -72,6 +73,7 @@ export function StatsDashboard({
           >
             ✦ Hold a festival (30g)
           </button>
+          <CustomDecreeControl world={world} onChange={() => setTick((n) => n + 1)} />
         </section>
 
         <section>
@@ -302,6 +304,58 @@ function Stat({ label, value }: { label: string; value: string | number }) {
     <div className="stat-tile">
       <div className="stat-label">{label}</div>
       <div className="stat-value">{value}</div>
+    </div>
+  );
+}
+
+const DECREE_EFFECT_OPTIONS: Array<{ value: DecreeEffect; label: string }> = [
+  { value: "favor_merchants", label: "favours merchants" },
+  { value: "favor_scholars",  label: "favours scholars" },
+  { value: "favor_guard",     label: "favours the guard" },
+  { value: "lighten_taxes",   label: "lightens taxes (cost: gold)" },
+  { value: "fill_coffers",    label: "fills coffers (cost: merchants)" },
+];
+
+function CustomDecreeControl({ world, onChange }: { world: World; onChange: () => void }) {
+  const [text, setText] = useState("");
+  const [effect, setEffect] = useState<DecreeEffect>("favor_merchants");
+  const active = world.customDecrees.active();
+  if (active) {
+    return (
+      <div className="custom-decree-active" title="The current player-authored decree.">
+        <span className="cd-quote">"{active.text}"</span>
+        <span className="cd-meta"> · {active.daysLeft}d left</span>
+      </div>
+    );
+  }
+  return (
+    <div className="custom-decree-control">
+      <input
+        type="text"
+        value={text}
+        maxLength={140}
+        placeholder='Author a decree, e.g. "merchants pay no tariffs at the south gate"'
+        onChange={(e) => setText(e.target.value)}
+      />
+      <div className="custom-decree-row">
+        <select value={effect} onChange={(e) => setEffect(e.target.value as DecreeEffect)}>
+          {DECREE_EFFECT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <button
+          className="kingdom-action-btn"
+          disabled={!text.trim()}
+          onClick={() => {
+            if (world.customDecrees.proclaim(text, effect)) {
+              setText("");
+              onChange();
+            }
+          }}
+        >
+          Proclaim (14d)
+        </button>
+      </div>
     </div>
   );
 }

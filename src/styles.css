@@ -141,6 +141,38 @@ html, body, #root, .app-root {
   opacity: 0.4;
   cursor: not-allowed;
 }
+.custom-decree-control { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.custom-decree-control input {
+  padding: 5px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--panel-fg);
+  font: inherit;
+  font-size: 11px;
+  border-radius: 3px;
+}
+.custom-decree-row { display: flex; gap: 6px; align-items: stretch; }
+.custom-decree-row select {
+  flex: 1;
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--panel-fg);
+  font: inherit;
+  font-size: 11px;
+  border-radius: 3px;
+}
+.custom-decree-active {
+  margin-top: 10px;
+  padding: 6px 10px;
+  background: rgba(253, 230, 138, 0.06);
+  border: 1px solid rgba(253, 230, 138, 0.3);
+  border-radius: 3px;
+  font-size: 11px;
+  font-style: italic;
+  color: rgba(253, 230, 138, 0.9);
+}
+.cd-meta { color: var(--panel-muted); font-style: normal; }
 .hud-quote {
   position: absolute;
   top: 38px;

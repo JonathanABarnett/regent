@@ -133,6 +133,8 @@ export class LifeEvents {
   }
 
   private tryBirth() {
+    // Cursed artifact "weeps_for_loss" suppresses births while held.
+    if (this.world.treasury.hasFertilityCurse()) return;
     const couples = new Set<string>();
     const pairs: Array<[NPC, NPC]> = [];
     for (const npc of this.world.npcs) {

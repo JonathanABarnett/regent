@@ -61,6 +61,12 @@ import { GreatAnniversaries } from "./systems/GreatAnniversaries";
 import type { GreatAnniversariesSnapshot } from "./systems/GreatAnniversaries";
 import { Refugees } from "./systems/Refugees";
 import type { RefugeesSnapshot } from "./systems/Refugees";
+import { CustomDecrees } from "./systems/CustomDecrees";
+import type { DecreeSnapshot } from "./systems/CustomDecrees";
+import { Expeditions } from "./systems/Expeditions";
+import type { ExpeditionSnapshot } from "./systems/Expeditions";
+import { Wanderer } from "./systems/Wanderer";
+import type { WandererSnapshot } from "./systems/Wanderer";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -246,6 +252,9 @@ export class World {
   readonly oldDays: OldDays;
   readonly greatAnniversaries: GreatAnniversaries;
   readonly refugees: Refugees;
+  readonly customDecrees: CustomDecrees;
+  readonly expeditions: Expeditions;
+  readonly wanderer: Wanderer;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -356,6 +365,9 @@ export class World {
     this.oldDays = new OldDays(this, this.journal, this.rand);
     this.greatAnniversaries = new GreatAnniversaries(this, this.journal, this.rand);
     this.refugees = new Refugees(this, this.journal, this.rand);
+    this.customDecrees = new CustomDecrees(this, this.journal);
+    this.expeditions = new Expeditions(this, this.journal, this.rand);
+    this.wanderer = new Wanderer(this, this.journal, this.rand);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -470,6 +482,14 @@ export class World {
       this.greatAnniversaries.tick();
       // Refugees — fleeing parties from off-map kingdoms.
       this.refugees.tick();
+      // Cursed artifacts — apply slow drain effects from items in the vault.
+      this.treasury.tickCurses();
+      // Custom decrees — player-authored laws applying small ongoing effects.
+      this.customDecrees.tick();
+      // Expeditions to discovered ruins/standing stones/obelisks.
+      this.expeditions.tick();
+      // The Wanderer — a recurring named NPC across the kingdom's decades.
+      this.wanderer.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {

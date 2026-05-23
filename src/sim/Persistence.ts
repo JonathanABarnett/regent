@@ -235,6 +235,24 @@ export interface SaveData {
   greatAnniversaries?: { firedYears: number[] };
   /** Refugees system cooldown. */
   refugees?: { lastEventDay: number; totalAccepted: number };
+  /** Expeditions: processed landmark IDs + pending day for in-flight expeditions. */
+  expeditions?: { processedLandmarkIds: string[]; pending: Record<string, number> };
+  /** The Wanderer — a single recurring named NPC across the kingdom's lifetime. */
+  wanderer?: {
+    name: string;
+    appearances: number;
+    lastAppearanceYear: number;
+    firstAppearanceYear: number;
+    nextEligibleYear: number;
+  };
+  /** Custom player-authored decree. */
+  customDecree?: {
+    text: string;
+    effect: "favor_merchants" | "favor_scholars" | "favor_guard" | "lighten_taxes" | "fill_coffers" | null;
+    startedDay: number;
+    endsOnDay: number;
+    lastEffectDay: number;
+  };
   /** Comet — rare decade-scale celestial event. */
   comet?: {
     active: boolean;
@@ -325,6 +343,8 @@ export interface SavedArtifact {
   origin?: string;
   obtainedOnDay: number;
   obtainedOnYear: number;
+  curse?: "rep_drift_negative" | "weeps_for_loss" | "calls_storms" | "feeds_greed";
+  curseLastTickedDay?: number;
 }
 
 export interface SavedPet {
@@ -450,6 +470,9 @@ export function serialize(
     oldDays: world.oldDays.snapshot(),
     greatAnniversaries: world.greatAnniversaries.snapshot(),
     refugees: world.refugees.snapshot(),
+    customDecree: world.customDecrees.snapshot(),
+    expeditions: world.expeditions.snapshot(),
+    wanderer: world.wanderer.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
@@ -472,6 +495,7 @@ const VALID_NPC_ROLES = new Set([
 const VALID_PET_KINDS = new Set(["dog", "cat"]);
 const VALID_JOURNAL_KINDS = new Set(["life", "weather", "event", "milestone", "system"]);
 const VALID_ARTIFACT_KINDS = new Set(["scroll", "relic", "gem", "tome", "weapon", "treasure"]);
+const VALID_CURSE_KINDS = new Set(["rep_drift_negative", "weeps_for_loss", "calls_storms", "feeds_greed"]);
 const ARTIFACTS_MAX_FROM_SAVE = 200;
 
 function isPlainObject(x: unknown): x is Record<string, unknown> {
@@ -657,6 +681,9 @@ export function validateSave(rawInput: unknown): SaveData | null {
           .map((item, idx) => {
             const kind = String(item.kind);
             if (!VALID_ARTIFACT_KINDS.has(kind)) return null;
+            const curse = typeof item.curse === "string" && VALID_CURSE_KINDS.has(item.curse)
+              ? item.curse as SavedArtifact["curse"]
+              : undefined;
             return {
               id: safeString(item.id, 80) || `art_${idx}`,
               kind: kind as SavedArtifact["kind"],
@@ -664,6 +691,10 @@ export function validateSave(rawInput: unknown): SaveData | null {
               origin: item.origin === undefined ? undefined : safeString(item.origin, 120),
               obtainedOnDay: safeInt(item.obtainedOnDay, 1, 0, 100_000),
               obtainedOnYear: safeInt(item.obtainedOnYear, 1, 0, 10_000),
+              curse,
+              curseLastTickedDay: item.curseLastTickedDay === undefined
+                ? undefined
+                : safeInt(item.curseLastTickedDay, 0, 0, 1_000_000),
             } as SavedArtifact;
           })
           .filter((x): x is SavedArtifact => x !== null)
@@ -730,6 +761,51 @@ export function validateSave(rawInput: unknown): SaveData | null {
           lastEventDay: safeInt((raw.refugees as Record<string, unknown>).lastEventDay, -30, -1000, 1_000_000),
           totalAccepted: safeInt((raw.refugees as Record<string, unknown>).totalAccepted, 0, 0, 100_000),
         }
+      : undefined,
+    wanderer: isPlainObject(raw.wanderer)
+      ? (() => {
+          const w = raw.wanderer as Record<string, unknown>;
+          return {
+            name: safeString(w.name, 32) || "",
+            appearances: safeInt(w.appearances, 0, 0, 10),
+            lastAppearanceYear: safeInt(w.lastAppearanceYear, 0, 0, 100_000),
+            firstAppearanceYear: safeInt(w.firstAppearanceYear, 0, 0, 100_000),
+            nextEligibleYear: safeInt(w.nextEligibleYear, 0, 0, 100_000),
+          };
+        })()
+      : undefined,
+    expeditions: isPlainObject(raw.expeditions)
+      ? (() => {
+          const e = raw.expeditions as Record<string, unknown>;
+          const pids = Array.isArray(e.processedLandmarkIds)
+            ? (e.processedLandmarkIds as unknown[])
+                .filter((s): s is string => typeof s === "string" && s.length <= 80)
+                .slice(0, 200)
+            : [];
+          const pending: Record<string, number> = {};
+          if (isPlainObject(e.pending)) {
+            for (const [k, v] of Object.entries(e.pending as Record<string, unknown>)) {
+              if (typeof v === "number" && isFinite(v)) pending[k] = Math.max(0, Math.floor(v));
+            }
+          }
+          return { processedLandmarkIds: pids, pending };
+        })()
+      : undefined,
+    customDecree: isPlainObject(raw.customDecree)
+      ? (() => {
+          const cd = raw.customDecree as Record<string, unknown>;
+          const validEffects = new Set(["favor_merchants","favor_scholars","favor_guard","lighten_taxes","fill_coffers"]);
+          const effect = typeof cd.effect === "string" && validEffects.has(cd.effect)
+            ? cd.effect as NonNullable<SaveData["customDecree"]>["effect"]
+            : null;
+          return {
+            text: safeString(cd.text, 140) || "",
+            effect,
+            startedDay: safeInt(cd.startedDay, 0, 0, 1_000_000),
+            endsOnDay: safeInt(cd.endsOnDay, 0, 0, 1_000_000),
+            lastEffectDay: safeInt(cd.lastEffectDay, 0, 0, 1_000_000),
+          };
+        })()
       : undefined,
     comet: isPlainObject(raw.comet)
       ? {
@@ -1151,6 +1227,15 @@ export function applySave(world: World, save: SaveData): void {
   }
   if (save.refugees) {
     world.refugees.restore(save.refugees);
+  }
+  if (save.customDecree) {
+    world.customDecrees.restore(save.customDecree);
+  }
+  if (save.expeditions) {
+    world.expeditions.restore(save.expeditions);
+  }
+  if (save.wanderer) {
+    world.wanderer.restore(save.wanderer);
   }
   // Restore succession state if present.
   if (save.succession) {

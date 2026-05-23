@@ -27,6 +27,16 @@ export type ArtifactKind =
   | "weapon"
   | "treasure";
 
+/**
+ * Curses an artifact can carry. Each is a slow drain or strange effect.
+ * The player can identify a curse by hovering on the artifact in the vault.
+ */
+export type CurseKind =
+  | "rep_drift_negative"   // -1 reputation every 14 days while held
+  | "weeps_for_loss"       // suppresses births until removed
+  | "calls_storms"         // +20% storm probability while held
+  | "feeds_greed";         // +5 gold every 14 days but -1 merchant loyalty
+
 export interface Artifact {
   id: string;
   kind: ArtifactKind;
@@ -36,6 +46,10 @@ export interface Artifact {
   /** Day in the kingdom when this was obtained. */
   obtainedOnDay: number;
   obtainedOnYear: number;
+  /** Optional curse — silently set on a small fraction of acquired artifacts. */
+  curse?: CurseKind;
+  /** Last day a curse effect was applied (cooldown tracking). */
+  curseLastTickedDay?: number;
 }
 
 const ARTIFACT_NAMES: Record<ArtifactKind, string[]> = {
@@ -122,6 +136,17 @@ export class Treasury {
       ? (origin.includes("year") ? origin : origin + contextSuffix)
       : `found in the ${season} of year ${year}`;
 
+    // 7% chance any acquired artifact carries a curse. Not announced —
+    // the curse is "discovered" via its slow effects, or hovering on the
+    // item in the vault UI.
+    const cursed = Math.random() < 0.07;
+    const curseChoices: CurseKind[] = [
+      "rep_drift_negative", "weeps_for_loss", "calls_storms", "feeds_greed",
+    ];
+    const curse = cursed
+      ? curseChoices[Math.floor(Math.random() * curseChoices.length)]
+      : undefined;
+
     const artifact: Artifact = {
       id: `art_${Math.floor(Date.now() / 1000)}_${this.artifacts.length}`,
       kind,
@@ -129,6 +154,8 @@ export class Treasury {
       origin: enrichedOrigin,
       obtainedOnDay: this.world.state.day,
       obtainedOnYear: year,
+      curse,
+      curseLastTickedDay: curse ? this.world.state.day : undefined,
     };
     this.artifacts.push(artifact);
     // Enforce the soft cap on the live vault so a runaway content loop can't
@@ -160,6 +187,69 @@ export class Treasury {
   /** Restore from save. */
   hydrate(saved: Artifact[]) {
     this.artifacts = saved.slice(0, Treasury.CAP);
+  }
+
+  /**
+   * Remove an artifact from the vault. Used for "dispose of cursed item"
+   * UI and for player gifts during anniversary events. Writes a journal
+   * entry; the kingdom always knows when something leaves the vault.
+   */
+  remove(id: string, prose?: string): Artifact | null {
+    const idx = this.artifacts.findIndex((a) => a.id === id);
+    if (idx < 0) return null;
+    const [removed] = this.artifacts.splice(idx, 1);
+    this.journal.write(
+      prose ?? `The ${removed.name} was removed from the royal vault.`,
+      "event",
+    );
+    return removed;
+  }
+
+  /**
+   * Apply curse effects from any cursed artifact currently held. Called
+   * once per in-world day from World.tick(). Cooldown per artifact so
+   * effects don't compound every single day.
+   */
+  tickCurses(): void {
+    const day = this.world.state.day;
+    const CURSE_INTERVAL = 14;
+    for (const art of this.artifacts) {
+      if (!art.curse) continue;
+      const last = art.curseLastTickedDay ?? art.obtainedOnDay;
+      if (day - last < CURSE_INTERVAL) continue;
+      art.curseLastTickedDay = day;
+      switch (art.curse) {
+        case "rep_drift_negative":
+          this.world.reputation.adjust(-1);
+          break;
+        case "calls_storms":
+          // No direct adjust — Weather already biased by other flags. We
+          // surface a journal hint instead.
+          this.journal.write(
+            `Storm clouds gathered over the keep tonight. The chronicler noted, quietly, that they always do when the ${art.name} is in the vault.`,
+            "weather",
+          );
+          break;
+        case "feeds_greed":
+          this.world.economy.state.gold = Math.min(99_999, this.world.economy.state.gold + 5);
+          this.world.factions.adjust("merchants", -1);
+          break;
+        case "weeps_for_loss":
+          // Flavour only — births are suppressed elsewhere when checked.
+          if (Math.random() < 0.3) {
+            this.journal.write(
+              `The ${art.name} was found wet again this morning. No one knows where the water comes from.`,
+              "event",
+            );
+          }
+          break;
+      }
+    }
+  }
+
+  /** True if any held artifact has the weeps_for_loss curse (blocks births). */
+  hasFertilityCurse(): boolean {
+    return this.artifacts.some((a) => a.curse === "weeps_for_loss");
   }
 }
 
