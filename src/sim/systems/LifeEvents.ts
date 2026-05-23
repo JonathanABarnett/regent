@@ -73,6 +73,26 @@ export class LifeEvents {
 
     // Anniversaries — check once per day; fire at every 90-day milestone
     this.checkAnniversaries(day);
+
+    // Dreams — very rare; a single named NPC has a vivid nocturnal image.
+    if (this.rand() < 0.015) this.fireDream(day);
+  }
+
+  /**
+   * Pick a single named NPC and write a vivid one-line dream entry. The
+   * imagery is intentionally a little surreal — the kind of thing that
+   * makes the player feel they've glimpsed a real interior life.
+   */
+  private fireDream(_day: number): void {
+    const candidates = this.world.npcs.filter(
+      (n) => n.name && n.role !== "monarch",
+    );
+    if (candidates.length === 0) return;
+    const npc = candidates[Math.floor(this.rand() * candidates.length)];
+    const line = pickFrom(DREAM_LINES, this.rand)
+      .replaceAll("{name}", npc.name ?? "they")
+      .replaceAll("{role}", npc.role);
+    this.journal.write(line, "life", npc.homeId);
   }
 
   private tryMarriage() {
@@ -346,6 +366,20 @@ const BIRTH_LINES: readonly string[] = [
   "The midwife of {place} announced a healthy birth — {name}, child of {a} and {b}. {blessing}",
   "{name} came into the world noisily, which the midwife said was a very good sign. {a} and {b} agreed.",
   "By afternoon everyone in {place} knew: {a} and {b} had a child. {name}. The name was settled within the hour.",
+];
+
+const DREAM_LINES: readonly string[] = [
+  "{name} woke at dawn unable to shake an image: a castle they've never seen, on a shore they've never visited.",
+  "{name} dreamt last night of a hall of people, all of them speaking the same word at once. They cannot now recall the word.",
+  "{name} woke before sunrise convinced they had heard their own name called from far away. They went outside. No one was there.",
+  "{name} dreamt of climbing a hill that grew higher with every step. They reached the top in the dream. They did not remember coming down.",
+  "{name}, the {role}, dreamt of opening a door in their own house that they have never noticed before. There was a sea behind it.",
+  "{name} woke remembering a song. They do not know where they learned it. They have been humming it all morning.",
+  "{name} had the falling dream again. They are tired of it. They sat up at the third hour and did not return to sleep.",
+  "{name} dreamt of a meal with everyone they had ever lost. The food was good. No one spoke. It was enough.",
+  "{name} woke at dawn with a single sentence on their lips: \"it is closer than you think.\" They do not know what \"it\" was. The feeling has not left.",
+  "{name} dreamt they were a child again, watching the adults from the doorway. The adults turned to look at them. They woke before anyone spoke.",
+  "{name} dreamt of the kingdom as it would look in a hundred years. The walls were taller. The river had moved. There was a name on a stone they could almost read.",
 ];
 
 const DEATH_LINES: readonly string[] = [

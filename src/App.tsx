@@ -38,6 +38,7 @@ import { DEFAULT_SPEC, type CharacterSpec } from "./engine/CharacterSpec";
 import type { PetSpec } from "./engine/PetSpec";
 import { bindTrayMenu } from "./ui/TrayMenuBindings";
 import { Achievements } from "./sim/systems/Achievements";
+import { quoteOfDay } from "./sim/systems/Quotes";
 import { AudioEngine } from "./engine/Audio";
 import type { ExternalEvent } from "./sim/events/EventSchema";
 import { ExternalEvent as Schema } from "./sim/events/EventSchema";
@@ -410,6 +411,7 @@ export function App() {
         seed: world.state.seed,
         npcNames,
         factions: world.factions.snapshot(),
+        quoteOfDay: quoteOfDay(world),
       });
     }, 500);
 

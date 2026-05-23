@@ -387,7 +387,7 @@ export class PixiApp {
 
     // Parallax: slow scroll + dynamic sky (stars, moon, horizon glow).
     this.parallax.container.x = -this.camera.x * 4;
-    this.parallax.update(hour, simTime);
+    this.parallax.update(hour, simTime, this.opts.world.comet.isActive());
 
     // Feed cinematic POIs to the camera autopilot so it gravitates toward
     // active effects (festivals, forge, weddings) rather than random structures.

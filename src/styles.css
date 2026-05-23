@@ -119,6 +119,26 @@ html, body, #root, .app-root {
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
 }
 .hud-left, .hud-right { display: flex; gap: 14px; align-items: center; }
+.hud-quote {
+  position: absolute;
+  top: 38px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 580px;
+  padding: 4px 14px;
+  font-style: italic;
+  font-size: 11px;
+  color: rgba(253, 230, 138, 0.85);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(253, 230, 138, 0.18);
+  border-radius: 12px;
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 15;
+}
 .hud .badge {
   font-weight: bold;
   color: var(--accent);

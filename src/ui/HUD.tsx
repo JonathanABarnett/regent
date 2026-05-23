@@ -52,6 +52,11 @@ export function HUD({
           <span className={`faction-dot faction-g ${factionClass(stats.factions.guard)}`} title={`Guard: ${factionLabel(stats.factions.guard)}`}>🛡</span>
         </span>
       </div>
+      {stats.quoteOfDay && (
+        <div className="hud-quote" title="A trait-flavored quote from the kingdom today">
+          {stats.quoteOfDay}
+        </div>
+      )}
       <div className="hud-right">
         {onToggleFamilyTree && (
           <button onClick={onToggleFamilyTree} title="Family tree of the kingdom">Family</button>

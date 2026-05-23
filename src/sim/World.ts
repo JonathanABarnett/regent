@@ -53,6 +53,10 @@ import { Regions } from "./systems/Regions";
 import type { RegionsSnapshot } from "./systems/Regions";
 import { Wildlife } from "./systems/Wildlife";
 import type { WildlifeSnapshot } from "./systems/Wildlife";
+import { Comet } from "./systems/Comet";
+import type { CometSnapshot } from "./systems/Comet";
+import { OldDays } from "./systems/OldDays";
+import type { OldDaysSnapshot } from "./systems/OldDays";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -234,6 +238,8 @@ export class World {
   readonly tradeCaravans: TradeCaravans;
   readonly regions: Regions;
   readonly wildlife: Wildlife;
+  readonly comet: Comet;
+  readonly oldDays: OldDays;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -340,6 +346,8 @@ export class World {
     this.tradeCaravans = new TradeCaravans(this, this.journal, this.rand);
     this.regions = new Regions(this);
     this.wildlife = new Wildlife(this, this.rand);
+    this.comet = new Comet(this, this.journal, this.rand);
+    this.oldDays = new OldDays(this, this.journal, this.rand);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -416,6 +424,10 @@ export class World {
       this.visitors.tick();
       // Trade caravans from off-map kingdoms — open / tax / refuse decision.
       this.tradeCaravans.tick();
+      // Comet — rare decade-scale celestial event.
+      this.comet.tick();
+      // Old Days — myth-toned prose once the kingdom is 20+ years old.
+      this.oldDays.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {

@@ -229,6 +229,17 @@ export interface SaveData {
   };
   /** Player-named region labels. */
   regions?: { labels: Array<{ id: string; name: string; pos: { x: number; y: number } }> };
+  /** Old Days mythos prose cooldown. */
+  oldDays?: { lastFiredDay: number };
+  /** Comet — rare decade-scale celestial event. */
+  comet?: {
+    active: boolean;
+    startedYear: number;
+    startedDay: number;
+    activeUntilDay: number;
+    lastCometYear: number;
+    lastCheckedYear: number;
+  };
   /** Wildlife entities — deer, fish, hawks, wolves. */
   wildlife?: {
     entities: Array<{
@@ -424,6 +435,8 @@ export function serialize(
     trade: world.tradeCaravans.snapshot(),
     regions: world.regions.snapshot(),
     wildlife: world.wildlife.snapshot(),
+    comet: world.comet.snapshot(),
+    oldDays: world.oldDays.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
@@ -672,6 +685,19 @@ export function validateSave(rawInput: unknown): SaveData | null {
       : undefined,
     regions: validateRegions(raw.regions),
     wildlife: validateWildlife(raw.wildlife),
+    oldDays: isPlainObject(raw.oldDays)
+      ? { lastFiredDay: safeInt((raw.oldDays as Record<string, unknown>).lastFiredDay, -25, -1000, 1_000_000) }
+      : undefined,
+    comet: isPlainObject(raw.comet)
+      ? {
+          active: Boolean((raw.comet as Record<string, unknown>).active),
+          startedYear: safeInt((raw.comet as Record<string, unknown>).startedYear, 0, 0, 100_000),
+          startedDay: safeInt((raw.comet as Record<string, unknown>).startedDay, 0, 0, 1_000_000),
+          activeUntilDay: safeInt((raw.comet as Record<string, unknown>).activeUntilDay, 0, 0, 1_000_000),
+          lastCometYear: safeInt((raw.comet as Record<string, unknown>).lastCometYear, -9, -1000, 100_000),
+          lastCheckedYear: safeInt((raw.comet as Record<string, unknown>).lastCheckedYear, 0, 0, 100_000),
+        }
+      : undefined,
   };
 }
 
@@ -1070,6 +1096,12 @@ export function applySave(world: World, save: SaveData): void {
   }
   if (save.wildlife) {
     world.wildlife.restore(save.wildlife);
+  }
+  if (save.comet) {
+    world.comet.restore(save.comet);
+  }
+  if (save.oldDays) {
+    world.oldDays.restore(save.oldDays);
   }
   // Restore succession state if present.
   if (save.succession) {

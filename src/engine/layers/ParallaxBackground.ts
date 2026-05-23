@@ -157,9 +157,50 @@ export class ParallaxBackground {
   // ---------------------------------------------------------------------------
 
   /** Called each frame from PixiApp (or wherever the game loop lives). */
-  update(hour: number, simTime: number): void {
+  update(hour: number, simTime: number, cometActive = false): void {
     this.draw(this._w, this._h);
     this.updateDynamic(hour, simTime);
+    this.updateComet(hour, simTime, cometActive);
+  }
+
+  // Lazily-created comet streak layer.
+  private cometLayer: Graphics | null = null;
+
+  private updateComet(hour: number, simTime: number, active: boolean): void {
+    if (!this.cometLayer) {
+      this.cometLayer = new Graphics();
+      this.container.addChild(this.cometLayer);
+    }
+    this.cometLayer.clear();
+    if (!active) return;
+    // Comet only visible at night/dusk hours.
+    const H = ((hour % 24) + 24) % 24;
+    let vis = 0;
+    if (H >= 20 || H < 5) vis = 1;
+    else if (H >= 18 && H < 20) vis = (H - 18) / 2;
+    else if (H >= 5 && H < 6) vis = 1 - (H - 5);
+    if (vis <= 0.01) return;
+
+    const w = this._w;
+    const skyH = this._h * 0.6;
+    // Slow drift across the sky over multiple hours.
+    const t = ((simTime * 0.005) % 1);
+    const cx = w * (0.15 + t * 0.7);
+    const cy = skyH * (0.18 + Math.sin(t * Math.PI) * 0.08);
+
+    // Tail (long line trailing back toward the upper-left).
+    const tailLen = 80;
+    const dx = -tailLen, dy = -tailLen * 0.3;
+    for (let i = 0; i < 12; i++) {
+      const u = i / 12;
+      const sx = cx + dx * u;
+      const sy = cy + dy * u;
+      const a = (1 - u) * 0.7 * vis;
+      this.cometLayer.rect(sx, sy, 2, 2).fill({ color: 0xfff7d6, alpha: a });
+    }
+    // Head — small bright point.
+    this.cometLayer.rect(cx - 1, cy - 1, 3, 3).fill({ color: 0xffffff, alpha: 0.95 * vis });
+    this.cometLayer.rect(cx, cy, 1, 1).fill({ color: 0xfff2c2, alpha: vis });
   }
 
   resize(w: number, h: number): void {

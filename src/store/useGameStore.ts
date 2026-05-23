@@ -105,6 +105,8 @@ export interface GameState {
     npcNames: Record<string, string>;
     /** Faction loyalty snapshot — pushed each stats update */
     factions: { merchants: number; scholars: number; guard: number };
+    /** Trait-flavored quote from a random NPC, refreshes once per in-world day. */
+    quoteOfDay?: string | null;
   };
   pushEvent: (e: ExternalEvent) => void;
   clearEvents: () => void;
