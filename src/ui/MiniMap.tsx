@@ -33,20 +33,25 @@ export function MiniMap({
   const baseRef = useRef<HTMLCanvasElement | null>(null);
 
   // Build (and periodically rebuild) the base terrain layer. Rebuilds every
-  // 3 seconds so newly-explored tiles appear on the minimap without lag.
-  // The explored state changes as the Exploration system expands, so a
-  // one-time build keyed on seed would leave fog forever on the minimap.
+  // 2 seconds, but only if the explored-tile count actually changed. This
+  // catches BOTH the weekly radius expansion AND the NPC-driven reveals
+  // from Exploration.revealAround() — which only flip individual tiles
+  // without changing the radius. (The previous radius-based dirty check
+  // missed every NPC discovery.)
   useEffect(() => {
-    let lastRadius = -1;
+    let lastExploredCount = -1;
     const id = window.setInterval(() => {
       const world = getWorld();
       if (!world) return;
-      const currentRadius = world.exploration?.radius ?? -1;
-      // Rebuild only when the explore radius grows (or on first load).
+      // Cheap O(n) scan to count explored tiles. Faster than rebuilding
+      // (no canvas pixel writes) so we use it as the dirty check.
+      let exploredCount = 0;
+      for (const t of world.map.tiles) if (t.explored) exploredCount++;
+      const seedKey = String(world.state.seed);
       if (baseRef.current &&
-          baseRef.current.dataset.seed === String(world.state.seed) &&
-          currentRadius === lastRadius) return;
-      lastRadius = currentRadius;
+          baseRef.current.dataset.seed === seedKey &&
+          exploredCount === lastExploredCount) return;
+      lastExploredCount = exploredCount;
       const off = document.createElement("canvas");
       off.width = world.map.width;
       off.height = world.map.height;
@@ -69,7 +74,7 @@ export function MiniMap({
       ctx.putImageData(img, 0, 0);
       off.dataset.seed = String(world.state.seed);
       baseRef.current = off;
-    }, 3000);
+    }, 2000);
     return () => clearInterval(id);
   }, [getWorld]);
 
