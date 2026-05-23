@@ -17,25 +17,32 @@ export interface PhotoModeOpts {
 }
 
 type FrameStyle = "wood" | "parchment" | "stone" | "window" | "naked";
+type FilterStyle = "none" | "vignette" | "sepia" | "grain" | "noir";
 
 const FRAME_STYLES: FrameStyle[] = ["wood", "parchment", "stone", "window", "naked"];
+const FILTER_STYLES: FilterStyle[] = ["none", "vignette", "sepia", "grain", "noir"];
 
 export function PhotoMode({ getCanvas, getCaption }: PhotoModeOpts) {
   const [open, setOpen] = useState(false);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
   const [styleIdx, setStyleIdx] = useState(0);
+  const [filterIdx, setFilterIdx] = useState(0);
   const [sourceCanvas, setSourceCanvas] = useState<HTMLCanvasElement | null>(null);
 
-  // Re-render with the current style whenever it changes
+  // Re-render with the current style or filter whenever either changes.
   useEffect(() => {
     if (!open || !sourceCanvas) return;
     try {
-      setDataUrl(renderFramed(sourceCanvas, caption, FRAME_STYLES[styleIdx]));
+      setDataUrl(renderFramed(
+        sourceCanvas, caption,
+        FRAME_STYLES[styleIdx],
+        FILTER_STYLES[filterIdx],
+      ));
     } catch (err) {
       console.warn("[PhotoMode] re-frame failed", err);
     }
-  }, [styleIdx, open, sourceCanvas, caption]);
+  }, [styleIdx, filterIdx, open, sourceCanvas, caption]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -62,7 +69,7 @@ export function PhotoMode({ getCanvas, getCaption }: PhotoModeOpts) {
     setCaption(cap);
     setSourceCanvas(canvas);
     try {
-      setDataUrl(renderFramed(canvas, cap, FRAME_STYLES[styleIdx]));
+      setDataUrl(renderFramed(canvas, cap, FRAME_STYLES[styleIdx], FILTER_STYLES[filterIdx]));
       setOpen(true);
     } catch (err) {
       console.warn("[PhotoMode] capture failed", err);
@@ -88,6 +95,9 @@ export function PhotoMode({ getCanvas, getCaption }: PhotoModeOpts) {
   function cycleStyle() {
     setStyleIdx((i) => (i + 1) % FRAME_STYLES.length);
   }
+  function cycleFilter() {
+    setFilterIdx((i) => (i + 1) % FILTER_STYLES.length);
+  }
 
   if (!open) return null;
   return (
@@ -99,6 +109,9 @@ export function PhotoMode({ getCanvas, getCaption }: PhotoModeOpts) {
           <button onClick={cycleStyle} title="Cycle frame style">
             Frame: {FRAME_STYLES[styleIdx]}
           </button>
+          <button onClick={cycleFilter} title="Cycle image filter">
+            Filter: {FILTER_STYLES[filterIdx]}
+          </button>
           <button onClick={copyToClipboard}>Copy</button>
           <button onClick={download}>Save PNG</button>
           <button onClick={() => setOpen(false)}>Close (Esc)</button>
@@ -109,8 +122,14 @@ export function PhotoMode({ getCanvas, getCaption }: PhotoModeOpts) {
 }
 
 /** Render the source canvas into a styled composition with caption. */
-function renderFramed(source: HTMLCanvasElement, caption: string, style: FrameStyle): string {
-  if (style === "naked") {
+function renderFramed(
+  source: HTMLCanvasElement,
+  caption: string,
+  style: FrameStyle,
+  filter: FilterStyle = "none",
+): string {
+  // For naked + no filter, fast-path to a direct dataURL.
+  if (style === "naked" && filter === "none") {
     return source.toDataURL("image/png");
   }
   const padding = style === "window" ? 56 : 40;
@@ -125,14 +144,15 @@ function renderFramed(source: HTMLCanvasElement, caption: string, style: FrameSt
   drawFrame(ctx, out.width, out.height, style);
 
   // Inner thin border
-  if (style !== "window") {
+  if (style !== "window" && style !== "naked") {
     ctx.fillStyle = style === "parchment" ? "#3f2616" : "#0c0a09";
     ctx.fillRect(padding - 4, padding - 4, source.width + 8, source.height + 8);
   }
 
-  // The actual scene
+  // The actual scene — pre-filter the source if any filter is selected.
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(source, padding, padding, source.width, source.height);
+  const filtered = filter === "none" ? source : applyFilter(source, filter);
+  ctx.drawImage(filtered, padding, padding, source.width, source.height);
 
   // Optional window "muntins" overlay — cross of brass-y bars
   if (style === "window") {
@@ -252,4 +272,62 @@ function wordmarkColor(style: FrameStyle): string {
     case "window": return "#fde68a";
     default: return "#92400e";
   }
+}
+
+/**
+ * Apply a post-process effect to the source canvas, returning a NEW canvas.
+ *   vignette — darkens the corners radially
+ *   sepia    — warm brown tone over greyscale
+ *   grain    — adds film grain noise
+ *   noir     — high-contrast black & white
+ */
+function applyFilter(source: HTMLCanvasElement, filter: FilterStyle): HTMLCanvasElement {
+  const out = document.createElement("canvas");
+  out.width = source.width;
+  out.height = source.height;
+  const ctx = out.getContext("2d");
+  if (!ctx) return source;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(source, 0, 0);
+
+  if (filter === "vignette") {
+    const grad = ctx.createRadialGradient(
+      out.width / 2, out.height / 2, 0,
+      out.width / 2, out.height / 2, Math.max(out.width, out.height) * 0.65,
+    );
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(0.7, "rgba(0,0,0,0.2)");
+    grad.addColorStop(1, "rgba(0,0,0,0.75)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, out.width, out.height);
+    return out;
+  }
+
+  // For pixel-manipulation filters, work on the ImageData directly.
+  const img = ctx.getImageData(0, 0, out.width, out.height);
+  const d = img.data;
+  if (filter === "sepia") {
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      d[i]     = Math.min(255, r * 0.393 + g * 0.769 + b * 0.189);
+      d[i + 1] = Math.min(255, r * 0.349 + g * 0.686 + b * 0.168);
+      d[i + 2] = Math.min(255, r * 0.272 + g * 0.534 + b * 0.131);
+    }
+  } else if (filter === "noir") {
+    for (let i = 0; i < d.length; i += 4) {
+      // Luminance, then push contrast.
+      const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      const v = lum < 128 ? lum * 0.6 : Math.min(255, lum * 1.25);
+      d[i] = d[i + 1] = d[i + 2] = v;
+    }
+  } else if (filter === "grain") {
+    for (let i = 0; i < d.length; i += 4) {
+      const n = (Math.random() - 0.5) * 40;
+      d[i]     = Math.max(0, Math.min(255, d[i] + n));
+      d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n));
+      d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n));
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return out;
 }

@@ -188,7 +188,23 @@ export function App() {
     } else {
       setJournal([]);
     }
-    world.onJournal = (entry) => pushJournalEntry(entry);
+    world.onJournal = (entry) => {
+      pushJournalEntry(entry);
+      // Subtle audio cue tied to journal kind. Skip system entries (they're
+      // engine chatter, not narrative beats).
+      const audio = audioRef.current;
+      if (audio && entry.kind !== "system") {
+        if (entry.kind === "milestone") {
+          // Brighter chime — coming-of-age, retirement, victory etc.
+          audio.chimeFor("default");
+        } else if (entry.kind === "life") {
+          // Soft warm chord for life events.
+          audio.chimeFor("life");
+        }
+        // event/weather entries already get SFX from bus subscriptions; no
+        // double cue needed.
+      }
+    };
 
     // Death bell + lightning flash: listen on the world bus for special signals.
     world.bus.subscribe((ev) => {
