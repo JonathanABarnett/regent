@@ -45,6 +45,10 @@ import { War } from "./systems/War";
 import type { WarSnapshot } from "./systems/War";
 import { Disasters } from "./systems/Disasters";
 import type { DisasterSnapshot } from "./systems/Disasters";
+import { Visitors } from "./systems/Visitors";
+import type { VisitorsSnapshot } from "./systems/Visitors";
+import { TradeCaravans } from "./systems/TradeCaravans";
+import type { TradeSnapshot } from "./systems/TradeCaravans";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -222,6 +226,8 @@ export class World {
   readonly immigration: Immigration;
   readonly war: War;
   readonly disasters: Disasters;
+  readonly visitors: Visitors;
+  readonly tradeCaravans: TradeCaravans;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -324,6 +330,8 @@ export class World {
     this.immigration = new Immigration(this, this.journal, this.rand);
     this.war = new War(this, this.journal, this.rand);
     this.disasters = new Disasters(this, this.journal, this.rand);
+    this.visitors = new Visitors(this, this.journal, this.rand);
+    this.tradeCaravans = new TradeCaravans(this, this.journal, this.rand);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -396,6 +404,10 @@ export class World {
       this.war.tick();
       // Disasters: plague / famine / flood with named NPC consequences.
       this.disasters.tick();
+      // Visitors: a bard, scholar, knight, pilgrim, or storyteller drops by.
+      this.visitors.tick();
+      // Trade caravans from off-map kingdoms — open / tax / refuse decision.
+      this.tradeCaravans.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {

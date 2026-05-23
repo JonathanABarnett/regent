@@ -227,6 +227,10 @@ export interface SaveData {
     lastWandererDay: number;
     processedCampIds: string[];
   };
+  /** Visitors system: cooldown + total count. */
+  visitors?: { lastVisitDay: number; totalVisits: number };
+  /** Trade caravans: cooldown + counters. */
+  trade?: { lastCaravanDay: number; totalCaravans: number; totalAccepted: number };
   /** Disasters system snapshot. */
   disasters?: {
     active: "plague" | "famine" | "flood" | null;
@@ -399,6 +403,8 @@ export function serialize(
     immigration: world.immigration.snapshot(),
     war: world.war.snapshot(),
     disasters: world.disasters.snapshot(),
+    visitors: world.visitors.snapshot(),
+    trade: world.tradeCaravans.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
@@ -632,6 +638,19 @@ export function validateSave(rawInput: unknown): SaveData | null {
     immigration: validateImmigration(raw.immigration),
     war: validateWar(raw.war),
     disasters: validateDisasters(raw.disasters),
+    visitors: isPlainObject(raw.visitors)
+      ? {
+          lastVisitDay: safeInt((raw.visitors as Record<string, unknown>).lastVisitDay, 0, 0, 1_000_000),
+          totalVisits: safeInt((raw.visitors as Record<string, unknown>).totalVisits, 0, 0, 100_000),
+        }
+      : undefined,
+    trade: isPlainObject(raw.trade)
+      ? {
+          lastCaravanDay: safeInt((raw.trade as Record<string, unknown>).lastCaravanDay, 0, 0, 1_000_000),
+          totalCaravans: safeInt((raw.trade as Record<string, unknown>).totalCaravans, 0, 0, 100_000),
+          totalAccepted: safeInt((raw.trade as Record<string, unknown>).totalAccepted, 0, 0, 100_000),
+        }
+      : undefined,
   };
 }
 
@@ -972,6 +991,12 @@ export function applySave(world: World, save: SaveData): void {
   }
   if (save.disasters) {
     world.disasters.restore(save.disasters);
+  }
+  if (save.visitors) {
+    world.visitors.restore(save.visitors);
+  }
+  if (save.trade) {
+    world.tradeCaravans.restore(save.trade);
   }
   // Restore succession state if present.
   if (save.succession) {
