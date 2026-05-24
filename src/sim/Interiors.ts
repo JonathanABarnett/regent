@@ -292,6 +292,18 @@ const OBELISK: Interior = {
   ],
 };
 
+// Graves are outdoor markers — no real interior. Stub provided only so the
+// StructureKind record stays exhaustive; cutaway view should never open a grave.
+const GRAVE: Interior = {
+  width: 1,
+  height: 1,
+  floor: "#3f3f46",
+  floorAccent: "#27272a",
+  wall: "#52525b",
+  mood: "quiet",
+  stations: [],
+};
+
 const INTERIORS: Record<StructureKind, Interior> = {
   castle: CASTLE,
   town: COTTAGE,
@@ -307,6 +319,7 @@ const INTERIORS: Record<StructureKind, Interior> = {
   wellspring: WELLSPRING,
   obelisk: OBELISK,
   astronomers_tower: ASTRONOMERS_TOWER,
+  grave: GRAVE,
 };
 
 /** Public lookup. Returns the cottage layout for unknown kinds as a safety net. */
