@@ -23,6 +23,7 @@ import { EdgeLayer } from "./layers/EdgeLayer";
 import { RoadLayer } from "./layers/RoadLayer";
 import { DecorLayer } from "./layers/DecorLayer";
 import { NightLightsLayer } from "./layers/NightLightsLayer";
+import { WinterCapLayer } from "./layers/WinterCapLayer";
 
 /** Virtual canvas dimensions for low-res (retro 16-bit) mode. */
 export const RETRO_CANVAS = { w: 480, h: 270 } as const;
@@ -70,6 +71,7 @@ export class PixiApp {
   roadLayer!: RoadLayer;
   decorLayer!: DecorLayer;
   nightLightsLayer!: NightLightsLayer;
+  winterCapLayer!: WinterCapLayer;
   weatherLayer!: WeatherLayer;
   parallax = new ParallaxBackground();
   worldStage = new Container();
@@ -169,6 +171,7 @@ export class PixiApp {
     this.roadLayer  = new RoadLayer(this.opts.world.map);
     this.decorLayer = new DecorLayer(this.opts.world.map);
     this.structureLayer = new StructureLayer(this.opts.world.map, this.factory);
+    this.winterCapLayer = new WinterCapLayer(this.opts.world.map, this.factory);
     this.nightLightsLayer = new NightLightsLayer(this.opts.world);
     this.borderLayer = new BorderLayer(this.opts.world);
     this.cutawayLayer = new CutawayLayer(this.opts.world);
@@ -188,6 +191,10 @@ export class PixiApp {
     this.worldStage.addChild(this.edgeLayer.container);
     this.worldStage.addChild(this.borderLayer.container);
     this.worldStage.addChild(this.structureLayer.container);
+    // Winter snow caps sit directly above the structure sprite but
+    // below the night-light glow — windows still shine through snow,
+    // which is correct (it's where the warmth is).
+    this.worldStage.addChild(this.winterCapLayer.container);
     // Night lights sit between structures and NPCs so the glow bleeds
     // visually outward from the building face without covering NPCs.
     this.worldStage.addChild(this.nightLightsLayer.container);
@@ -421,6 +428,11 @@ export class PixiApp {
     // Apply cutaway sprite fade — structure sprites become translucent so
     // the cutaway layer's interior overlay reads as "inside the building."
     this.structureLayer.container.alpha = this.cutawayLayer.enabled ? 0.35 : 1;
+    // Winter snow caps — auto-build on first winter frame, auto-clear
+    // when season changes. Also hidden under cutaway so the interior
+    // view isn't obscured by snow.
+    this.winterCapLayer.container.alpha = this.cutawayLayer.enabled ? 0 : 1;
+    this.winterCapLayer.update(this.opts.world.state.season);
     // Building window and forge glows — intensity follows in-world hour.
     this.nightLightsLayer.update(hour);
     this.borderLayer.update();
