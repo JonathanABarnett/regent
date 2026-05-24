@@ -2,7 +2,7 @@
 
 A 16-bit ambient fantasy kingdom that lives on the desktop. Runs autonomously; reacts to real-world signals (git, system, Twitch) as flavor.
 
-> Status at last full pass: **392 tests passing across 29 files · TypeScript strict · production build ~2.7s.** Live demo at https://jonathanabarnett.github.io/kingdomos/ — auto-deployed on every push to `main` via `.github/workflows/pages.yml`.
+> Status at last full pass: **451 tests passing across 40 files · TypeScript strict · production build ~2.7s.** Live demo at https://jonathanabarnett.github.io/kingdomos/ — auto-deployed on every push to `main` via `.github/workflows/pages.yml`.
 
 ## TL;DR
 
@@ -10,10 +10,11 @@ A 16-bit ambient fantasy kingdom that lives on the desktop. Runs autonomously; r
 npm install           # one-time
 npm run dev           # Vite-only frontend (works in browser; Tauri APIs stub)
 npm run tauri:dev     # Full desktop app (needs Rust + MSVC)
-npm test              # Vitest suite (392 tests across 29 files)
+npm test              # Vitest suite (451 tests across 40 files)
 npm run typecheck     # tsc -b strict
 npm run build         # Production bundle → dist/
 npm run release       # Tag + push → CI publishes to itch.io
+npm run assets:check  # Audit which sprites are authored vs procedural fallback
 ```
 
 ## Stack
@@ -44,6 +45,10 @@ npm run release       # Tag + push → CI publishes to itch.io
 10. **Two interior lenses on the same data.** `src/sim/Interiors.ts` defines a layout (rooms + furniture stations) for every structure kind. The same data drives:
     - **Tier 2** (modal "Step inside" view): click a building → detailed 24px-tile interior + roster — `src/ui/InteriorView.tsx`
     - **Tier 3** (cutaway / dollhouse mode, press `X`): roofs go translucent, every building shows its interior overlay at world scale, non-walking NPCs render at their stations — `src/engine/layers/CutawayLayer.ts` + `src/sim/Associations.ts`
+11. **Single right-rail panel slot.** Event Log, Journal, Family Tree, Diplomacy, and Stats panels all occupy the same screen real estate (top:44px right:8px). One `rightPanel` discriminated state in `App.tsx` drives all five via derived booleans + backward-compatible setter shims (`makeRightPanelSetter`). Opening any one auto-closes the others — five-panel overlap solved, no callsite rewrites needed.
+12. **Sim halts gracefully on deterministic crashes.** `PixiApp.simStep` wraps `world.tick()` in try/catch with a 5-failure streak counter (`SIM_HALT_THRESHOLD`). After 5 consecutive crashes the sim stops being called entirely; render loop keeps running so the world stays visible at the last good frame and the player can open Settings → Diagnostics to download the crash log. Failures dedup at 2s per source so a 60Hz crash spiral doesn't flood the 50-entry crash log.
+13. **Crash log + (optional) remote sink.** `src/lib/crashLog.ts` is the single sink for window.error, unhandledrejection, ErrorBoundary failures, and sim-tick exceptions. Local-first localStorage with quota fallback (writes just the newest entry if the buffer fills). Optional remote endpoint via `VITE_CRASH_ENDPOINT` build-time env var (no-op without it). Surfaced in Settings → Diagnostics with a "Download crash log" button.
+14. **FF6 UI voice.** Two-tier typography (`--font-body: VT323` for paragraphs, `--font-pixel: "Press Start 2P"` for h1/h2 + brand chips). Every floating panel wears a "double-bordered" FF6 windowbox via a shared rule (outer dark ring + inner light line + top highlight gradient). Hovered/focused buttons in panels get a blinking `▸` cursor pseudo-element. Hover + click play a procedural menu blip / confirm chord via the `<UiSound>` delegator (opt out per element with `data-no-sound`).
 
 ## Directory map
 
@@ -87,7 +92,25 @@ src/
 │       ├── Discoveries.ts    # spontaneous map landmarks (standing_stones, ruin, camp, …)
 │       ├── Edicts.ts         # 4 player-issued 7-day royal decrees with real effects (stackable with court seats)
 │       ├── NameAStar.ts      # yearly Astronomer's-Tower-unlocked decision: name a new star or dedicate it to a past monarch
-│       └── Achievements.ts   # 27 milestone badges (17 visible + 10 hidden mysteries)
+│       ├── Achievements.ts   # ~40 milestone badges (visible + hidden mysteries)
+│       ├── Exploration.ts    # NPC patrol patterns reveal fog-of-war tiles around them
+│       ├── Immigration.ts    # wanderers arrive from off-map kingdoms (welcome/pay/refuse)
+│       ├── War.ts            # full war flow with named guard casualties + grief
+│       ├── Disasters.ts      # plagues, famines, floods — kill named NPCs, surviving partner grieves
+│       ├── Visitors.ts       # traveling bards, scholars, merchants (short visits)
+│       ├── TradeCaravans.ts  # caravans from named off-map kingdoms (tax/open/marriage)
+│       ├── Refugees.ts       # fleeing parties arrive seeking shelter
+│       ├── ReturningBloodline.ts # claimant from a deposed monarch's line
+│       ├── Cult.ts           # quiet religious schism (dormant → rumours → decision)
+│       ├── GreatAnniversaries.ts # year 25/50/100/150/200 milestone decisions
+│       ├── Expeditions.ts    # SEND/IGNORE landmarks (ruin, standing_stones, obelisk)
+│       ├── MonarchLegacy.ts  # past-monarch letters added to vault on succession
+│       ├── TreasuryPressure.ts # vault saturation feedback
+│       ├── Remembrance.ts    # death anniversary entries
+│       ├── Wildlife.ts       # deer, wolves, fish, hawks ambient
+│       ├── Comet.ts          # decade-scale celestial event with player decision
+│       ├── OldDays.ts        # myth-toned founding references at year 20+
+│       └── InWorldHolidays.ts # in-world calendar holidays (Founding Day, Midwinter, etc.)
 ├── engine/                   # PIXI RENDERING — reads sim, never writes
 │   ├── PixiApp.ts            # bootstraps Pixi v8, runs sim/render ticks
 │   ├── Camera.ts             # smooth pan, zoom, follow, autopilot
@@ -105,6 +128,12 @@ src/
 │       ├── BorderLayer.ts       # dashed gold convex-hull outline around the kingdom
 │       ├── CutawayLayer.ts      # Tier 3 dollhouse overlay — interior decor at world scale
 │       ├── EntityLayer.ts       # NPCs, pets, couriers, effects, speech bubbles (incl. cutaway relocation)
+│       ├── WildlifeLayer.ts     # deer, wolves, fish, hawks
+│       ├── SmokeLayer.ts        # chimney + forge ember particles
+│       ├── EdgeLayer.ts         # viewport-cached terrain edges (cliffs, shorelines)
+│       ├── RoadLayer.ts         # pixel paths connecting all structures
+│       ├── DecorLayer.ts        # boulders, flowers, seasonal ground detail
+│       ├── NightLightsLayer.ts  # window glow + lanterns after dusk
 │       ├── WeatherLayer.ts      # rain/snow/cloud particles
 │       └── CrtOverlay.ts        # scanline + vignette overlay
 ├── ui/                       # REACT chrome
@@ -132,15 +161,25 @@ src/
 │   ├── MiniMap.tsx           # corner overworld preview
 │   ├── SpeedControl.tsx      # pause/0.5x/1x/2x/3x
 │   ├── StreamerOverlay.tsx   # Twitch event ticker (only in streamer mode)
-│   ├── ErrorBoundary.tsx
+│   ├── ErrorBoundary.tsx     # React render-error fallback → recordCrash
 │   ├── TrayMenuBindings.ts   # Tauri tray IPC
-│   └── AchievementToast.tsx
+│   ├── AchievementToast.tsx
+│   ├── UpdateToast.tsx       # Tauri auto-updater (polls every 6h, no-op on web)
+│   ├── UiSound.tsx           # global menu-blip + confirm-chord delegator
+│   ├── FamilyTreePanel.tsx   # family-tree visualization (right rail)
+│   ├── DiplomacyPanel.tsx    # off-map kingdom relations (right rail)
+│   ├── KingdomChronicle.tsx  # long-form story view
+│   ├── KingdomCard.tsx       # printable kingdom summary card
+│   ├── VaultPanel.tsx        # artifacts + monarch letters
+│   ├── TutorialHints.tsx     # 6-step first-launch coachmark sequence
+│   └── PastKingdoms.tsx      # read-only archive of past kingdoms (title screen entry)
 ├── store/
 │   └── useGameStore.ts       # Zustand: events, journal, achievements, identity, settings,
 │                             #         monarchSpec, petSpec, seen
 ├── lib/
 │   ├── sanitize.ts           # sanitizeName, sanitizeTwitchUser, sanitizeHexColor
-│   └── sanitize.test.ts
+│   ├── sanitize.test.ts
+│   └── crashLog.ts           # global error sink (window.error + boundary + sim-tick)
 ├── App.tsx                   # root component — bootstraps everything
 └── main.tsx                  # ReactDOM root
 
@@ -162,18 +201,30 @@ src-tauri/                    # RUST desktop shell
     └── plugins/
         └── http.rs           # optional axum POST /events (feature-gated)
 
-public/sprites/               # OPTIONAL custom art drop-in
+public/sprites/               # OPTIONAL custom art drop-in (runtime PNGs)
 ├── manifest.json             # list PNG overrides here
 ├── tiles/                    # 32×32 PNGs, 1-4 variants per tile kind
 ├── structures/               # variable-size PNGs (anchor bottom-center)
 ├── characters/               # sprite sheets (4 dir × 4 frame)
-└── props/                    # particles, airship, monster, cloud
+├── props/                    # particles, airship, monster, cloud
+└── README.md                 # manifest schema + Aseprite quick-start
+
+assets/                       # SOURCE files for art / audio / marketing (never shipped)
+├── README.md                 # source → runtime pipeline overview
+├── sprites/                  # .ase originals for the PNGs in public/sprites/
+├── audio/                    # .bps (BeepBox), .jsfxr parameter files
+├── marketing/                # cover art, screenshots, GIFs, trailer
+└── palette/kingdomos.gpl     # 32-colour shared palette (load into Aseprite)
 
 docs/
 ├── EVENT_SCHEMA.md           # v1 JSON event reference
 ├── INTEGRATIONS.md           # CPU/git/fs/inbox/Twitch wiring
 ├── AUTOMATION.md             # release pipeline reference (pre-commit, CI, nightly, dependabot)
-└── AI_SPRITES.md             # full ComfyUI + SD pixel-art pipeline
+├── AI_SPRITES.md             # full ComfyUI + SD pixel-art pipeline (+ PixelLab/Replicate alternatives)
+├── UPDATER.md                # Tauri auto-updater key-gen + CI signing setup
+├── ITCH.md                   # itch.io page copy + asset checklist
+├── SCREENSHOTS.md            # in-game capture workflow
+└── TESTING.md                # adversarial input + edge-case patterns
 
 scripts/
 ├── install-hooks.mjs         # one-time pre-commit hook installer (typecheck + tests)
@@ -181,6 +232,7 @@ scripts/
 ├── release.mjs               # bump → tag → push (CI publishes)
 ├── seed-events.ps1           # PowerShell: drop sample events into inbox
 ├── slice-sheet.mjs           # CLI: register a character sprite sheet
+├── check-assets.mjs          # audit which manifest slots are authored vs procedural
 └── sprite-prompts.md         # paste-ready ComfyUI prompts
 
 .github/workflows/
@@ -194,6 +246,8 @@ scripts/
 ## Save format & persistence
 
 `localStorage["kingdomos.kingdom.v1"]` holds the entire save as JSON. Tauri also mirrors to `AppData/kingdom.json`. Schema versioned via `SAVE_VERSION` (currently 1) with a migration scaffold in `migrateSave()`.
+
+**Multi-slot support.** Three slots (`kingdomos.kingdom.v1`, `kingdomos.kingdom.slot1.v1`, `kingdomos.kingdom.slot2.v1`) — slot 0 is the legacy single-key for back-compat. Active slot persists in `kingdomos.activeSlot`. `readAllSlotMeta()` reads lightweight metadata (kingdom name, year, population) for all slots without fully parsing them. Title screen exposes the picker + per-slot delete with confirmation; deleting the active slot triggers a guarded reload via the `__kingdomos_skip_save` window flag.
 
 Every load goes through `validateSave(unknown)` which:
 - Caps roster at 500 NPCs, journal at 5000 entries, achievements at 200, artifacts at 200
@@ -262,6 +316,51 @@ window.kingdomos.world().treasury.artifacts;
 window.kingdomos.world().succession.state;
 ```
 
+## Crash & diagnostics
+
+`src/lib/crashLog.ts` is the unified error sink. Capped at 50 entries in localStorage. Three call paths:
+
+```ts
+// 1. Global window handlers — installed in main.tsx before React mounts
+installCrashHandlers();  // captures window.error + unhandledrejection
+
+// 2. React render errors — componentDidCatch in ErrorBoundary
+recordCrash("react.boundary", err);
+
+// 3. Sim-tick exceptions — caught in PixiApp.simStep with 5-strike halt
+recordCrash("sim.tick", err);
+```
+
+Optional remote sink: set `VITE_CRASH_ENDPOINT` at build time and entries POST as JSON (best-effort, `keepalive: true`, silent on failure). Without it, crashes stay local. Surfaced to the player in Settings → Diagnostics with a "Download crash log" button (formatted via `formatCrashLog`).
+
+After a streaming sim crash: render keeps running, the sim halts, crash log debounces to one entry per 2s per source.
+
+## Auto-updater (Tauri)
+
+Wired end-to-end via `tauri-plugin-updater` + `@tauri-apps/plugin-updater` + `@tauri-apps/plugin-process`:
+
+- Rust side: registered in `src-tauri/src/lib.rs`. Endpoint + pubkey in `tauri.conf.json` under `plugins.updater`.
+- Frontend: `<UpdateToast />` polls every 6 hours, shows a bottom-right card on "available", supports download → install → relaunch flow with progress bar. Dismissed version is tracked individually so a NEWER version reopens the toast even after "Later".
+- Web-demo safe: short-circuits if `__TAURI_INTERNALS__` is missing.
+
+**One-time setup required before it works:** see `docs/UPDATER.md`. Generate a signing keypair with `npx @tauri-apps/cli signer generate`, paste the public key into `tauri.conf.json`, add `TAURI_SIGNING_PRIVATE_KEY` + password to GitHub Actions secrets, and set `includeUpdaterJson: true` on the `tauri-action` step in `release.yml`.
+
+## Accessibility
+
+`SettingsState.uiScale` (0.85 / 1 / 1.15 / 1.3) and `SettingsState.colorblindMode` (boolean). Applied to the document on mount via `applyA11ySettings(loadSettings())` in `useGameStore.ts` so they take effect before the user opens Settings. Scale is clamped to [0.7, 1.5] both on set AND on load (defends against corrupt/hand-edited persisted values). HUD + panel font-sizes are `calc(13px * var(--ui-scale, 1))` and `calc(14px * var(--ui-scale, 1))` respectively — only UI surfaces scale; the world canvas is unaffected. Colorblind mode adds `.colorblind` to `<html>` and the CSS retargets faction-loyalty hues to high-contrast values that don't rely on red/green discrimination.
+
+## FF6 UI polish (current chrome)
+
+Several distinct treatments stacked to give panels a SNES JRPG menu feel without abandoning the warm brown/amber palette:
+
+- **Typography**: `--font-body: VT323` is the default (readable thin pixel terminal). `--font-pixel: "Press Start 2P"` is reserved for h1/h2 and explicit `.font-pixel` chips (the wordmark, the kingdom badge). Both loaded via Google Fonts in `index.html` so the fallback chain doesn't land on system mono on machines without them installed.
+- **Windowbox chrome**: every floating panel (event-log, settings, stats, family, diplomacy, journal, vault, onboarding, title, update-toast, tutorial-card, decision-prompt) gets a double-bordered treatment via a shared CSS rule — outer dark ring + inner light line + top highlight gradient + soft bottom inset.
+- **Title shadows**: h1/h2 get a stacked dark drop shadow that mimics SNES dialogue text painted onto the windowbox; h3/h4 get a subtler single-pixel shadow.
+- **Hover cursor**: `.decision-options button`, `.stats-panel button`, `.settings-panel button`, `.tutorial-actions button` get a blinking `▸` pseudo-element pinned to their left edge on hover/focus.
+- **Audio**: `<UiSound>` (mounted in App.tsx) delegates `pointerover` + `click` document-wide for `button, [role='button']`, plays `AudioEngine.playMenuBlip()` on hover (80 ms throttled) and `playMenuConfirm()` on click. Respects master volume + pad-enabled. Opt out per element with `data-no-sound`.
+- **Decision urgency**: `DecisionPrompt` flips to a pulsing `urgent` class when `secondsLeft <= 30`, drops the pulse at 0 and switches the footer to "Time's up — unpause to apply X" (the prompt only clears when `Decisions.tick` runs, which only happens when the sim runs).
+- **HUD chips**: day/season/clock/weather/npcs/factions wrap in pill-shaped backgrounds with subtle hover lift. HUD buttons are pill-shaped (`border-radius: 999px`) instead of sharp 3px rectangles.
+
 ## Keyboard shortcuts
 
 ```
@@ -283,7 +382,8 @@ Mouse: click NPC → camera follows; click structure → inspector → "Step ins
 
 | System | Content count |
 |---|---|
-| Achievements | 27 (17 visible + 10 hidden mysteries) |
+| Achievements | ~40 (visible + hidden mysteries) |
+| Quote of day | 48 lines (6 per trait × 8 traits) — refreshes daily, deterministic per (seed, day) |
 | Aspirations (player-facing goals) | 21 in pool, 3 active at a time |
 | Quest arcs | 15 (`traveler`, `festival_prep`, `rival_banner`, `scholar_discovery`, `wandering_cat`, `river_flood`, `lost_child`, `old_friend_returns`, `village_well`, `fence_dispute`, `letter_from_afar`, `tournament`, `returning_bloodline`, `long_drought`, `wandering_bard`) |
 | Decision archetypes | 10 (petition, merchant, festival, stranger, levy, pilgrim, boundary dispute, astronomer's portent, stray dog, anonymous gift) |
@@ -411,14 +511,40 @@ Three upgrade tiers, ordered cheapest-to-richest:
 
 ## Shipping checklist
 
-- [ ] Drop sprite PNGs into `public/sprites/*` and update `manifest.json` (optional — programmatic sprites ship fine)
-- [ ] One ambient music track (optional, Howler ready)
-- [ ] Trailer recording (OBS + the streamer-overlay mode for clean footage)
-- [ ] Screenshots / capsule images for Steam / itch.io
+**Blocking for a public release:**
+- [ ] **Personal playtest pass** — found bugs become the next punch list
+- [ ] **Windows code-signing cert** (~$200/yr Sectigo) — without it SmartScreen warns "Windows protected your PC" on first launch
+- [ ] **itch.io store-page assets**: cover image (630×500), 4–6 screenshots (use Photo mode `P`), 15–30s promo GIF (ScreenToGif), pricing decision
+- [ ] **Set `BUTLER_API_KEY` / `ITCH_USER` / `ITCH_GAME` GitHub secrets** for the release workflow
+
+**Auto-updater go-live** (one-time, see `docs/UPDATER.md`):
+- [ ] Generate signing keypair: `npx @tauri-apps/cli signer generate -w ~/.tauri/kingdomos.key`
+- [ ] Paste public key into `tauri.conf.json` (replace placeholder)
+- [ ] Add `TAURI_SIGNING_PRIVATE_KEY` + `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` to GitHub secrets
+- [ ] Set `includeUpdaterJson: true` on `tauri-action` step in `release.yml`
+
+**Nice-to-have (raise the ceiling, not blocking):**
+- [ ] Drop sprite PNGs into `public/sprites/*` and update `manifest.json` — see `assets/README.md` for priority order. Run `npm run assets:check` to see what's authored vs procedural.
+- [ ] One ambient chiptune music track via BeepBox to replace procedural pad — see `assets/audio/README.md`
+- [ ] Trailer recording (OBS + streamer-overlay mode for clean footage)
 - [ ] Steam page: tags, description, system requirements
 - [ ] Build Rust Twitch EventSub adapter (~3hr, frontend already complete)
 - [ ] Test `npm run tauri:build` on machine with Rust toolchain
-- [ ] Set `BUTLER_API_KEY` / `ITCH_USER` / `ITCH_GAME` secrets on the GitHub repo
+- [ ] `VITE_CRASH_ENDPOINT` for remote crash collection (optional — local log already works)
+
+## Common gotchas
+
+- **`Math.random()` in sim code is a bug.** Always use `world.rand` (mulberry32 seeded from world seed). Anything that round-trips through a save needs to be deterministic. `Math.random()` is OK for transient render-only effects.
+- **Files under `src/sim/` must not import from `pixi.js` or `src/engine/`.** The sim runs headless in tests. CI catches this; adding a Pixi import to a sim file breaks the typecheck.
+- **HUD toggle handlers must use functional updaters** (`setLogOpen((b) => !b)`), not raw booleans. Two rapid clicks within one render commit can both compute `next=true` from a stale closure. The right-rail setter shims accept both forms.
+- **Decision prompts only clear when the sim ticks.** If a decision expires while the sim is paused, the prompt sits at 0:00 until you unpause. `DecisionPrompt` switches to an "expired" footer (no urgent pulse) to make this visible — don't paper over it.
+- **`createCrashHandler` runs once before React mounts** in `main.tsx`. Don't add another global error listener — route through `recordCrash()` so it shows up in Diagnostics.
+- **Sim-tick exceptions debounce.** A deterministic bug used to flood the crash log at 60Hz. After 5 consecutive failures the sim halts entirely (render keeps going). Crash log writes are also rate-limited to one entry per 2s per source.
+- **Right-rail panels are mutually exclusive.** Don't add new state for a new right-rail panel — extend the `RightPanel` union in App.tsx and pass through `makeRightPanelSetter`. Otherwise opening your panel won't close the others.
+- **Don't enable `imageSmoothingEnabled` on Pixi.** Pixel art is nearest-neighbor always. Bilinear filtering produces *blurrier blocks*, not crisper art.
+- **VT323 + Press Start 2P load from Google Fonts.** If you're working offline or the CDN is down, the fallback chain is `Courier New → ui-monospace → monospace`. Functional but loses the retro feel.
+- **The `assets/` directory is for source files only.** Never reference anything in `assets/` from runtime code. The game loads from `public/sprites/` (PNG/JSON only). `assets/` is the working room for Aseprite originals.
+- **Tauri auto-updater requires a real signing key.** The committed `tauri.conf.json` has a placeholder `pubkey`. The plugin will load but the updater plugin refuses to apply downloads with the placeholder. See `docs/UPDATER.md`.
 
 ## Tauri / Rust notes
 
