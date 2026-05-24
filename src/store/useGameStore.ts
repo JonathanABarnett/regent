@@ -107,12 +107,18 @@ export interface GameState {
     factions: { merchants: number; scholars: number; guard: number };
     /** Trait-flavored quote from a random NPC, refreshes once per in-world day. */
     quoteOfDay?: string | null;
+    /** Kingdom mood label ("the kingdom is content"). */
+    moodLabel?: string;
+    /** Kingdom mood tier for CSS styling. */
+    moodTier?: "celebrating" | "content" | "uneasy" | "anxious";
   };
   pushEvent: (e: ExternalEvent) => void;
   clearEvents: () => void;
   pushJournalEntry: (e: SavedJournalEntry) => void;
   setJournal: (entries: SavedJournalEntry[]) => void;
   clearJournal: () => void;
+  /** Set a player-written note on a specific journal entry by id. */
+  setJournalNote: (entryId: string, note: string) => void;
   unlockAchievement: (id: string, title: string, description: string) => void;
   setAchievements: (a: Record<string, string>) => void;
   dismissAchievementToast: () => void;
@@ -224,6 +230,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   setJournal: (entries) => set({ journal: entries }),
   clearJournal: () => set({ journal: [] }),
+  setJournalNote: (entryId, note) => set((s) => ({
+    journal: s.journal.map((e) =>
+      e.id === entryId ? { ...e, note: note.trim().slice(0, 240) || undefined } : e
+    ),
+  })),
   unlockAchievement: (id, title, description) => {
     const state = get();
     if (state.achievements[id]) return; // already unlocked

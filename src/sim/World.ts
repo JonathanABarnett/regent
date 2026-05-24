@@ -77,6 +77,8 @@ import { Remembrance } from "./systems/Remembrance";
 import type { RemembranceSnapshot } from "./systems/Remembrance";
 import { InWorldHolidays } from "./systems/InWorldHolidays";
 import type { InWorldHolidaysSnapshot } from "./systems/InWorldHolidays";
+import { Mood } from "./systems/Mood";
+import type { MoodSnapshot } from "./systems/Mood";
 import { proposeNameAStar } from "./systems/NameAStar";
 import { shortBubbleLine } from "./systems/Quotes";
 import type { SavedJournalEntry } from "./Persistence";
@@ -271,6 +273,7 @@ export class World {
   readonly cult: Cult;
   readonly remembrance: Remembrance;
   readonly inWorldHolidays: InWorldHolidays;
+  readonly mood: Mood;
   /** Accumulator for NPC speech-bubble cadence. */
   private _bubbleAcc = 0;
   /** Callbacks invoked when the Journal writes a new entry. */
@@ -391,6 +394,7 @@ export class World {
     this.cult = new Cult(this, this.journal, this.rand);
     this.remembrance = new Remembrance(this, this.journal, this.rand);
     this.inWorldHolidays = new InWorldHolidays(this, this.journal, this.rand);
+    this.mood = new Mood(this);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -406,6 +410,19 @@ export class World {
     };
     this.spawnInitialNPCs();
     this.bus.subscribe((ev) => this.handleEvent(ev));
+    // Mood reacts to broad event categories. Listen on the same bus.
+    this.bus.subscribe((ev) => {
+      if (ev.kind === "festival" || ev.kind === "celebration") this.mood.adjust(1);
+      else if (ev.kind === "monster") this.mood.adjust(-2); // war casualty / raid
+      else if (ev.kind === "storm") this.mood.adjust(-0.5);
+      else if (
+        ev.kind === "custom" &&
+        typeof ev.payload.label === "string" &&
+        ev.payload.label.startsWith("death_bell:")
+      ) {
+        this.mood.adjust(-1);
+      }
+    });
   }
 
   /** Public accessors */
@@ -523,6 +540,8 @@ export class World {
       this.remembrance.tick();
       // In-world calendar holidays — Founding Day, Midsummer, Harvest, Midwinter.
       this.inWorldHolidays.tick();
+      // Mood drift toward 0 + famine drag.
+      this.mood.tickDay();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {

@@ -70,6 +70,9 @@ export function exportMarkdown(
       lastKey = key;
     }
     lines.push(`- ${kindEmoji(e.kind)} ${escapeMd(e.text)}`);
+    if (e.note) {
+      lines.push(`  > _${escapeMd(e.note)}_`);
+    }
   }
   return lines.join("\n");
 }

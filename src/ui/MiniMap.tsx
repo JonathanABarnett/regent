@@ -117,6 +117,46 @@ export function MiniMap({
         ctx.fillStyle = "#f472b6";
         ctx.fillRect(p.pos.x * sx, p.pos.y * sy, 2, 2);
       }
+      // Trade route lines — for partners we've traded with in the last 30 days,
+      // draw a thin line from the castle to a directional label at the map edge.
+      const trade = world.tradeCaravans.snapshot();
+      const partnerGoodwill = trade.partnerGoodwill ?? {};
+      const recentPartners = Object.entries(partnerGoodwill)
+        .filter(([, n]) => n > 0)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6); // cap visible routes to avoid clutter
+      if (recentPartners.length > 0) {
+        const castle = world.map.structures.find((s) => s.kind === "castle");
+        if (castle) {
+          const cx = (castle.pos.x + castle.size.x / 2) * sx;
+          const cy = (castle.pos.y + castle.size.y / 2) * sy;
+          ctx.font = "8px sans-serif";
+          ctx.textBaseline = "middle";
+          recentPartners.forEach(([partner], i) => {
+            // Position around the rim — angle by hash of partner name.
+            let hash = 0;
+            for (const c of partner) hash = (hash * 31 + c.charCodeAt(0)) | 0;
+            const angle = ((hash >>> 0) % 360) * (Math.PI / 180);
+            const ex = canvas.width / 2 + Math.cos(angle) * canvas.width * 0.55;
+            const ey = canvas.height / 2 + Math.sin(angle) * canvas.height * 0.55;
+            // Faded line.
+            ctx.strokeStyle = "rgba(251, 191, 36, 0.35)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(ex, ey);
+            ctx.stroke();
+            // Small label at the rim.
+            ctx.fillStyle = "rgba(253, 230, 138, 0.7)";
+            ctx.textAlign = ex < canvas.width / 2 ? "left" : "right";
+            const short = partner.replace(/^the /i, "");
+            ctx.fillText(short.slice(0, 18), ex, ey);
+            void i;
+          });
+          ctx.textAlign = "center";
+        }
+      }
+
       // Region labels — small text at saved positions, only if the tile is explored.
       ctx.font = "9px sans-serif";
       ctx.textBaseline = "middle";

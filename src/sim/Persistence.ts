@@ -247,6 +247,8 @@ export interface SaveData {
   sagas?: { planted: Record<string, number>; firedPayoffs: string[] };
   /** In-world holidays fired per year. */
   inWorldHolidays?: { firedKeys: string[] };
+  /** Kingdom mood score (-10..+10). */
+  mood?: { score: number };
   /** Death anniversary tracking — records of notable losses. */
   remembrance?: {
     records: Array<{ name: string; day: number; year: number }>;
@@ -397,6 +399,12 @@ export interface SavedJournalEntry {
    * gracefully omits the pin button when undefined.
    */
   targetStructureId?: string;
+  /**
+   * Optional player-written note attached to this entry. Surfaces in the
+   * journal UI as a small italic line beneath the entry, and is included
+   * in the markdown export.
+   */
+  note?: string;
 }
 
 export interface SavedNpc {
@@ -509,6 +517,7 @@ export function serialize(
     cult: world.cult.snapshot(),
     remembrance: world.remembrance.snapshot(),
     inWorldHolidays: world.inWorldHolidays.snapshot(),
+    mood: world.mood.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
@@ -662,6 +671,10 @@ export function validateSave(rawInput: unknown): SaveData | null {
           item.targetStructureId === undefined
             ? undefined
             : safeString(item.targetStructureId, 64) || undefined,
+        note:
+          item.note === undefined
+            ? undefined
+            : safeString(item.note, 240) || undefined,
       });
     }
   }
@@ -797,6 +810,9 @@ export function validateSave(rawInput: unknown): SaveData | null {
           lastEventDay: safeInt((raw.refugees as Record<string, unknown>).lastEventDay, -30, -1000, 1_000_000),
           totalAccepted: safeInt((raw.refugees as Record<string, unknown>).totalAccepted, 0, 0, 100_000),
         }
+      : undefined,
+    mood: isPlainObject(raw.mood)
+      ? { score: Math.max(-10, Math.min(10, safeNumber((raw.mood as Record<string, unknown>).score, 0))) }
       : undefined,
     inWorldHolidays: isPlainObject(raw.inWorldHolidays) && Array.isArray((raw.inWorldHolidays as Record<string, unknown>).firedKeys)
       ? {
@@ -1390,6 +1406,9 @@ export function applySave(world: World, save: SaveData): void {
   }
   if (save.inWorldHolidays) {
     world.inWorldHolidays.restore(save.inWorldHolidays);
+  }
+  if (save.mood) {
+    world.mood.restore(save.mood);
   }
   // Restore succession state if present.
   if (save.succession) {

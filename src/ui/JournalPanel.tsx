@@ -63,6 +63,7 @@ export function JournalPanel({
 }) {
   const journal = useGameStore((s) => s.journal);
   const clearJournal = useGameStore((s) => s.clearJournal);
+  const setJournalNote = useGameStore((s) => s.setJournalNote);
   const settings = useGameStore((s) => s.settings);
   const identity = useGameStore((s) => s.identity);
   const npcNames = useGameStore((s) => s.worldStats.npcNames);
@@ -186,6 +187,11 @@ export function JournalPanel({
                     <span className="entry-icon" aria-hidden="true">{kindIcon[e.kind]}</span>
                     <span className="entry-text">
                       {linkifyNpcNames(e.text, npcNames, onSelectNpc)}
+                      {e.note && (
+                        <span className="entry-note-line" title="Your note">
+                          {" "}— <em>{e.note}</em>
+                        </span>
+                      )}
                     </span>
                     {e.targetStructureId && onNavigateToStructure && (
                       <button
@@ -204,11 +210,23 @@ export function JournalPanel({
                       title="Copy this entry to clipboard"
                       aria-label="Copy journal entry to clipboard"
                       onClick={() => {
-                        const text = `${identity?.kingdomName ?? "Kingdom"} · Day ${e.day}, Y${e.year} (${e.season})\n\n${e.text}`;
+                        const text = `${identity?.kingdomName ?? "Kingdom"} · Day ${e.day}, Y${e.year} (${e.season})${e.note ? ` (note: ${e.note})` : ""}\n\n${e.text}`;
                         navigator.clipboard?.writeText(text).catch(() => {});
                       }}
                     >
                       📋
+                    </button>
+                    <button
+                      type="button"
+                      className="entry-note"
+                      title={e.note ? "Edit your note" : "Add a personal note"}
+                      aria-label={e.note ? "Edit your note" : "Add a personal note"}
+                      onClick={() => {
+                        const next = window.prompt("Your note on this entry:", e.note ?? "");
+                        if (next !== null) setJournalNote(e.id, next);
+                      }}
+                    >
+                      ✎
                     </button>
                   </li>
                 ))}

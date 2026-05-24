@@ -21,12 +21,14 @@ export function HUD({
   onToggleJournal,
   onToggleStats,
   onToggleFamilyTree,
+  onToggleDiplomacy,
 }: {
   onToggleLog: () => void;
   onToggleSettings: () => void;
   onToggleJournal: () => void;
   onToggleStats: () => void;
   onToggleFamilyTree?: () => void;
+  onToggleDiplomacy?: () => void;
 }) {
   const stats = useGameStore((s) => s.worldStats);
   const identity = useGameStore((s) => s.identity);
@@ -57,9 +59,17 @@ export function HUD({
           {stats.quoteOfDay}
         </div>
       )}
+      {stats.moodLabel && (
+        <div className={`hud-mood mood-${stats.moodTier ?? "content"}`} title="Kingdom mood">
+          {stats.moodLabel}
+        </div>
+      )}
       <div className="hud-right">
         {onToggleFamilyTree && (
           <button onClick={onToggleFamilyTree} title="Family tree of the kingdom">Family</button>
+        )}
+        {onToggleDiplomacy && (
+          <button onClick={onToggleDiplomacy} title="Diplomatic relations with off-map kingdoms">Diplomacy</button>
         )}
         <button onClick={onToggleStats} title="Kingdom stats">Stats</button>
         <button onClick={onToggleJournal} className={unseenJournal > 0 ? "has-badge" : ""}>
