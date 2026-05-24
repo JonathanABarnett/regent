@@ -165,6 +165,10 @@ export interface SaveData {
     cameOfAgeIds: string[];
     retiredIds: string[];
     bondKeys: string[];
+    /** NPC id pairs in a rivalry (added later — optional). */
+    rivalryKeys?: string[];
+    /** NPC id pairs in mentor/apprentice relationship (added later — optional). */
+    mentorshipKeys?: string[];
     lastCheckedDay: number;
   };
   /** Usurper system snapshot (optional — absent in pre-usurper saves). */
