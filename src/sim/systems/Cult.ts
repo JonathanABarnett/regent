@@ -12,10 +12,16 @@ import type { Journal } from "./Journal";
  *
  * After resolution, returns to DORMANT for a long cooldown.
  *
- * Triggers: year 5+, 60-day cooldown after a resolution.
+ * Triggers: year 2+, 60-day cooldown after a resolution.
+ *
+ * (Was year 5 originally — but at the standard 48-min/day pace,
+ * year 5 = ~4 real hours, and a refund-window player would never
+ * see this arc trigger. Lowered to year 2 so an enthusiastic
+ * 30-minute play session at 2-3× speed actually gets to see the
+ * Cult arc fire and demonstrate the consequence chain pattern.)
  */
 
-const MIN_YEAR = 5;
+const MIN_YEAR = 2;
 const COOLDOWN_DAYS = 60;
 const BASE_CHANCE_PER_DAY = 0.005;
 const RUMOUR_INTERVAL_DAYS = 6;

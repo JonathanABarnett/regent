@@ -3010,6 +3010,105 @@ html, body, #root, .app-root {
   50%      { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
 }
 
+/* ── Founding Moment toast ───────────────────────────────────────────────────
+   One-time orientation toast that fades in ~5s after founding,
+   pointing the player at the journal so they know the chronicle is
+   already filling itself. Top-center so it reads without scanning;
+   subtle enough that an ambient player can ignore it. */
+.founding-moment {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  width: min(440px, calc(100vw - 32px));
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0) 32%, rgba(0,0,0,0.18) 100%),
+    var(--panel-bg);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 18px 44px rgba(0, 0, 0, 0.45),
+    0 0 28px rgba(251, 191, 36, 0.18);
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  row-gap: 10px;
+  color: var(--panel-fg);
+  font-size: 13px;
+  animation: founding-fade-in 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.founding-moment.dismissing {
+  animation: founding-fade-out 360ms ease-out forwards;
+}
+.founding-moment-crest {
+  grid-row: 1 / span 2;
+  font-size: 22px;
+  color: var(--accent);
+  line-height: 1;
+  text-align: center;
+  align-self: center;
+}
+.founding-moment-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.founding-moment-text strong {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.55);
+}
+.founding-moment-text span {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--panel-fg);
+}
+.founding-moment-actions {
+  grid-column: 2;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.founding-moment-actions button {
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 1px solid var(--hud-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--panel-fg);
+}
+.founding-moment-actions button.primary {
+  background: linear-gradient(180deg, var(--accent), #d97706);
+  color: #1a1410;
+  border-color: rgba(251, 191, 36, 0.7);
+  font-weight: bold;
+  box-shadow: 0 2px 6px rgba(251, 191, 36, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.founding-moment-actions button.primary:hover {
+  background: linear-gradient(180deg, #fcd34d, var(--accent));
+}
+.founding-moment-actions button.ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+@keyframes founding-fade-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes founding-fade-out {
+  from { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to   { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+}
+
 /* ── FF6 windowbox chrome ────────────────────────────────────────────────────
    Shared "lit-from-above + double-framed" treatment so every floating
    panel reads as a Final Fantasy VI dialogue window — outer dark ring,

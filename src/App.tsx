@@ -11,6 +11,7 @@ import { PhotoMode } from "./ui/PhotoMode";
 import { UpdateToast } from "./ui/UpdateToast";
 import { UiSound } from "./ui/UiSound";
 import { VideoCapture } from "./ui/VideoCapture";
+import { FoundingMoment } from "./ui/FoundingMoment";
 import { KingdomCard } from "./ui/KingdomCard";
 import { JournalPanel } from "./ui/JournalPanel";
 import { AchievementToast } from "./ui/AchievementToast";
@@ -1435,6 +1436,19 @@ export function App() {
           launch material; hidden in streamer mode + pre-kingdom flow. */}
       {!preKingdomFlow && (
         <VideoCapture getCanvas={() => containerRef.current?.querySelector("canvas") ?? null} />
+      )}
+      {/* One-time orientation toast 5s after founding. Self-dismisses
+          and persists "seen" per kingdom in localStorage so a returning
+          player doesn't see it again. Only meaningful pre-streamer-mode. */}
+      {!preKingdomFlow && !streamerMode && (
+        <FoundingMoment
+          onOpenJournal={() => {
+            setJournalOpen((b) => {
+              if (!b) useGameStore.getState().markSeenJournal();
+              return true;
+            });
+          }}
+        />
       )}
     </div>
   );
