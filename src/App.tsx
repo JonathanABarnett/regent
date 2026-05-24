@@ -10,6 +10,7 @@ import { SettingsPanel } from "./ui/SettingsPanel";
 import { PhotoMode } from "./ui/PhotoMode";
 import { UpdateToast } from "./ui/UpdateToast";
 import { UiSound } from "./ui/UiSound";
+import { VideoCapture } from "./ui/VideoCapture";
 import { KingdomCard } from "./ui/KingdomCard";
 import { JournalPanel } from "./ui/JournalPanel";
 import { AchievementToast } from "./ui/AchievementToast";
@@ -1412,6 +1413,10 @@ export function App() {
           live volume from the store, so muting in Settings disables
           UI sound too. */}
       <UiSound getAudio={() => audioRef.current} />
+      {/* Bottom-right floating recorder. Captures live Pixi canvas
+          via MediaRecorder → downloads .webm. Used for itch.io / social
+          launch material; hidden in streamer mode. */}
+      <VideoCapture getCanvas={() => containerRef.current?.querySelector("canvas") ?? null} />
     </div>
   );
 }
