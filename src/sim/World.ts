@@ -79,6 +79,8 @@ import { InWorldHolidays } from "./systems/InWorldHolidays";
 import type { InWorldHolidaysSnapshot } from "./systems/InWorldHolidays";
 import { Mood } from "./systems/Mood";
 import type { MoodSnapshot } from "./systems/Mood";
+import { Consequences } from "./systems/Consequences";
+import type { ConsequencesSnapshot } from "./systems/Consequences";
 import { proposeNameAStar } from "./systems/NameAStar";
 import { shortBubbleLine } from "./systems/Quotes";
 import type { SavedJournalEntry } from "./Persistence";
@@ -274,6 +276,7 @@ export class World {
   readonly remembrance: Remembrance;
   readonly inWorldHolidays: InWorldHolidays;
   readonly mood: Mood;
+  readonly consequences: Consequences;
   /** Accumulator for NPC speech-bubble cadence. */
   private _bubbleAcc = 0;
   /** Callbacks invoked when the Journal writes a new entry. */
@@ -395,6 +398,7 @@ export class World {
     this.remembrance = new Remembrance(this, this.journal, this.rand);
     this.inWorldHolidays = new InWorldHolidays(this, this.journal, this.rand);
     this.mood = new Mood(this);
+    this.consequences = new Consequences(this, this.journal, this.rand);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -534,6 +538,11 @@ export class World {
       this.returningBloodline.tick();
       // Sagas — multi-generation quest arcs that span years.
       this.sagas.tick();
+      // Scheduled consequences — fire deferred effects from past
+      // decisions. Runs BEFORE cult/quest ticks so a consequence that
+      // proposes a follow-on decision blocks competitors from also
+      // claiming the (single-slot) decision queue this tick.
+      this.consequences.tickDay();
       // Cult subplot — quiet religious schism with rumours and a decision.
       this.cult.tick();
       // Death anniversaries — fire quiet remembrance entries for past losses.

@@ -1,6 +1,7 @@
 import type { World } from "./World";
 import type { NPC, Structure, WorldState } from "./types";
 import { sanitizeName } from "../lib/sanitize";
+import type { ConsequencesSnapshot } from "./systems/Consequences";
 
 /**
  * Save/load schema. Versioned so we can migrate when the data model changes
@@ -261,6 +262,18 @@ export interface SaveData {
     lastRumourDay: number;
     lastResolvedDay: number;
   };
+  /** Scheduled consequences — deferred effects from past decisions.
+   *  Each entry's `kind` is dispatched at fire time via Consequences._fire. */
+  consequences?: {
+    pending: Array<{
+      id: string;
+      kind: string;
+      fireDay: number;
+      data?: Record<string, string | number | boolean>;
+      sourceId?: string;
+    }>;
+    idCounter: number;
+  };
   /** Returning bloodline claimant tracking. */
   bloodline?: {
     lastFiredYear: number;
@@ -515,6 +528,7 @@ export function serialize(
       .filter((s) => s.kind === "grave")
       .map((s) => ({ id: s.id, name: s.name, pos: { ...s.pos } })),
     cult: world.cult.snapshot(),
+    consequences: world.consequences.snapshot(),
     remembrance: world.remembrance.snapshot(),
     inWorldHolidays: world.inWorldHolidays.snapshot(),
     mood: world.mood.snapshot(),
@@ -853,6 +867,51 @@ export function validateSave(rawInput: unknown): SaveData | null {
             rumoursFired: safeInt(c.rumoursFired, 0, 0, 100),
             lastRumourDay: safeInt(c.lastRumourDay, 0, 0, 1_000_000),
             lastResolvedDay: safeInt(c.lastResolvedDay, -60, -10_000, 1_000_000),
+          };
+        })()
+      : undefined,
+    consequences: isPlainObject(raw.consequences)
+      ? (() => {
+          const c = raw.consequences as Record<string, unknown>;
+          const validKinds = new Set([
+            "cult_suppress_echo",
+            "cult_tolerate_growth",
+            "cult_tolerate_decision",
+            "cult_investigate_report",
+          ]);
+          const rawPending = Array.isArray(c.pending) ? (c.pending as unknown[]) : [];
+          const pending = rawPending
+            .filter(isPlainObject)
+            .slice(0, 200)
+            .map((p, i) => {
+              const kind = typeof p.kind === "string" && validKinds.has(p.kind)
+                ? (p.kind as string)
+                : null;
+              if (!kind) return null;
+              // Sanitize data bag — only primitives allowed, cap key count.
+              let data: Record<string, string | number | boolean> | undefined;
+              if (isPlainObject(p.data)) {
+                data = {};
+                let n = 0;
+                for (const [k, v] of Object.entries(p.data)) {
+                  if (n++ >= 20) break;
+                  if (typeof v === "string") data[safeString(k, 40)] = safeString(v, 200);
+                  else if (typeof v === "number" && Number.isFinite(v)) data[safeString(k, 40)] = v;
+                  else if (typeof v === "boolean") data[safeString(k, 40)] = v;
+                }
+              }
+              return {
+                id: safeString(p.id, 80) || `csq_${i}`,
+                kind,
+                fireDay: safeInt(p.fireDay, 0, 0, 10_000_000),
+                data,
+                sourceId: typeof p.sourceId === "string" ? safeString(p.sourceId, 80) : undefined,
+              };
+            })
+            .filter((p): p is NonNullable<typeof p> => p !== null);
+          return {
+            pending,
+            idCounter: safeInt(c.idCounter, 0, 0, 10_000_000),
           };
         })()
       : undefined,
@@ -1409,6 +1468,12 @@ export function applySave(world: World, save: SaveData): void {
   }
   if (save.mood) {
     world.mood.restore(save.mood);
+  }
+  if (save.consequences) {
+    // Cast: validateSave's union of `kind: string` is a superset of
+    // ConsequenceKind. Runtime guards above filtered to known kinds, so
+    // the cast is safe — but TS needs the assertion.
+    world.consequences.restore(save.consequences as ConsequencesSnapshot);
   }
   // Restore succession state if present.
   if (save.succession) {

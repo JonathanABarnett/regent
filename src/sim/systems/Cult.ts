@@ -107,33 +107,81 @@ export class Cult {
         {
           id: "tolerate",
           label: "Tolerate the group",
-          hint: "scholars -1",
+          hint: "scholars -1 · the group will grow",
           onChoose: (w) => {
             w.factions.adjust("scholars", -1);
             const line = TOLERATE_LINES[Math.floor(this.rand() * TOLERATE_LINES.length)];
             this.journal.write(line, "milestone");
+            // Downstream chain: the kingdom is going to feel this for
+            // months. Two growth echoes, then a forced follow-on
+            // decision at +90 days.
+            const toleratedDay = w.state.day;
+            w.consequences.schedule({
+              kind: "cult_tolerate_growth",
+              fireInDays: 30,
+              data: { toleratedDay },
+              sourceId: `cult_${w.state.day}`,
+            });
+            w.consequences.schedule({
+              kind: "cult_tolerate_growth",
+              fireInDays: 60,
+              data: { toleratedDay },
+              sourceId: `cult_${w.state.day}`,
+            });
+            w.consequences.schedule({
+              kind: "cult_tolerate_decision",
+              fireInDays: 90,
+              data: { toleratedDay },
+              sourceId: `cult_${w.state.day}`,
+            });
             this._resolved();
           },
         },
         {
           id: "investigate",
           label: "Investigate (10 gold)",
-          hint: "-10g · names revealed",
+          hint: "-10g · the chancellor reports back over weeks",
           onChoose: (w) => {
             if (w.economy.state.gold >= 10) w.economy.state.gold -= 10;
             const line = INVESTIGATE_LINES[Math.floor(this.rand() * INVESTIGATE_LINES.length)];
             this.journal.write(line, "milestone");
+            // Downstream: investigation produces reports for the crown
+            // over the next month. No decision required, but the player
+            // sees the work happening.
+            w.consequences.schedule({
+              kind: "cult_investigate_report",
+              fireInDays: 14,
+              sourceId: `cult_${w.state.day}`,
+            });
+            w.consequences.schedule({
+              kind: "cult_investigate_report",
+              fireInDays: 30,
+              sourceId: `cult_${w.state.day}`,
+            });
             this._resolved();
           },
         },
         {
           id: "suppress",
           label: "Suppress them",
-          hint: "rep -5 · the group vanishes",
+          hint: "rep -5 · the kingdom remembers",
           onChoose: (w) => {
             w.reputation.adjust(-5);
             const line = SUPPRESS_LINES[Math.floor(this.rand() * SUPPRESS_LINES.length)];
             this.journal.write(line, "milestone");
+            // Downstream: the shrine stands locked. Two quiet echoes
+            // over the next month so the choice isn't forgotten the
+            // moment it's made.
+            w.consequences.schedule({
+              kind: "cult_suppress_echo",
+              fireInDays: 14,
+              sourceId: `cult_${w.state.day}`,
+            });
+            w.consequences.schedule({
+              kind: "cult_suppress_echo",
+              fireInDays: 30,
+              sourceId: `cult_${w.state.day}`,
+            });
             this._resolved();
           },
         },
