@@ -3358,6 +3358,123 @@ html, body, #root, .app-root {
 }
 .help-feedback-link:hover { color: #fcd34d; }
 
+/* ── Feedback moment toast ───────────────────────────────────────────────────
+   Bottom-right unobtrusive prompt at 10-min mark or year-1 rollover.
+   Different position from VideoCapture (bottom-left) and UpdateToast
+   (bottom-right but smaller) so they don't stack. Sized to be glanceable
+   but dismissible — never demands attention, never blocks input. */
+.feedback-moment {
+  position: fixed;
+  right: 16px;
+  bottom: 80px; /* clears UpdateToast if both visible */
+  z-index: 92;
+  width: min(320px, calc(100vw - 32px));
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0) 32%, rgba(0,0,0,0.18) 100%),
+    var(--panel-bg);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 14px 36px rgba(0, 0, 0, 0.45),
+    0 0 18px rgba(251, 191, 36, 0.12);
+  padding: 12px 14px 14px;
+  color: var(--panel-fg);
+  font-size: 12px;
+  animation: feedback-moment-in 400ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.feedback-moment.dismissing {
+  animation: feedback-moment-out 260ms ease-out forwards;
+}
+.feedback-moment-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.feedback-moment-head strong {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.55);
+}
+.feedback-moment-close {
+  background: none;
+  border: none;
+  color: var(--panel-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.feedback-moment-close:hover { color: var(--accent); }
+.feedback-moment-body {
+  margin: 4px 0 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--panel-fg);
+}
+.feedback-moment-reactions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.feedback-moment-reaction {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hud-border);
+  border-radius: var(--radius-md);
+  color: var(--panel-fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  transition: border-color var(--motion-fast), background-color var(--motion-fast), transform var(--motion-fast);
+}
+.feedback-moment-reaction:hover {
+  border-color: var(--accent);
+  background: rgba(251, 191, 36, 0.08);
+  transform: translateY(-1px);
+}
+.feedback-moment-emoji { font-size: 18px; line-height: 1; }
+.feedback-moment-label {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--panel-muted);
+}
+.feedback-moment-reaction:hover .feedback-moment-label { color: var(--accent); }
+.feedback-moment-more {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 4px 0 0;
+  text-align: right;
+  width: 100%;
+  text-decoration: underline;
+}
+.feedback-moment-more:hover { color: #fcd34d; }
+
+@keyframes feedback-moment-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes feedback-moment-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(12px); }
+}
+
 /* ── FF6 windowbox chrome ────────────────────────────────────────────────────
    Shared "lit-from-above + double-framed" treatment so every floating
    panel reads as a Final Fantasy VI dialogue window — outer dark ring,

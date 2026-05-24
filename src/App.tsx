@@ -13,6 +13,7 @@ import { UiSound } from "./ui/UiSound";
 import { VideoCapture } from "./ui/VideoCapture";
 import { FoundingMoment } from "./ui/FoundingMoment";
 import { FeedbackPanel } from "./ui/FeedbackPanel";
+import { FeedbackMoments } from "./ui/FeedbackMoments";
 import { KingdomCard } from "./ui/KingdomCard";
 import { JournalPanel } from "./ui/JournalPanel";
 import { AchievementToast } from "./ui/AchievementToast";
@@ -1136,6 +1137,11 @@ export function App() {
         onClose={() => setFeedbackOpen(false)}
         getWorld={() => worldRef.current}
       />
+      {/* Opportunistic feedback prompts at 10-min session mark + first
+          year-1 rollover. Hidden in streamer mode and pre-kingdom. */}
+      {!preKingdomFlow && !streamerMode && (
+        <FeedbackMoments getOpenFeedback={() => setFeedbackOpen(true)} />
+      )}
       <KingdomCard
         world={worldRef.current}
         open={kingdomCardOpen && !streamerMode}
