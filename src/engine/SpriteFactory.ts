@@ -109,6 +109,7 @@ export class SpriteFactory {
     this.structures.set("wellspring", (await this.loadStructure("wellspring")) ?? this.buildWellspring());
     this.structures.set("obelisk", (await this.loadStructure("obelisk")) ?? this.buildObelisk());
     this.structures.set("astronomers_tower", (await this.loadStructure("astronomers_tower")) ?? this.buildAstronomersTower());
+    this.structures.set("grave", (await this.loadStructure("grave")) ?? this.buildGrave());
 
     const roles = ["villager", "courier", "scholar", "blacksmith", "miner", "guard"];
     for (const r of roles) {
@@ -1860,6 +1861,36 @@ export class SpriteFactory {
     // Pyramidion at top
     g.rect(W / 2 - 2, H - 36, 4, 2).fill(stoneLight);
     g.rect(W / 2 - 1, H - 38, 2, 2).fill(accent);
+    return this.rt(g, W, H);
+  }
+
+  /**
+   * Tiny grave headstone — a low rounded slab with a darker shadow,
+   * 1×1 tile footprint. Quiet so a graveyard of dozens doesn't dominate
+   * the map.
+   */
+  private buildGrave(): Texture {
+    const W = 32, H = 32;
+    const g = new Graphics();
+    g.rect(0, 0, W, H).fill({ alpha: 0 });
+    const stone = "#71717a";
+    const stoneLight = "#a1a1aa";
+    const stoneDark = "#3f3f46";
+    const grass = "#365314";
+    // Mound base.
+    g.rect(W / 2 - 8, H - 10, 16, 3).fill(grass);
+    g.rect(W / 2 - 8, H - 10, 16, 1).fill("#4d7c0f");
+    // Headstone body — small rounded slab.
+    g.rect(W / 2 - 5, H - 22, 10, 13).fill(stone);
+    g.rect(W / 2 - 5, H - 22, 10, 1).fill(stoneLight);
+    g.rect(W / 2 - 5, H - 22, 1, 13).fill(stoneLight);
+    g.rect(W / 2 + 4, H - 22, 1, 13).fill(stoneDark);
+    // Rounded top — cut corners.
+    g.rect(W / 2 - 5, H - 22, 1, 1).fill({ alpha: 0 });
+    g.rect(W / 2 + 4, H - 22, 1, 1).fill({ alpha: 0 });
+    // Faint cross-mark on the face.
+    g.rect(W / 2 - 1, H - 19, 2, 5).fill(stoneDark);
+    g.rect(W / 2 - 2, H - 17, 4, 1).fill(stoneDark);
     return this.rt(g, W, H);
   }
 

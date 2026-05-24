@@ -1,6 +1,7 @@
 import type { World } from "../World";
 import type { Journal } from "./Journal";
 import { makeEvent } from "../events/EventSchema";
+import { plantGrave } from "./Graves";
 
 /**
  * Disasters system — periodic catastrophes that touch the kingdom in a way
@@ -224,6 +225,12 @@ export class Disasters {
       }
     }
     this.journal.write(line, "life", npc.homeId);
+
+    // Plant a grave for the plague victim and record for remembrance.
+    if (npc.name) {
+      plantGrave(this.world, npc.name);
+      this.world.remembrance.record(npc.name, this.world.state.day, this.world.state.year);
+    }
   }
 
   private _endPlague(): void {

@@ -138,4 +138,86 @@ export function writeMonarchLegacy(
     "scroll",
     `the reign of ${oldName} — year ${reignStartYear} to ${world.state.year}`,
   );
+
+  // For natural successions, also generate a personal letter from the
+  // departing monarch to whoever takes the throne next. Intimate prose,
+  // not chronicler's summary.
+  if (context === "natural") {
+    writeMonarchLetter(world, oldName, reignDays, repDesc);
+  }
+}
+
+// ── Personal letter prose ─────────────────────────────────────────────────────
+
+const LETTER_OPENINGS: readonly string[] = [
+  "To whoever takes this seat after me — ",
+  "If you are reading this you are the new monarch. I was the old one. A few notes:",
+  "I had hoped to say this in person. Failing that — ",
+  "The chronicler will tell you the official version. Here is the unofficial one.",
+];
+
+const LETTER_BODIES_BY_REP: Record<string, readonly string[]> = {
+  beloved: [
+    "The kingdom was kind to me. I tried to be kind back. It is a fair exchange.",
+    "I ruled for {seasons}. None of it was hard, but none of it was easy. Both of those statements are true.",
+    "Be generous. Generosity costs less than people say and earns more than gold.",
+  ],
+  "well-regarded": [
+    "I made fewer enemies than I expected and more friends than I deserved. Try to do the same.",
+    "I ruled {seasons}. The kingdom is roughly where I found it, plus or minus the names on the wall.",
+    "Trust the chancellor. Most of the time. Not always. You will learn the difference.",
+  ],
+  steady: [
+    "Most days the work is small. The small days are the ones that matter.",
+    "I ruled {seasons}. I made decisions. Some were correct. The rest are buried with me.",
+    "Listen more than you speak. The throne projects your voice further than you think.",
+  ],
+  austere: [
+    "I was a hard ruler. The kingdom needed it then. Read the chronicle and decide for yourself if it needs the same from you.",
+    "I ruled {seasons}. Few mourned. None starved. I take both as victories.",
+    "Discipline is a tool. Do not let it become an identity. I forgot this once. Do not.",
+  ],
+  feared: [
+    "They will tell you I was harsh. Some of it I will not deny.",
+    "I ruled {seasons}. The kingdom endured. I did not require it to be more than that.",
+    "If you wish to be loved instead of feared — start now. The first season is the only easy one.",
+  ],
+};
+
+const LETTER_CLOSINGS: readonly string[] = [
+  "The crown is heavier than they let on. Set it down sometimes.",
+  "Good luck. You will not need as much as you think.",
+  "Take care of the kingdom. Take care of yourself. The order matters.",
+  "I will not haunt the keep. You have it to yourself now.",
+];
+
+/**
+ * Compose a personal letter from the departing monarch and place it in
+ * the vault as a distinct artifact. The full letter text lives in the
+ * artifact's `origin` field so the vault tooltip shows it.
+ */
+function writeMonarchLetter(
+  world: World,
+  oldName: string,
+  reignDays: number,
+  repDesc: string,
+): void {
+  const seed = (reignDays * 17 + Math.floor(reignDays / 56)) | 0;
+  const opening = pick(LETTER_OPENINGS, seed);
+  const bodyPool = LETTER_BODIES_BY_REP[repDesc] ?? LETTER_BODIES_BY_REP.steady;
+  const body = pick(bodyPool, seed + 1).replace("{seasons}", seasonsLabel(reignDays));
+  const closing = pick(LETTER_CLOSINGS, seed + 2);
+  const letterText = `${opening} ${body} ${closing} — ${oldName}.`;
+
+  // Letter goes into the vault with the full text in the origin so it
+  // surfaces in tooltips/the VaultPanel. Name is identifying.
+  world.treasury.acquire(
+    "scroll",
+    letterText,
+  );
+  // Also write a brief journal entry pointing to the letter.
+  world.journal.write(
+    `A sealed letter was found on the late monarch's desk, addressed to whoever would take the throne next. It was placed unopened in the royal vault, where it now waits.`,
+    "milestone",
+  );
 }

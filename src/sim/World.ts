@@ -73,6 +73,8 @@ import { Sagas } from "./systems/Sagas";
 import type { SagasSnapshot } from "./systems/Sagas";
 import { Cult } from "./systems/Cult";
 import type { CultSnapshot } from "./systems/Cult";
+import { Remembrance } from "./systems/Remembrance";
+import type { RemembranceSnapshot } from "./systems/Remembrance";
 import { proposeNameAStar } from "./systems/NameAStar";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
@@ -264,6 +266,7 @@ export class World {
   readonly returningBloodline: ReturningBloodline;
   readonly sagas: Sagas;
   readonly cult: Cult;
+  readonly remembrance: Remembrance;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -380,6 +383,7 @@ export class World {
     this.returningBloodline = new ReturningBloodline(this, this.journal, this.rand);
     this.sagas = new Sagas(this, this.journal, this.rand);
     this.cult = new Cult(this, this.journal, this.rand);
+    this.remembrance = new Remembrance(this, this.journal, this.rand);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -508,6 +512,8 @@ export class World {
       this.sagas.tick();
       // Cult subplot — quiet religious schism with rumours and a decision.
       this.cult.tick();
+      // Death anniversaries — fire quiet remembrance entries for past losses.
+      this.remembrance.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {

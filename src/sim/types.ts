@@ -49,7 +49,10 @@ export type StructureKind =
   | "ruin"
   | "camp"
   | "wellspring"
-  | "obelisk";
+  | "obelisk"
+  // Memorial grave — placed automatically when a notable named NPC dies.
+  // 1×1 tile, doesn't block paths, accumulates near the castle.
+  | "grave";
 
 export interface Structure {
   id: string;

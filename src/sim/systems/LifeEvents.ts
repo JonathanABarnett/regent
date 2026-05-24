@@ -9,6 +9,7 @@ import {
   WAR_CIVILIAN_DEATH_LINES,
   WAR_GRIEF_ADDENDA,
 } from "./War";
+import { plantGrave } from "./Graves";
 
 /**
  * NPC life events: aging, marriages, births, deaths.
@@ -227,6 +228,11 @@ export class LifeEvents {
       if (partner) partner.partnerId = undefined;
     }
     this.journal.write(this.deathLine(npc), "life", npc.homeId);
+    // Plant a memorial grave for notable named deaths.
+    if (isSignificant && npc.name) {
+      plantGrave(this.world, npc.name);
+      this.world.remembrance.record(npc.name, this.world.state.day, this.world.state.year);
+    }
     // Signal the engine to play a death bell and flash a brief vignette
     // for NPCs who had families or lived a long life in the kingdom.
     if (isSignificant) {
@@ -305,6 +311,12 @@ export class LifeEvents {
 
     // Anchor the entry at the castle (the front line of the kingdom's defence).
     this.journal.write(line, "life", battleStructure?.id);
+
+    // Plant a grave near the castle for the fallen.
+    if (npc.name) {
+      plantGrave(this.world, npc.name);
+      this.world.remembrance.record(npc.name, this.world.state.day, this.world.state.year);
+    }
 
     // Death bell — always ring for war casualties (they died in service).
     this.world.bus.publish(

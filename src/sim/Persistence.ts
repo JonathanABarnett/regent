@@ -241,8 +241,15 @@ export interface SaveData {
   refugees?: { lastEventDay: number; totalAccepted: number };
   /** Expeditions: processed landmark IDs + pending day for in-flight expeditions. */
   expeditions?: { processedLandmarkIds: string[]; pending: Record<string, number> };
+  /** Memorial graves placed when notable named NPCs die. */
+  graves?: Array<{ id: string; name: string; pos: { x: number; y: number } }>;
   /** Sagas — multi-generation quest arcs (planted seeds + fired payoffs). */
   sagas?: { planted: Record<string, number>; firedPayoffs: string[] };
+  /** Death anniversary tracking — records of notable losses. */
+  remembrance?: {
+    records: Array<{ name: string; day: number; year: number }>;
+    firedKeys: string[];
+  };
   /** Cult subplot phase + cooldowns. */
   cult?: {
     phase: "dormant" | "rumouring" | "resolved";
@@ -494,7 +501,11 @@ export function serialize(
     wanderer: world.wanderer.snapshot(),
     bloodline: world.returningBloodline.snapshot(),
     sagas: world.sagas.snapshot(),
+    graves: world.map.structures
+      .filter((s) => s.kind === "grave")
+      .map((s) => ({ id: s.id, name: s.name, pos: { ...s.pos } })),
     cult: world.cult.snapshot(),
+    remembrance: world.remembrance.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
@@ -784,6 +795,26 @@ export function validateSave(rawInput: unknown): SaveData | null {
           totalAccepted: safeInt((raw.refugees as Record<string, unknown>).totalAccepted, 0, 0, 100_000),
         }
       : undefined,
+    remembrance: isPlainObject(raw.remembrance)
+      ? (() => {
+          const r = raw.remembrance as Record<string, unknown>;
+          const records: Array<{ name: string; day: number; year: number }> = [];
+          if (Array.isArray(r.records)) {
+            for (const item of (r.records as unknown[]).slice(0, 200)) {
+              if (!isPlainObject(item)) continue;
+              records.push({
+                name: safeString(item.name, 64) || "",
+                day: safeInt(item.day, 0, 0, 1_000_000),
+                year: safeInt(item.year, 0, 0, 100_000),
+              });
+            }
+          }
+          const firedKeys = Array.isArray(r.firedKeys)
+            ? (r.firedKeys as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 800)
+            : [];
+          return { records, firedKeys };
+        })()
+      : undefined,
     cult: isPlainObject(raw.cult)
       ? (() => {
           const c = raw.cult as Record<string, unknown>;
@@ -798,6 +829,22 @@ export function validateSave(rawInput: unknown): SaveData | null {
             lastResolvedDay: safeInt(c.lastResolvedDay, -60, -10_000, 1_000_000),
           };
         })()
+      : undefined,
+    graves: Array.isArray(raw.graves)
+      ? (raw.graves as unknown[])
+          .filter(isPlainObject)
+          .slice(0, 100)
+          .map((g, i) => {
+            const pos = isPlainObject(g.pos) ? g.pos as Record<string, unknown> : {};
+            return {
+              id: safeString(g.id, 80) || `grave_${i}`,
+              name: safeString(g.name, 80) || "Grave",
+              pos: {
+                x: safeInt(pos.x, 0, 0, 10_000),
+                y: safeInt(pos.y, 0, 0, 10_000),
+              },
+            };
+          })
       : undefined,
     sagas: isPlainObject(raw.sagas)
       ? (() => {
@@ -1312,8 +1359,24 @@ export function applySave(world: World, save: SaveData): void {
   if (save.sagas) {
     world.sagas.restore(save.sagas);
   }
+  if (save.graves) {
+    for (const g of save.graves) {
+      if (world.map.structures.some((s) => s.id === g.id)) continue;
+      world.map.structures.push({
+        id: g.id,
+        kind: "grave",
+        name: g.name,
+        pos: { ...g.pos },
+        size: { x: 1, y: 1 },
+      });
+      world.map.landmarks.set(g.id, { x: g.pos.x, y: g.pos.y });
+    }
+  }
   if (save.cult) {
     world.cult.restore(save.cult);
+  }
+  if (save.remembrance) {
+    world.remembrance.restore(save.remembrance);
   }
   // Restore succession state if present.
   if (save.succession) {
