@@ -123,6 +123,10 @@ export interface GameState {
     moodLabel?: string;
     /** Kingdom mood tier for CSS styling. */
     moodTier?: "celebrating" | "content" | "uneasy" | "anxious";
+    /** Monarch generation — increments on succession (= a monarch died
+     *  and an heir ascended). Watched by FeedbackMoments to fire the
+     *  monarch-death prompt at the peak emotional moment. */
+    generation?: number;
   };
   pushEvent: (e: ExternalEvent) => void;
   clearEvents: () => void;
@@ -246,6 +250,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     seed: 0,
     npcNames: {},
     factions: { merchants: 0, scholars: 0, guard: 0 },
+    generation: 1,
   },
   pushEvent: (e) => {
     set((s) => {

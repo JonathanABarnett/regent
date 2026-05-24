@@ -41,20 +41,27 @@ const STORAGE_KEY = "kingdomos.feedbackMoments.seen.v1";
 interface Seen {
   /** Kingdoms that have completed the year-1 prompt. */
   yearOne: string[];
+  /** Kingdoms that have completed the monarch-death prompt. */
+  monarchDeath: string[];
+}
+
+function arrayOfStrings(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((s): s is string => typeof s === "string").slice(-50)
+    : [];
 }
 
 function loadSeen(): Seen {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { yearOne: [] };
+    if (!raw) return { yearOne: [], monarchDeath: [] };
     const parsed = JSON.parse(raw);
     return {
-      yearOne: Array.isArray(parsed?.yearOne)
-        ? parsed.yearOne.filter((s: unknown): s is string => typeof s === "string").slice(-50)
-        : [],
+      yearOne: arrayOfStrings(parsed?.yearOne),
+      monarchDeath: arrayOfStrings(parsed?.monarchDeath),
     };
   } catch {
-    return { yearOne: [] };
+    return { yearOne: [], monarchDeath: [] };
   }
 }
 
@@ -62,14 +69,15 @@ function saveSeen(s: Seen): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       yearOne: s.yearOne.slice(-50),
+      monarchDeath: s.monarchDeath.slice(-50),
     }));
   } catch {
     /* ignore quota */
   }
 }
 
-type Trigger = "session_10min" | "year_one";
-type QuickReaction = "loving" | "mixed" | "bored" | "joyful" | "stunned" | "sad";
+type Trigger = "session_10min" | "year_one" | "monarch_death";
+type QuickReaction = "loving" | "mixed" | "bored" | "joyful" | "stunned" | "sad" | "moved" | "grim";
 
 /** Per-trigger copy + reaction palette. */
 const TRIGGERS: Record<Trigger, {
@@ -99,6 +107,18 @@ const TRIGGERS: Record<Trigger, {
     ],
     category: "love",
   },
+  monarch_death: {
+    title: "A monarch is dead",
+    body: (k) =>
+      `${k} outlives the one who founded it. The throne passes. Did this moment land for you?`,
+    reactions: [
+      { id: "moved",   emoji: "💔", label: "Moved" },
+      { id: "joyful",  emoji: "👏", label: "Worked" },
+      { id: "mixed",   emoji: "🤔", label: "Mixed" },
+      { id: "grim",    emoji: "😐", label: "Flat" },
+    ],
+    category: "love",
+  },
 };
 
 export function FeedbackMoments({ getOpenFeedback }: { getOpenFeedback: () => void }) {
@@ -111,6 +131,8 @@ export function FeedbackMoments({ getOpenFeedback }: { getOpenFeedback: () => vo
   const [dismissing, setDismissing] = useState(false);
   /** Has any prompt fired this session? Once true, no more prompts. */
   const sessionPromptFired = useRef(false);
+  /** Last seen generation — used to detect the rising edge of succession. */
+  const lastGenerationSeen = useRef<number | null>(null);
 
   // ── Year 1 trigger ───────────────────────────────────────────────────
   // Watches worldStats.year. Fires once per kingdom (persisted) when
@@ -124,6 +146,33 @@ export function FeedbackMoments({ getOpenFeedback }: { getOpenFeedback: () => vo
     // Fire it.
     sessionPromptFired.current = true;
     setActiveTrigger("year_one");
+  }, [kingdomName, streamerMode, worldStats]);
+
+  // ── Monarch death trigger ────────────────────────────────────────────
+  // Fires on the *rising edge* of the generation counter — the moment a
+  // succession completes. Idempotent per-kingdom (uses the same seen
+  // map as year-one, with a separate key). Skips the initial mount
+  // when generation === 1 (founding state, not a death).
+  useEffect(() => {
+    if (!kingdomName || streamerMode || sessionPromptFired.current) return;
+    const gen = worldStats?.generation;
+    if (typeof gen !== "number") return;
+    // First observation of this mount — just record, don't fire.
+    if (lastGenerationSeen.current === null) {
+      lastGenerationSeen.current = gen;
+      return;
+    }
+    if (gen > lastGenerationSeen.current) {
+      lastGenerationSeen.current = gen;
+      const seen = loadSeen();
+      if (seen.monarchDeath?.includes(kingdomName)) return;
+      sessionPromptFired.current = true;
+      // Small delay so the player has a beat to absorb the journal
+      // entries the Succession system just wrote before the prompt
+      // slides in. 4s = enough to read "[Name] has passed" without
+      // letting the moment cool.
+      window.setTimeout(() => setActiveTrigger("monarch_death"), 4000);
+    }
   }, [kingdomName, streamerMode, worldStats]);
 
   // ── 10-minute session trigger ───────────────────────────────────────
@@ -147,13 +196,19 @@ export function FeedbackMoments({ getOpenFeedback }: { getOpenFeedback: () => vo
       setActiveTrigger(null);
       setDismissing(false);
     }, 280);
-    // Year-1 dismissal also marks seen — don't show again on this kingdom.
-    if (activeTrigger === "year_one" && kingdomName) {
+    // Per-kingdom prompts (year-one, monarch-death) record themselves
+    // as "seen" on dismiss so a returning player isn't pestered.
+    if (kingdomName) {
       const seen = loadSeen();
-      if (!seen.yearOne.includes(kingdomName)) {
+      let changed = false;
+      if (activeTrigger === "year_one" && !seen.yearOne.includes(kingdomName)) {
         seen.yearOne.push(kingdomName);
-        saveSeen(seen);
+        changed = true;
+      } else if (activeTrigger === "monarch_death" && !seen.monarchDeath.includes(kingdomName)) {
+        seen.monarchDeath.push(kingdomName);
+        changed = true;
       }
+      if (changed) saveSeen(seen);
     }
   }
 

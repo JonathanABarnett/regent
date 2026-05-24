@@ -461,6 +461,7 @@ export function App() {
         quoteOfDay: quoteOfDay(world),
         moodLabel: world.mood.label(),
         moodTier: world.mood.tier(),
+        generation: world.succession.state.generation,
       });
     }, 500);
 
