@@ -24,6 +24,7 @@ import { RoadLayer } from "./layers/RoadLayer";
 import { DecorLayer } from "./layers/DecorLayer";
 import { NightLightsLayer } from "./layers/NightLightsLayer";
 import { WinterCapLayer } from "./layers/WinterCapLayer";
+import { StructureBannerLayer } from "./layers/StructureBannerLayer";
 
 /** Virtual canvas dimensions for low-res (retro 16-bit) mode. */
 export const RETRO_CANVAS = { w: 480, h: 270 } as const;
@@ -72,6 +73,7 @@ export class PixiApp {
   decorLayer!: DecorLayer;
   nightLightsLayer!: NightLightsLayer;
   winterCapLayer!: WinterCapLayer;
+  structureBannerLayer!: StructureBannerLayer;
   weatherLayer!: WeatherLayer;
   parallax = new ParallaxBackground();
   worldStage = new Container();
@@ -172,6 +174,7 @@ export class PixiApp {
     this.decorLayer = new DecorLayer(this.opts.world.map);
     this.structureLayer = new StructureLayer(this.opts.world.map, this.factory);
     this.winterCapLayer = new WinterCapLayer(this.opts.world.map, this.factory);
+    this.structureBannerLayer = new StructureBannerLayer(this.opts.world.map);
     this.nightLightsLayer = new NightLightsLayer(this.opts.world);
     this.borderLayer = new BorderLayer(this.opts.world);
     this.cutawayLayer = new CutawayLayer(this.opts.world);
@@ -191,6 +194,10 @@ export class PixiApp {
     this.worldStage.addChild(this.edgeLayer.container);
     this.worldStage.addChild(this.borderLayer.container);
     this.worldStage.addChild(this.structureLayer.container);
+    // Banners sit just above the structure sprite so they read as
+    // attached to the building. Winter caps go on top of banners
+    // (snow accumulates on the cloth too).
+    this.worldStage.addChild(this.structureBannerLayer.container);
     // Winter snow caps sit directly above the structure sprite but
     // below the night-light glow — windows still shine through snow,
     // which is correct (it's where the warmth is).
@@ -428,6 +435,10 @@ export class PixiApp {
     // Apply cutaway sprite fade — structure sprites become translucent so
     // the cutaway layer's interior overlay reads as "inside the building."
     this.structureLayer.container.alpha = this.cutawayLayer.enabled ? 0.35 : 1;
+    // Per-structure banners — same fade behavior as the building they're
+    // attached to (banners are part of the exterior).
+    this.structureBannerLayer.container.alpha = this.cutawayLayer.enabled ? 0.25 : 1;
+    this.structureBannerLayer.update();
     // Winter snow caps — auto-build on first winter frame, auto-clear
     // when season changes. Also hidden under cutaway so the interior
     // view isn't obscured by snow.
