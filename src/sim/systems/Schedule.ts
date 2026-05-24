@@ -15,6 +15,23 @@ export function preferredDestination(
   const taverns = map.structures.filter((s) => s.kind === "town");
   const tavernId = taverns[0]?.id ?? npc.homeId;
 
+  // Children (in-sim births under age 12) play between buildings during
+  // day/dusk and return home at dawn/night. They don't follow adult careers.
+  if ((npc.age ?? 99) < 12 && npc.parentIds && npc.parentIds.length > 0) {
+    if (band === "dawn" || band === "night") return npc.homeId;
+    // Day/dusk: pick a random nearby building to wander to.
+    const playOptions = map.structures.filter(
+      (s) =>
+        s.kind === "town" || s.kind === "castle" ||
+        s.kind === "shrine" || s.kind === "mill" ||
+        s.kind === "library",
+    );
+    if (playOptions.length === 0) return npc.homeId;
+    // Use the NPC's seed for deterministic but-varied destination cycling.
+    const idx = ((npc.seed ^ Math.floor(Date.now() / 60_000)) >>> 0) % playOptions.length;
+    return playOptions[idx].id;
+  }
+
   switch (npc.role) {
     case "monarch":
       // monarch stays near the castle, with occasional walks to the town square

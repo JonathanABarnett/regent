@@ -75,7 +75,10 @@ import { Cult } from "./systems/Cult";
 import type { CultSnapshot } from "./systems/Cult";
 import { Remembrance } from "./systems/Remembrance";
 import type { RemembranceSnapshot } from "./systems/Remembrance";
+import { InWorldHolidays } from "./systems/InWorldHolidays";
+import type { InWorldHolidaysSnapshot } from "./systems/InWorldHolidays";
 import { proposeNameAStar } from "./systems/NameAStar";
+import { shortBubbleLine } from "./systems/Quotes";
 import type { SavedJournalEntry } from "./Persistence";
 import { EventBus } from "./events/EventBus";
 import type { ExternalEvent } from "./events/EventSchema";
@@ -267,6 +270,9 @@ export class World {
   readonly sagas: Sagas;
   readonly cult: Cult;
   readonly remembrance: Remembrance;
+  readonly inWorldHolidays: InWorldHolidays;
+  /** Accumulator for NPC speech-bubble cadence. */
+  private _bubbleAcc = 0;
   /** Callbacks invoked when the Journal writes a new entry. */
   onJournal?: (entry: SavedJournalEntry) => void;
 
@@ -384,6 +390,7 @@ export class World {
     this.sagas = new Sagas(this, this.journal, this.rand);
     this.cult = new Cult(this, this.journal, this.rand);
     this.remembrance = new Remembrance(this, this.journal, this.rand);
+    this.inWorldHolidays = new InWorldHolidays(this, this.journal, this.rand);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
@@ -514,6 +521,8 @@ export class World {
       this.cult.tick();
       // Death anniversaries — fire quiet remembrance entries for past losses.
       this.remembrance.tick();
+      // In-world calendar holidays — Founding Day, Midsummer, Harvest, Midwinter.
+      this.inWorldHolidays.tick();
       // Aspirations: check progress, fire journal on completion.
       const completed = this.aspirations.evaluate(this);
       for (const id of completed) {
@@ -567,6 +576,26 @@ export class World {
     this.tickCouriers(dt);
     this.tickEffects(dt);
     this.wildlife.tick(dt);
+    this._tickSpeechBubbles(dt);
+  }
+
+  /**
+   * Periodically give a random NPC a brief trait-flavored speech bubble.
+   * Cadence: roughly one bubble every 8-12 seconds of real time, picking
+   * a random eligible NPC. Bubbles last 3 seconds.
+   */
+  private _tickSpeechBubbles(dt: number): void {
+    this._bubbleAcc += dt;
+    const interval = 8 + this.rand() * 4;
+    if (this._bubbleAcc < interval) return;
+    this._bubbleAcc = 0;
+    const candidates = this.npcs.filter(
+      (n) => n.name && n.role !== "monarch" && !n.speech,
+    );
+    if (candidates.length === 0) return;
+    const npc = candidates[Math.floor(this.rand() * candidates.length)];
+    npc.speech = shortBubbleLine(npc.trait, this.rand);
+    npc.speechUntil = this.state.time + 3;
   }
 
   /**

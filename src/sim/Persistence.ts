@@ -245,6 +245,8 @@ export interface SaveData {
   graves?: Array<{ id: string; name: string; pos: { x: number; y: number } }>;
   /** Sagas — multi-generation quest arcs (planted seeds + fired payoffs). */
   sagas?: { planted: Record<string, number>; firedPayoffs: string[] };
+  /** In-world holidays fired per year. */
+  inWorldHolidays?: { firedKeys: string[] };
   /** Death anniversary tracking — records of notable losses. */
   remembrance?: {
     records: Array<{ name: string; day: number; year: number }>;
@@ -506,6 +508,7 @@ export function serialize(
       .map((s) => ({ id: s.id, name: s.name, pos: { ...s.pos } })),
     cult: world.cult.snapshot(),
     remembrance: world.remembrance.snapshot(),
+    inWorldHolidays: world.inWorldHolidays.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
@@ -793,6 +796,13 @@ export function validateSave(rawInput: unknown): SaveData | null {
       ? {
           lastEventDay: safeInt((raw.refugees as Record<string, unknown>).lastEventDay, -30, -1000, 1_000_000),
           totalAccepted: safeInt((raw.refugees as Record<string, unknown>).totalAccepted, 0, 0, 100_000),
+        }
+      : undefined,
+    inWorldHolidays: isPlainObject(raw.inWorldHolidays) && Array.isArray((raw.inWorldHolidays as Record<string, unknown>).firedKeys)
+      ? {
+          firedKeys: ((raw.inWorldHolidays as Record<string, unknown>).firedKeys as unknown[])
+            .filter((x): x is string => typeof x === "string" && x.length <= 64)
+            .slice(0, 800),
         }
       : undefined,
     remembrance: isPlainObject(raw.remembrance)
@@ -1377,6 +1387,9 @@ export function applySave(world: World, save: SaveData): void {
   }
   if (save.remembrance) {
     world.remembrance.restore(save.remembrance);
+  }
+  if (save.inWorldHolidays) {
+    world.inWorldHolidays.restore(save.inWorldHolidays);
   }
   // Restore succession state if present.
   if (save.succession) {

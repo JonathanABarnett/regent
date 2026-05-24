@@ -66,6 +66,76 @@ const FALLBACK_LINES: readonly string[] = [
   "{name} was in good spirits this morning, by whatever measure they use.",
 ];
 
+/**
+ * Short bubble lines for the world-canvas floating speech. Trait-keyed
+ * one-liners — fewer than a dozen words, no NPC name (the bubble is over
+ * the speaker so identification is implicit).
+ */
+export const SHORT_BUBBLE_LINES: Record<NPCTrait, readonly string[]> = {
+  joyful: [
+    "lovely day!",
+    "ha!",
+    "look at that.",
+    "bread was good.",
+    "good morning!",
+  ],
+  grim: [
+    "could be worse.",
+    "knew it.",
+    "rain coming.",
+    "told you.",
+    "mm.",
+  ],
+  curious: [
+    "huh.",
+    "wait, what?",
+    "interesting...",
+    "how does that work?",
+    "let me see.",
+  ],
+  stoic: [
+    "carry on.",
+    "noted.",
+    "...",
+    "as expected.",
+    "fine.",
+  ],
+  kind: [
+    "after you.",
+    "let me help.",
+    "thank you.",
+    "no trouble.",
+    "are you alright?",
+  ],
+  ambitious: [
+    "I'll handle it.",
+    "watch this.",
+    "give me a year.",
+    "we'll see.",
+    "I have an idea.",
+  ],
+  anxious: [
+    "is that... ok?",
+    "did I lock the gate?",
+    "what was that?",
+    "I should check.",
+    "hm.",
+  ],
+  wise: [
+    "patience.",
+    "it'll keep.",
+    "let it lie.",
+    "and so.",
+    "as it must.",
+  ],
+};
+
+/** Pick a short bubble line for an NPC based on trait + a random seed. */
+export function shortBubbleLine(trait: NPCTrait | undefined, rand: () => number): string {
+  const pool = SHORT_BUBBLE_LINES[trait ?? "stoic"] ?? SHORT_BUBBLE_LINES.stoic;
+  return pool[Math.floor(rand() * pool.length)];
+}
+
 /** Stateless hash so the same (day, seed) returns the same quote. */
 function hashPick(seed: number, day: number, mod: number): number {
   let h = (seed | 0) ^ ((day * 2654435761) | 0);
