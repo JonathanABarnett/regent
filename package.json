@@ -17,7 +17,8 @@
     "hooks:install": "node scripts/install-hooks.mjs",
     "changelog": "node scripts/changelog.mjs",
     "release": "node scripts/release.mjs",
-    "sprites:slice": "node scripts/slice-sheet.mjs"
+    "sprites:slice": "node scripts/slice-sheet.mjs",
+    "assets:check": "node scripts/check-assets.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.1.1",

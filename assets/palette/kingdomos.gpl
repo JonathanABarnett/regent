@@ -1,0 +1,49 @@
+GIMP Palette
+Name: KingdomOS
+Columns: 8
+# Shared palette for KingdomOS pixel art. Load in Aseprite via
+# Edit → Preferences → Palette → Load Palette, then lock the palette
+# (Edit → Preferences → Color → "Restrict to current palette") so
+# every sprite stays in the same colour family.
+#
+# 32 colours, grouped by purpose:
+#   row 1 — terrain greens (plains, forests)
+#   row 2 — terrain browns/golds (hills, dirt)
+#   row 3 — stone & sky (mountains, ocean, snow, ui)
+#   row 4 — warm accents (fire, sunset, brand)
+#
+# These match the values documented in public/sprites/README.md under
+# "Colour palette reference". Update both if you change one.
+#
+ 22  51   0	near_black
+ 64  88  19	deep_forest
+101 163  13	plain_dark
+132 204  22	plain_mid
+163 230  53	plain_bright
+ 22 101  52	forest_dark
+ 21 128  61	forest_mid
+ 34 197  94	forest_bright
+161  98   7	hill_dark
+202 138   4	hill_mid
+234 179   8	hill_gold
+180 120  45	wood_warm
+120  72  30	wood_dark
+245 222 179	wheat_pale
+196 154  72	sand_warm
+ 60  40  20	leather
+120 113 108	stone_dark
+168 162 158	stone_mid
+214 211 209	stone_light
+ 30  58 138	ocean_deep
+ 29  78 216	ocean_mid
+ 37 100 235	ocean_bright
+135 206 235	sky_light
+231 229 228	snow_off
+245 245 244	snow_pure
+255 255 255	pure_white
+237 232 216	parchment_cream
+220  38  38	rose_red
+251 191  36	gold_brand
+253 230 138	gold_light
+146  64  14	rust_dark
+ 26  20  16	panel_bg

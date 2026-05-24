@@ -4,6 +4,15 @@ Drop PNG / JSON files into the matching sub-folders, list them in
 `manifest.json`, and reload. The engine prefers manifest entries over its
 built-in programmatic placeholders — swap assets one category at a time.
 
+> **Working on source files?** The Aseprite `.ase` files and other
+> editable originals live in [`../../assets/sprites/`](../../assets/sprites/) —
+> this `public/sprites/` directory is exported runtime PNGs only.
+> See [`assets/README.md`](../../assets/README.md) for the full source-
+> to-distributable pipeline.
+>
+> Quick audit: `npm run assets:check` — shows which slots are authored
+> vs. still using the procedural fallback.
+
 ---
 
 ## Folder layout
