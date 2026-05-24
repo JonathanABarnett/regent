@@ -226,7 +226,8 @@ docs/
 ├── SCREENSHOTS.md            # in-game capture workflow
 ├── TESTING.md                # adversarial input + edge-case patterns
 ├── V1_ROADMAP.md             # phased path from v0.2 → v1.0 (playtest, hardening, store, launch)
-└── PLAYTEST_RECRUITING.md    # Phase 1 ready-to-post copy + feedback form (Bluesky, Reddit, DM templates)
+├── PLAYTEST_RECRUITING.md    # Phase 1 ready-to-post copy + feedback form (Bluesky, Reddit, DM templates)
+└── MARKETING.md              # 6-month launch playbook + outreach templates + honest financial reality
 
 scripts/
 ├── install-hooks.mjs         # one-time pre-commit hook installer (typecheck + tests)
