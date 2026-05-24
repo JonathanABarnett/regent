@@ -225,7 +225,8 @@ docs/
 ├── ITCH.md                   # itch.io page copy + asset checklist
 ├── SCREENSHOTS.md            # in-game capture workflow
 ├── TESTING.md                # adversarial input + edge-case patterns
-└── V1_ROADMAP.md             # phased path from v0.2 → v1.0 (playtest, hardening, store, launch)
+├── V1_ROADMAP.md             # phased path from v0.2 → v1.0 (playtest, hardening, store, launch)
+└── PLAYTEST_RECRUITING.md    # Phase 1 ready-to-post copy + feedback form (Bluesky, Reddit, DM templates)
 
 scripts/
 ├── install-hooks.mjs         # one-time pre-commit hook installer (typecheck + tests)
