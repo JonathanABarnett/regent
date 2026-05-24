@@ -50,6 +50,21 @@
 
     <!-- PWA manifest -->
     <link rel="manifest" href="./manifest.webmanifest" />
+
+    <!-- Fonts. We were leaning on whatever monospace the OS happened to have
+         when Press Start 2P wasn't installed (rare) — that fallback was the
+         actual source of the "wall of pixels" feel. Loading both fonts
+         explicitly keeps the retro identity but gives us a much more
+         readable body face (VT323) while reserving Press Start 2P for
+         brand moments, headings, and small badges. `display=swap` so we
+         render with the system fallback first and upgrade when the
+         webfont arrives — no flash-of-invisible-text. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap"
+    />
   </head>
   <body>
     <div id="root"></div>

@@ -211,10 +211,16 @@ function persistSettings(s: SettingsState) {
  * Apply accessibility settings to the document on initial mount so the
  * scale + palette take effect before the user touches Settings. Called
  * once during store construction; safe in SSR (no-ops without document).
+ *
+ * Clamps `uiScale` on load too — without this a hand-edited or corrupt
+ * persisted value (e.g. `uiScale: 99`) would be written verbatim to the
+ * CSS var and explode the layout.
  */
 function applyA11ySettings(s: SettingsState) {
   if (typeof document === "undefined") return;
-  document.documentElement.style.setProperty("--ui-scale", String(s.uiScale ?? 1));
+  const raw = Number(s.uiScale ?? 1);
+  const scale = Number.isFinite(raw) ? Math.max(0.7, Math.min(1.5, raw)) : 1;
+  document.documentElement.style.setProperty("--ui-scale", String(scale));
   document.documentElement.classList.toggle("colorblind", Boolean(s.colorblindMode));
 }
 applyA11ySettings(loadSettings());

@@ -1038,15 +1038,22 @@ export function App() {
       {!streamerMode && (
         <HUD
           onToggleLog={() => {
-            const next = !logOpen;
-            setLogOpen(next);
-            if (next) useGameStore.getState().markSeenEvents();
+            // Functional updater so rapid double-clicks within one render
+            // commit can't both compute next=true from the same stale
+            // `logOpen` closure. The shim accepts (prev)=>next.
+            setLogOpen((b) => {
+              const next = !b;
+              if (next) useGameStore.getState().markSeenEvents();
+              return next;
+            });
           }}
           onToggleSettings={() => setSettingsOpen((b) => !b)}
           onToggleJournal={() => {
-            const next = !journalOpen;
-            setJournalOpen(next);
-            if (next) useGameStore.getState().markSeenJournal();
+            setJournalOpen((b) => {
+              const next = !b;
+              if (next) useGameStore.getState().markSeenJournal();
+              return next;
+            });
           }}
           onToggleStats={() => setStatsOpen((b) => !b)}
           onToggleFamilyTree={() => setFamilyTreeOpen((b) => !b)}

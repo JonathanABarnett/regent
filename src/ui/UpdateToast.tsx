@@ -28,7 +28,10 @@ const POLL_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 export function UpdateToast() {
   const [state, setState] = useState<UpdateState>({ kind: "idle" });
-  const [dismissed, setDismissed] = useState(false);
+  /** Version the user explicitly dismissed via "Later". A NEWER
+   *  available version supersedes the dismissal — they need to see
+   *  the next update even if they skipped a previous one. */
+  const [dismissedVersion, setDismissedVersion] = useState<string | null>(null);
 
   useEffect(() => {
     // Skip entirely on the web demo build — no Tauri APIs available.
@@ -95,7 +98,9 @@ export function UpdateToast() {
   }
 
   if (state.kind === "idle") return null;
-  if (dismissed && state.kind === "available") return null;
+  // Stay hidden only if the user dismissed THIS specific version. A
+  // newer version (or the same one re-surfacing after a restart) reopens.
+  if (state.kind === "available" && dismissedVersion === state.version) return null;
 
   return (
     <div className="update-toast" role="status" aria-live="polite">
@@ -111,7 +116,7 @@ export function UpdateToast() {
             </p>
           )}
           <div className="update-toast-actions">
-            <button type="button" className="ghost" onClick={() => setDismissed(true)}>
+            <button type="button" className="ghost" onClick={() => setDismissedVersion(state.version)}>
               Later
             </button>
             <button type="button" className="primary" onClick={install}>

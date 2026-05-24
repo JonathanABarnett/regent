@@ -27,6 +27,14 @@ import { NightLightsLayer } from "./layers/NightLightsLayer";
 /** Virtual canvas dimensions for low-res (retro 16-bit) mode. */
 export const RETRO_CANVAS = { w: 480, h: 270 } as const;
 
+/**
+ * After this many consecutive `world.tick()` failures, stop calling the
+ * sim entirely. A deterministic bug would otherwise crash on every frame
+ * (60/s) and flood the crash log. The render loop keeps running so the
+ * world stays on-screen at its last good frame.
+ */
+const SIM_HALT_THRESHOLD = 5;
+
 export interface PixiAppOptions {
   world: World;
   parent: HTMLElement;
@@ -69,6 +77,17 @@ export class PixiApp {
   tintFilter = new ColorMatrixFilter();
   crtOverlay = new CrtOverlay();
   private lastSimTickAcc = 0;
+  /** Consecutive failed `world.tick()` calls. After SIM_HALT_THRESHOLD,
+   *  the engine stops calling the sim entirely — render keeps running so
+   *  the last good frame is visible and the player can open Settings →
+   *  Diagnostics to grab the crash log. */
+  private consecutiveSimFailures = 0;
+  /** Sticky kill switch — true after we give up on the sim. Reset only
+   *  by a fresh world being installed (i.e. page reload / new kingdom). */
+  private simHalted = false;
+  /** Wall-clock ms of the last sim-tick failure record. Used to debounce
+   *  the crash log so a deterministic crash doesn't flood the buffer. */
+  private lastSimFailureRecordedAt = 0;
   /** seconds elapsed since last sim tick — used to compute interpolation alpha for renderer */
   private accumulator = 0;
   private alpha = 0;
@@ -309,6 +328,13 @@ export class PixiApp {
       this.alpha = 0;
       return;
     }
+    // Sim is dead. Don't try anymore. The render loop keeps going so
+    // the world stays visible at its last good frame and the user can
+    // open Settings → Diagnostics to download the crash log.
+    if (this.simHalted) {
+      this.alpha = 0;
+      return;
+    }
     this.accumulator += realDt * speed;
     let steps = 0;
     // Cap steps higher at 4x speed so the fast-forward feels snappy
@@ -316,17 +342,32 @@ export class PixiApp {
     while (this.accumulator >= tickDuration && steps < maxSteps) {
       try {
         this.opts.world.tick(tickDuration);
+        // Successful tick — reset the failure streak.
+        this.consecutiveSimFailures = 0;
       } catch (err) {
-        // Sim-tick exception. Log it so it surfaces in Diagnostics +
-        // (optionally) the remote crash endpoint, then skip the rest
-        // of the catch-up loop to avoid a tight crash spiral. The render
-        // step still runs, so the world freezes at the last good frame
-        // instead of going to a black screen.
-        try {
-          // Dynamic import keeps the engine layer free of UI module deps
-          // at startup; we only resolve crashLog on the rare failure path.
-          import("../lib/crashLog").then(({ recordCrash }) => recordCrash("sim.tick", err));
-        } catch { /* never let crash logging itself break the loop */ }
+        // Sim-tick exception. Two failure modes to defend against:
+        //   1. One-off transient (rare). Log once, skip this frame's
+        //      catch-up, continue normally next frame.
+        //   2. Deterministic bug (common — every tick crashes). Without
+        //      a halt switch this would call recordCrash 60× per second
+        //      and fill the 50-entry crash log inside one second,
+        //      evicting the actual first useful entry.
+        const now = performance.now();
+        // Dedup: only record one entry per 2-second window so a streaming
+        // failure doesn't bury everything else in the log.
+        if (now - this.lastSimFailureRecordedAt > 2000) {
+          this.lastSimFailureRecordedAt = now;
+          try {
+            import("../lib/crashLog").then(({ recordCrash }) => recordCrash("sim.tick", err));
+          } catch { /* never let crash logging itself break the loop */ }
+        }
+        this.consecutiveSimFailures++;
+        if (this.consecutiveSimFailures >= SIM_HALT_THRESHOLD) {
+          this.simHalted = true;
+          console.error(
+            `[PixiApp] sim halted after ${SIM_HALT_THRESHOLD} consecutive failures — render loop continues`,
+          );
+        }
         this.accumulator = 0;
         break;
       }

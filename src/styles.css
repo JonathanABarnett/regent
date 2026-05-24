@@ -24,9 +24,38 @@
   --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
   --motion-fast: 120ms ease-out;
   --motion-med: 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
-  font-family: "Press Start 2P", "VT323", "Courier New", ui-monospace, monospace;
+  /* Two-tier typography:
+       --font-body   → readable for paragraphs, journal entries, panel text
+       --font-pixel  → blocky brand voice for the wordmark, badges, h1/h2
+     VT323 is still pixelated (no break in identity) but it's a thin terminal
+     font with kerning that doesn't read as "wall of squares" at body sizes.
+     The old setup defaulted everything to Press Start 2P, which falls back
+     to ugly system mono when not installed — that fallback chain was the
+     actual reason the UI felt blocky on most machines. */
+  --font-body: "VT323", "Courier New", ui-monospace, monospace;
+  --font-pixel: "Press Start 2P", "VT323", "Courier New", monospace;
+  font-family: var(--font-body);
+  /* VT323 reads about 1px smaller than Courier at the same px size — bump
+     the base body size so panels feel the same visual weight as before. */
+  font-size: 14px;
   color-scheme: dark;
 }
+
+/* Heading scale — pixel font for the brand voice. Restrict to h1/h2 so
+   body content (h3, h4, paragraphs) stays in the readable face. */
+h1, h2 {
+  font-family: var(--font-pixel);
+  letter-spacing: 0.04em;
+}
+h3, h4 {
+  font-family: var(--font-body);
+  font-weight: bold;
+  letter-spacing: 0.06em;
+}
+/* Class hook for anything that explicitly wants the pixel voice
+   (badges, achievement counters, the wordmark, etc.) without coupling
+   to a tag name. */
+.font-pixel { font-family: var(--font-pixel); }
 
 /* Reduce-motion respect — transitions become instant.
    Set as a separate rule (rather than disabling at the var level) so any
@@ -112,17 +141,46 @@ html, body, #root, .app-root {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 10px;
-  background: linear-gradient(180deg, rgba(15, 18, 36, 0.92) 0%, rgba(15, 18, 36, 0.78) 100%);
+  /* Slightly more breathing room. Pixel font + dense info chips were
+     squeezed at 6px — 8px reads as the same HUD but less "menu bar". */
+  padding: 8px 12px;
+  background: linear-gradient(180deg, rgba(15, 18, 36, 0.94) 0%, rgba(15, 18, 36, 0.74) 100%);
   border-bottom: 1px solid var(--hud-border-soft);
-  font-size: 12px;
-  letter-spacing: 0.05em;
+  font-size: 13px;
+  letter-spacing: 0.04em;
   user-select: none;
   pointer-events: auto;
-  backdrop-filter: blur(6px) saturate(120%);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px) saturate(125%);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.2);
 }
-.hud-left, .hud-right { display: flex; gap: 14px; align-items: center; }
+.hud-left, .hud-right { display: flex; gap: 10px; align-items: center; }
+/* Wrap key HUD info segments in pill chips so the header reads as a
+   row of distinct facts instead of a single uniform line. Subtle
+   border + tiny pad — still flat, just delineated. */
+.hud-left > .day,
+.hud-left > .season,
+.hud-left > .clock,
+.hud-left > .weather,
+.hud-left > .npcs,
+.hud-left > .factions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background-color var(--motion-fast), border-color var(--motion-fast);
+}
+.hud-left > .day:hover,
+.hud-left > .season:hover,
+.hud-left > .clock:hover,
+.hud-left > .weather:hover,
+.hud-left > .npcs:hover,
+.hud-left > .factions:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
 .stats-actions {
   padding: 6px 10px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -181,7 +239,7 @@ html, body, #root, .app-root {
 /* Diplomacy panel */
 .diplomacy-panel {
   position: absolute;
-  top: 36px;
+  top: 44px;
   bottom: 8px;
   right: 8px;
   width: 440px;
@@ -286,7 +344,7 @@ html, body, #root, .app-root {
 .hud-mood.mood-anxious     { color: #fca5a5; border: 1px solid rgba(252, 165, 165, 0.35); }
 .hud-quote {
   position: absolute;
-  top: 38px;
+  top: 48px;
   left: 50%;
   transform: translateX(-50%);
   /* Generous range — narrow windows get the full available width,
@@ -308,25 +366,37 @@ html, body, #root, .app-root {
   z-index: 15;
 }
 .hud .badge {
+  font-family: var(--font-pixel);
   font-weight: bold;
+  font-size: 11px;
   color: var(--accent);
-  letter-spacing: 0.15em;
+  letter-spacing: 0.18em;
+  padding: 4px 12px;
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.08), rgba(251, 191, 36, 0.02));
+  border: 1px solid rgba(251, 191, 36, 0.22);
+  border-radius: 999px;
+  /* Brand chip should look "etched" — subtle inset to suggest depth. */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
-.hud .clock { font-variant-numeric: tabular-nums; }
+.hud .clock { font-variant-numeric: tabular-nums; color: #e7e5e4; }
 .hud .weather, .hud .npcs { color: #cbd5e1; }
+.hud .day, .hud .season { color: #e7e5e4; }
 .hud button {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.02);
   color: var(--hud-fg);
   border: 1px solid var(--hud-border);
-  padding: 4px 10px;
+  padding: 5px 12px;
   font: inherit;
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  /* Rounder pill — replaces the sharp 3px corners that read as 8-bit
+     "OK" boxes. The pill matches the chip styling on the left side. */
+  border-radius: 999px;
 }
 .hud button:hover {
   border-color: var(--accent);
   color: var(--accent);
-  background: rgba(251, 191, 36, 0.05);
+  background: rgba(251, 191, 36, 0.08);
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.08);
 }
 .hud button.has-badge {
   position: relative;
@@ -370,19 +440,25 @@ html, body, #root, .app-root {
 .event-log, .settings-panel {
   position: absolute;
   z-index: 20;
-  top: 36px;
-  bottom: 8px;
+  top: 44px;
+  bottom: 12px;
   width: 360px;
-  background: var(--panel-bg);
-  border: 1px solid var(--hud-border);
+  /* Tiny inner gradient on top of the panel BG — gives the surface a
+     subtle "lit from above" feel instead of reading as a flat slab. */
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0) 30%),
+    var(--panel-bg);
+  border: 1px solid var(--hud-border-soft);
   color: var(--panel-fg);
   display: flex;
   flex-direction: column;
-  font-size: 11px;
+  font-size: 13px;
   overflow: hidden;
   box-shadow: var(--shadow-md);
-  border-radius: var(--radius-md);
-  backdrop-filter: blur(4px) saturate(115%);
+  /* Bigger radius — softer corners. The retro identity stays through
+     font/colour, not boxy edges. */
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(8px) saturate(120%);
 }
 .event-log { right: 8px; }
 .settings-panel { left: 8px; width: 380px; }
@@ -772,7 +848,7 @@ html, body, #root, .app-root {
 /* Journal */
 .journal-panel {
   position: absolute;
-  top: 36px;
+  top: 44px;
   bottom: 8px;
   right: 8px;
   width: 460px;
@@ -799,7 +875,7 @@ html, body, #root, .app-root {
 /* Family Tree panel */
 .family-tree-panel {
   position: absolute;
-  top: 36px;
+  top: 44px;
   bottom: 8px;
   right: 8px;
   width: 640px;
@@ -1038,18 +1114,26 @@ html, body, #root, .app-root {
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  width: 460px;
+  width: 480px;
   max-width: calc(100vw - 40px);
-  background: linear-gradient(180deg, rgba(26, 20, 16, 0.96), rgba(12, 10, 9, 0.96));
-  border: 1px solid #5a3a22;
-  padding: 16px 22px 18px;
+  /* Layered gradients — top highlight + radial warmth from the bottom
+     gives the prompt the feel of a parchment under lamplight rather
+     than a flat console box. */
+  background:
+    radial-gradient(ellipse at bottom, rgba(251, 191, 36, 0.08), transparent 70%),
+    linear-gradient(180deg, rgba(40, 30, 22, 0.96), rgba(18, 14, 11, 0.96));
+  border: 1px solid rgba(90, 58, 34, 0.7);
+  padding: 18px 24px 20px;
   z-index: 40;
-  border-radius: var(--radius-md);
-  box-shadow: 0 16px 40px rgba(251, 191, 36, 0.22), var(--shadow-lg);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 1px 0 rgba(255, 255, 255, 0.05) inset;
   color: var(--panel-fg);
-  font-size: 12px;
+  font-size: 14px;
   animation: dec-in 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(4px);
 }
 @keyframes dec-in {
   from { opacity: 0; transform: translateX(-50%) translateY(20px); }
@@ -1129,28 +1213,34 @@ html, body, #root, .app-root {
   gap: 8px;
 }
 .decision-options button {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--panel-fg);
   border: 1px solid var(--hud-border);
-  padding: 8px 18px;
+  padding: 9px 18px;
   font: inherit;
-  font-size: 11px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  /* Drop the uppercase shouting — the option labels are mostly short
+     phrases that read more like buttons than slogans now. */
+  text-transform: none;
   cursor: pointer;
+  border-radius: var(--radius-md);
 }
 .decision-options button.ghost:hover {
   color: var(--accent);
   border-color: var(--accent);
+  background: rgba(251, 191, 36, 0.06);
 }
 .decision-options button.primary {
-  background: var(--accent);
+  background: linear-gradient(180deg, var(--accent), #d97706);
   color: #1a1410;
-  border-color: var(--accent);
+  border-color: rgba(251, 191, 36, 0.7);
   font-weight: bold;
+  box-shadow: 0 2px 6px rgba(251, 191, 36, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .decision-options button.primary:hover {
-  background: #fcd34d;
+  background: linear-gradient(180deg, #fcd34d, var(--accent));
+  box-shadow: 0 4px 10px rgba(251, 191, 36, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 /* Tutorial hints */
@@ -1364,7 +1454,7 @@ html, body, #root, .app-root {
 .stats-panel {
   position: absolute;
   z-index: 22;
-  top: 36px;
+  top: 44px;
   bottom: 8px;
   right: 8px;
   width: 380px;
@@ -2790,7 +2880,7 @@ html, body, #root, .app-root {
    resize the Pixi canvas — only the HUD/panels/prompts where reading
    matters. Layouts use fixed pixel widths so the surfaces stay
    geometrically the same; text inside them gets bigger. */
-.hud { font-size: calc(12px * var(--ui-scale, 1)); }
+.hud { font-size: calc(13px * var(--ui-scale, 1)); }
 .event-log,
 .settings-panel,
 .stats-panel,
@@ -2804,7 +2894,7 @@ html, body, #root, .app-root {
 .title-card,
 .update-toast,
 .tutorial-card {
-  font-size: calc(12px * var(--ui-scale, 1));
+  font-size: calc(14px * var(--ui-scale, 1));
 }
 
 /* ── Accessibility: colorblind-friendly palette swap ───────────────────────

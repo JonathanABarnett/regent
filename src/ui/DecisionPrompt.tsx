@@ -47,14 +47,22 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
   const mm = Math.floor(secondsLeft / 60);
   const ss = secondsLeft % 60;
   const timeStr = `${mm}:${String(ss).padStart(2, "0")}`;
-  // Under 30s left, switch to urgent styling — pulsing border, red timer.
-  // Players reported "didn't realize it would auto-decide" — the urgency
-  // signal needs to be visual, not buried in a title attribute.
-  const urgent = secondsLeft <= 30;
+  // Under 30s left → urgent state (pulsing border). At 0s the timer has
+  // run out, but the prompt only actually clears when the sim ticks
+  // (Decisions.tick runs inside world.tick). If the sim is paused, the
+  // prompt sits at 0:00 indefinitely — without the `expired` flag we
+  // would pulse the border forever, which reads as a bug. Drop urgency
+  // once we hit zero and explain why nothing's happening.
+  const expired = secondsLeft <= 0;
+  const urgent = !expired && secondsLeft <= 30;
   const defaultName = current.options[0]?.label ?? "first option";
-  const footerText = current.defaultOnExpire
-    ? `Auto-decides in ${timeStr} → "${defaultName}"`
-    : `Expires in ${timeStr}`;
+  const footerText = expired
+    ? (current.defaultOnExpire
+        ? `Time's up — unpause to apply "${defaultName}"`
+        : "Time's up — unpause to dismiss")
+    : current.defaultOnExpire
+      ? `Auto-decides in ${timeStr} → "${defaultName}"`
+      : `Expires in ${timeStr}`;
 
   return (
     <div

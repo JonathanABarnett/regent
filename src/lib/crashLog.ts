@@ -56,13 +56,23 @@ export function clearCrashLog(): void {
 }
 
 function writeCrashLog(entries: CrashEntry[]): void {
+  // Cap to the most recent N — old crashes drop off the tail.
+  const capped = entries.slice(-MAX_ENTRIES);
   try {
-    // Cap to the most recent N — old crashes drop off the tail.
-    const capped = entries.slice(-MAX_ENTRIES);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(capped));
+    return;
   } catch {
-    // Quota exceeded or storage disabled — better to lose the new entry
-    // than to throw inside the error handler and recurse.
+    // Quota fallback: try just the newest entry. Better to keep the
+    // most recent crash than to silently lose it because the existing
+    // log had grown large enough to push the combined string over the
+    // browser quota.
+    try {
+      const lastOnly = capped.slice(-1);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(lastOnly));
+    } catch {
+      // Storage truly unavailable (private mode / quota=0). Give up
+      // gracefully — recording crashes is best-effort.
+    }
   }
 }
 
