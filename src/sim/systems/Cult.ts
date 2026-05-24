@@ -107,6 +107,7 @@ export class Cult {
         {
           id: "tolerate",
           label: "Tolerate the group",
+          hint: "scholars -1",
           onChoose: (w) => {
             w.factions.adjust("scholars", -1);
             const line = TOLERATE_LINES[Math.floor(this.rand() * TOLERATE_LINES.length)];
@@ -117,6 +118,7 @@ export class Cult {
         {
           id: "investigate",
           label: "Investigate (10 gold)",
+          hint: "-10g · names revealed",
           onChoose: (w) => {
             if (w.economy.state.gold >= 10) w.economy.state.gold -= 10;
             const line = INVESTIGATE_LINES[Math.floor(this.rand() * INVESTIGATE_LINES.length)];
@@ -127,6 +129,7 @@ export class Cult {
         {
           id: "suppress",
           label: "Suppress them",
+          hint: "rep -5 · the group vanishes",
           onChoose: (w) => {
             w.reputation.adjust(-5);
             const line = SUPPRESS_LINES[Math.floor(this.rand() * SUPPRESS_LINES.length)];

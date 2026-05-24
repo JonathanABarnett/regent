@@ -116,6 +116,7 @@ export class GreatAnniversaries {
         {
           id: "vault",
           label: "Open the vault to the people",
+          hint: "rep +5 · 3 oldest artifacts removed",
           onChoose: (w) => {
             // Drop the three oldest artifacts.
             const removed = w.treasury.artifacts.splice(0, 3);
@@ -128,6 +129,7 @@ export class GreatAnniversaries {
         {
           id: "pardon",
           label: "Pardon all who remain imprisoned",
+          hint: "rep +3",
           onChoose: (w) => {
             w.reputation.adjust(3);
             const line = PARDON_RESULT_LINES[Math.floor(this.rand() * PARDON_RESULT_LINES.length)];
@@ -137,6 +139,7 @@ export class GreatAnniversaries {
         {
           id: "monument",
           label: `Commission a great monument (${MONUMENT_COST} gold)`,
+          hint: `-${MONUMENT_COST}g · +1 permanent relic in vault`,
           onChoose: (w) => {
             if (w.economy.state.gold >= MONUMENT_COST) {
               w.economy.state.gold -= MONUMENT_COST;

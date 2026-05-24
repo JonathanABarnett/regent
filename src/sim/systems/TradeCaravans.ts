@@ -173,6 +173,7 @@ export class TradeCaravans {
         {
           id: "accept",
           label: "Accept the alliance",
+          hint: "+1 named spouse · rep +3 · merchants +2 · permanent alliance",
           onChoose: (w) => {
             (this.state.marriedPartners ??= []).push(partner);
             w.factions.adjust("merchants", 2);
@@ -207,6 +208,7 @@ export class TradeCaravans {
         {
           id: "decline",
           label: "Decline politely",
+          hint: "goodwill resets · partner cools",
           onChoose: (w) => {
             // Reset goodwill with that partner so they cool off but don't sour.
             (this.state.partnerGoodwill ??= {})[partner] = 0;
@@ -238,6 +240,7 @@ export class TradeCaravans {
         {
           id: "open",
           label: `Trade fairly (${TRADE_GOLD_PAID} gold)`,
+          hint: `-${TRADE_GOLD_PAID}g · +4 tomes · +2 ironwork · merchants +1`,
           onChoose: (w) => {
             if (w.economy.state.gold >= TRADE_GOLD_PAID) {
               w.economy.state.gold -= TRADE_GOLD_PAID;
@@ -263,6 +266,7 @@ export class TradeCaravans {
         {
           id: "tax",
           label: `Tax heavily (+${TRADE_GOLD_TAX} gold)`,
+          hint: `+${TRADE_GOLD_TAX}g · rep -1 · merchants -1 (blocks future alliance)`,
           onChoose: (w) => {
             w.economy.state.gold = Math.min(99_999, w.economy.state.gold + TRADE_GOLD_TAX);
             w.reputation.adjust(-1);
@@ -275,6 +279,7 @@ export class TradeCaravans {
         {
           id: "refuse",
           label: "Turn them away",
+          hint: "merchants -0.5",
           onChoose: (w) => {
             w.factions.adjust("merchants", -0.5);
             const line = REFUSE_RESULT_LINES[Math.floor(this.rand() * REFUSE_RESULT_LINES.length)]

@@ -110,6 +110,7 @@ export class Expeditions {
         {
           id: "send",
           label: "Send a small expedition (3 days)",
+          hint: "75% artifact · 20% nothing · 5% lose a guard",
           onChoose: (_w) => {
             this.state.pending[landmarkId] = this.world.state.day;
             this.journal.write(
@@ -122,6 +123,7 @@ export class Expeditions {
         {
           id: "ignore",
           label: "Leave it undisturbed",
+          hint: "no change",
           onChoose: (_w) => {
             const line = IGNORE_LINES[Math.floor(this.rand() * IGNORE_LINES.length)]
               .replace("{name}", name);

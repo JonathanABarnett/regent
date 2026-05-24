@@ -134,11 +134,13 @@ export class ReturningBloodline {
         {
           id: "accept",
           label: "Accept the claim — install them as monarch",
+          hint: "new monarch · rep +5 · dynasty restored",
           onChoose: (w) => this._installAsMonarch(w, name),
         },
         {
           id: "test",
           label: "Set a trial of proof (5 days)",
+          hint: "70% authentic (auto-install) · 30% exposed (rep +1)",
           onChoose: (_w) => {
             this.state.testPending = {
               name, proof,
@@ -153,6 +155,7 @@ export class ReturningBloodline {
         {
           id: "deny",
           label: "Deny the claim — send them away",
+          hint: "rep -1",
           onChoose: (w) => {
             w.reputation.adjust(-1);
             const line = DENY_LINES[Math.floor(this.rand() * DENY_LINES.length)]

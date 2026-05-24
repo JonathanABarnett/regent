@@ -111,6 +111,7 @@ export class Refugees {
         {
           id: "accept",
           label: `Open the gates (${ACCEPT_GOLD_COST} gold)`,
+          hint: `+${count} named NPCs · rep +2 · -${ACCEPT_GOLD_COST}g`,
           onChoose: (w) => {
             if (w.economy.state.gold < ACCEPT_GOLD_COST) {
               this.journal.write(
@@ -137,6 +138,7 @@ export class Refugees {
         {
           id: "quarter",
           label: `Quarter them outside the walls (${QUARTER_GOLD_COST} gold)`,
+          hint: `rep +1 · -${QUARTER_GOLD_COST}g · they move on`,
           onChoose: (w) => {
             if (w.economy.state.gold < QUARTER_GOLD_COST) {
               this.journal.write(
@@ -156,6 +158,7 @@ export class Refugees {
         {
           id: "refuse",
           label: "Turn them away",
+          hint: "rep -3 · the kingdom remembers",
           onChoose: (w) => {
             w.reputation.adjust(-3);
             const line = REFUSE_LINES[Math.floor(this.rand() * REFUSE_LINES.length)]

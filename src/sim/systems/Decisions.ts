@@ -16,6 +16,13 @@ import type { World } from "../World";
 export interface DecisionOption {
   id: string;
   label: string;
+  /**
+   * Short consequence preview shown beneath the button — e.g.
+   * "+2 rep · merchants +1 · -20g". Optional; if absent the button
+   * shows just the label. Keeps players from picking blind on big
+   * decisions while leaving small ones uncluttered.
+   */
+  hint?: string;
   onChoose: (world: World) => void;
 }
 

@@ -273,6 +273,7 @@ export class War {
         {
           id: "defend",
           label: "Defend the walls",
+          hint: "10 days · lower casualties per battle",
           onChoose: (w) => {
             this.state.strategy = "defend";
             this.state.daysRemaining = DEFEND_DURATION;
@@ -286,6 +287,7 @@ export class War {
         {
           id: "counter",
           label: "Counter-attack",
+          hint: "6 days · higher casualties · better odds · prisoners on win",
           onChoose: (w) => {
             this.state.strategy = "counter";
             this.state.daysRemaining = COUNTER_DURATION;
@@ -299,6 +301,7 @@ export class War {
         {
           id: "terms",
           label: `Seek terms (${SEEK_TERMS_GOLD_COST} gold)`,
+          hint: "ends now · rep -2 · no casualties",
           onChoose: (w) => {
             this.state.strategy = "terms";
             this._seekTerms();

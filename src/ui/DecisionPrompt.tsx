@@ -73,7 +73,8 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
             onClick={() => w.decisions.resolve(current.id, opt.id)}
             className={opt.id === current.options[0]?.id ? "ghost" : "primary"}
           >
-            {opt.label}
+            <span className="decision-opt-label">{opt.label}</span>
+            {opt.hint && <span className="decision-opt-hint">{opt.hint}</span>}
           </button>
         ))}
       </div>

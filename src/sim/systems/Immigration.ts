@@ -171,11 +171,13 @@ export class Immigration {
         {
           id: "welcome",
           label: "Welcome them (free)",
+          hint: "+1 named NPC",
           onChoose: (w) => spawnNPC(w),
         },
         {
           id: "pay",
           label: `Pay to recruit (${RECRUIT_GOLD_COST} gold)`,
+          hint: `+1 named NPC · -${RECRUIT_GOLD_COST}g`,
           onChoose: (w) => {
             if (w.economy.state.gold >= RECRUIT_GOLD_COST) {
               w.economy.state.gold -= RECRUIT_GOLD_COST;
@@ -191,6 +193,7 @@ export class Immigration {
         {
           id: "refuse",
           label: "Turn them away",
+          hint: "no change",
           onChoose: () => {
             this.journal.write(
               `${name} was turned away at the gate. They did not look back.`,
@@ -231,6 +234,7 @@ export class Immigration {
         {
           id: "diplomacy",
           label: `Send diplomats (${DIPLOMACY_GOLD_COST} gold)`,
+          hint: `+${count} NPCs · rep +1 · -${DIPLOMACY_GOLD_COST}g`,
           onChoose: (w) => {
             if (w.economy.state.gold >= DIPLOMACY_GOLD_COST) {
               w.economy.state.gold -= DIPLOMACY_GOLD_COST;
@@ -252,6 +256,7 @@ export class Immigration {
         {
           id: "raid",
           label: "Raid at dawn",
+          hint: `+${count} NPCs (forced) · rep -2 · -${RAID_GOLD_COST}g`,
           onChoose: (w) => {
             if (w.economy.state.gold >= RAID_GOLD_COST) {
               w.economy.state.gold -= RAID_GOLD_COST;
@@ -277,6 +282,7 @@ export class Immigration {
         {
           id: "ignore",
           label: "Leave them be",
+          hint: "no change",
           onChoose: () => {
             this.journal.write(
               `The camp at ${camp.name} was left undisturbed. Their fires still burn on the horizon.`,
