@@ -2,6 +2,7 @@ import type { World } from "./World";
 import type { NPC, Structure, WorldState } from "./types";
 import { sanitizeName } from "../lib/sanitize";
 import type { ConsequencesSnapshot } from "./systems/Consequences";
+import type { FoundingDaySnapshot } from "./systems/FoundingDay";
 
 /**
  * Save/load schema. Versioned so we can migrate when the data model changes
@@ -274,6 +275,9 @@ export interface SaveData {
     }>;
     idCounter: number;
   };
+  /** FoundingDay fired flag — prevents re-firing the welcome sequence
+   *  if the player saves immediately after founding then reloads. */
+  foundingDay?: { fired: boolean };
   /** Returning bloodline claimant tracking. */
   bloodline?: {
     lastFiredYear: number;
@@ -529,6 +533,7 @@ export function serialize(
       .map((s) => ({ id: s.id, name: s.name, pos: { ...s.pos } })),
     cult: world.cult.snapshot(),
     consequences: world.consequences.snapshot(),
+    foundingDay: world.foundingDay.snapshot(),
     remembrance: world.remembrance.snapshot(),
     inWorldHolidays: world.inWorldHolidays.snapshot(),
     mood: world.mood.snapshot(),
@@ -878,6 +883,8 @@ export function validateSave(rawInput: unknown): SaveData | null {
             "cult_tolerate_growth",
             "cult_tolerate_decision",
             "cult_investigate_report",
+            "welcome_petition",
+            "welcome_petition_echo",
           ]);
           const rawPending = Array.isArray(c.pending) ? (c.pending as unknown[]) : [];
           const pending = rawPending
@@ -914,6 +921,9 @@ export function validateSave(rawInput: unknown): SaveData | null {
             idCounter: safeInt(c.idCounter, 0, 0, 10_000_000),
           };
         })()
+      : undefined,
+    foundingDay: isPlainObject(raw.foundingDay)
+      ? { fired: (raw.foundingDay as Record<string, unknown>).fired === true }
       : undefined,
     graves: Array.isArray(raw.graves)
       ? (raw.graves as unknown[])
@@ -1474,6 +1484,9 @@ export function applySave(world: World, save: SaveData): void {
     // ConsequenceKind. Runtime guards above filtered to known kinds, so
     // the cast is safe — but TS needs the assertion.
     world.consequences.restore(save.consequences as ConsequencesSnapshot);
+  }
+  if (save.foundingDay) {
+    world.foundingDay.restore(save.foundingDay as FoundingDaySnapshot);
   }
   // Restore succession state if present.
   if (save.succession) {

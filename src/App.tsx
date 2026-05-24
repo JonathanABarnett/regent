@@ -1376,6 +1376,15 @@ export function App() {
                 // Pet starts by following the monarch — meaningful for the
                 // "this is MY character" moment.
                 w.setPetFollowing("npc_monarch");
+                // Fire the FoundingDay sequence — fireworks over the
+                // castle, a courier delivering the seal of office, an
+                // anchoring journal flourish, AND a Welcome Petition
+                // scheduled for day +2 so the player sees their first
+                // real choice within the first couple of in-world
+                // minutes. The whole point: a 99¢ buyer who founds a
+                // kingdom and sees nothing happen for two minutes
+                // refunds. This makes sure something happens.
+                w.foundingDay.fire();
               }
               // Immediate save.
               try {

@@ -45,7 +45,13 @@ export type ConsequenceKind =
   /** Decision: "the group has tripled in size." Follow-on for TOLERATE. */
   | "cult_tolerate_decision"
   /** Investigation update — the chancellor's report fragments. */
-  | "cult_investigate_report";
+  | "cult_investigate_report"
+  // ── Founding ──────────────────────────────────────────────────────
+  /** First decision after founding — gates the player's first choice
+   *  loop within 2 in-world days of starting a new kingdom. */
+  | "welcome_petition"
+  /** Echo of the welcome-petition's outcome at +14 days. */
+  | "welcome_petition_echo";
 
 export interface ScheduledConsequence {
   /** Unique id (e.g. "csq_cult_echo_42" — keyed by source + counter). */
@@ -189,6 +195,12 @@ export class Consequences {
       case "cult_investigate_report":
         this._fireCultInvestigateReport(c);
         break;
+      case "welcome_petition":
+        this._fireWelcomePetition(c);
+        break;
+      case "welcome_petition_echo":
+        this._fireWelcomePetitionEcho(c);
+        break;
     }
   }
 
@@ -308,5 +320,103 @@ export class Consequences {
     ];
     const line = lines[Math.floor(this.rand() * lines.length)];
     this.journal.write(line, "event");
+  }
+
+  // ── Founding: Welcome Petition ──────────────────────────────────────
+  // The player's first decision. Fires ~2 in-world days after founding
+  // so a new player sees the choice loop within a real minute or two.
+  // All three options are warm, all three schedule a +14-day echo so
+  // the player feels the consequence chain immediately in their first
+  // session — that's the refund-prevention payload.
+
+  private _fireWelcomePetition(c: ScheduledConsequence): void {
+    if (this.world.decisions.current()) {
+      // Don't stack on top of another decision (vanishingly unlikely
+      // this early, but be defensive).
+      this.schedule({ kind: "welcome_petition", fireInDays: 1, sourceId: c.sourceId });
+      return;
+    }
+    const monarch = this.world.npcs.find((n) => n.role === "monarch");
+    const monarchName = monarch?.name ?? "the monarch";
+    // Pick a random new-arrival surname for the family.
+    const surnames = ["Marlow", "Hollis", "Greaves", "Penn", "Thatch", "Brae", "Linde"];
+    const surname = surnames[Math.floor(this.rand() * surnames.length)];
+
+    this.world.decisions.propose({
+      id: `welcome_petition_${this.world.state.day}`,
+      title: "A petition at the gate",
+      body:
+        `A young family — the ${surname}s — have come to the keep. Their newborn arrived the same week as the founding, and they have named the child after ${monarchName}. They ask, shyly, whether the crown might mark the occasion.`,
+      options: [
+        {
+          id: "attend",
+          label: "Attend the naming ceremony",
+          hint: "rep +2 · the kingdom will remember",
+          onChoose: (w) => {
+            w.reputation.adjust(2);
+            this.journal.write(
+              `${monarchName} stood in the ${surname}s' small courtyard this afternoon and held the child for a moment. The neighbours were quietly proud. The chronicler wrote down what the baby was wearing.`,
+              "milestone",
+            );
+            w.consequences.schedule({
+              kind: "welcome_petition_echo",
+              fireInDays: 14,
+              data: { surname, choice: "attend" },
+            });
+          },
+        },
+        {
+          id: "gift",
+          label: "Send a silver cup as a gift",
+          hint: "-5g · a token, kindly meant",
+          onChoose: (w) => {
+            if (w.economy.state.gold >= 5) w.economy.state.gold -= 5;
+            this.journal.write(
+              `A silver cup, hammered the night before, was sent to the ${surname} household with a brief note in ${monarchName}'s hand. The family wept a little when it arrived. Then they put it on the mantle.`,
+              "milestone",
+            );
+            w.consequences.schedule({
+              kind: "welcome_petition_echo",
+              fireInDays: 14,
+              data: { surname, choice: "gift" },
+            });
+          },
+        },
+        {
+          id: "decline",
+          label: "Decline modestly — too soon for ceremony",
+          hint: "no change · a quiet beginning",
+          onChoose: (_w) => {
+            this.journal.write(
+              `The crown sent back a kind note thanking the ${surname}s and asking after the child's health, but declining the ceremony — the kingdom was, after all, only days old. The family understood. They named the child anyway.`,
+              "event",
+            );
+            this.world.consequences.schedule({
+              kind: "welcome_petition_echo",
+              fireInDays: 14,
+              data: { surname, choice: "decline" },
+            });
+          },
+        },
+      ],
+      // Generous timer — this is the first decision a new player ever
+      // sees. We don't want to penalize someone who's reading slowly.
+      expiresAt: Date.now() + 360_000, // 6 min
+      defaultOnExpire: false,
+    });
+  }
+
+  private _fireWelcomePetitionEcho(c: ScheduledConsequence): void {
+    const surname = String(c.data?.surname ?? "the family");
+    const choice = String(c.data?.choice ?? "attend");
+    let line: string;
+    if (choice === "attend") {
+      line = `The ${surname} child walks now, almost. They were seen in the courtyard this morning, holding on to their mother's skirt. The naming-day painting still hangs by the door.`;
+    } else if (choice === "gift") {
+      line = `The silver cup at the ${surname}s' is on the mantle still. It's already a little tarnished from being handled. The child has begun to grab at it whenever they're carried past.`;
+    } else {
+      line = `The ${surname}s' child is healthy. The family sent word of thanks for the kind note. They have not asked for anything else.`;
+    }
+    this.journal.write(line, "life");
   }
 }

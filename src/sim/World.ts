@@ -81,6 +81,8 @@ import { Mood } from "./systems/Mood";
 import type { MoodSnapshot } from "./systems/Mood";
 import { Consequences } from "./systems/Consequences";
 import type { ConsequencesSnapshot } from "./systems/Consequences";
+import { FoundingDay } from "./systems/FoundingDay";
+import type { FoundingDaySnapshot } from "./systems/FoundingDay";
 import { proposeNameAStar } from "./systems/NameAStar";
 import { shortBubbleLine } from "./systems/Quotes";
 import type { SavedJournalEntry } from "./Persistence";
@@ -277,6 +279,7 @@ export class World {
   readonly inWorldHolidays: InWorldHolidays;
   readonly mood: Mood;
   readonly consequences: Consequences;
+  readonly foundingDay: FoundingDay;
   /** Accumulator for NPC speech-bubble cadence. */
   private _bubbleAcc = 0;
   /** Callbacks invoked when the Journal writes a new entry. */
@@ -399,6 +402,7 @@ export class World {
     this.inWorldHolidays = new InWorldHolidays(this, this.journal, this.rand);
     this.mood = new Mood(this);
     this.consequences = new Consequences(this, this.journal, this.rand);
+    this.foundingDay = new FoundingDay(this, this.journal);
     const cal = this.calendar.snapshot();
     this.state = {
       time: 0,
