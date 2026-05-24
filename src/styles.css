@@ -7,8 +7,11 @@
   --accent-dim: #92400e;
   --accent-ring: rgba(251, 191, 36, 0.35);
   --panel-bg: rgba(10, 14, 30, 0.92);
-  --panel-fg: #d6d3d1;
-  --panel-muted: #78716c;
+  /* FF6 menu text was a warm cream, not grey. Pushing toward
+     parchment (#ede8d8) makes paragraphs feel like they belong on a
+     scroll/banner rather than a console readout. */
+  --panel-fg: #ede8d8;
+  --panel-muted: #94897c;
   /* Accessibility — UI text scale multiplier. Default 1.0; user-adjustable
      via Settings → Accessibility. Applied to the html element so all
      rem-based + the .ui-scale-target font-size cascade picks it up. */
@@ -46,11 +49,19 @@
 h1, h2 {
   font-family: var(--font-pixel);
   letter-spacing: 0.04em;
+  /* FF6 / SNES dialogue convention — every title has a 1px dark drop
+     shadow, like text painted onto the windowbox. Reads as "etched into
+     the screen" rather than floating on top. The shadow stacks two
+     pixels deep to survive the higher-DPI rendering modern displays use. */
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.7), 2px 2px 0 rgba(0, 0, 0, 0.35);
 }
 h3, h4 {
   font-family: var(--font-body);
   font-weight: bold;
   letter-spacing: 0.06em;
+  /* Subtler shadow on body headings — still in the FF6 voice without
+     competing with h1/h2. */
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.55);
 }
 /* Class hook for anything that explicitly wants the pixel voice
    (badges, achievement counters, the wordmark, etc.) without coupling
@@ -443,18 +454,25 @@ html, body, #root, .app-root {
   top: 44px;
   bottom: 12px;
   width: 360px;
-  /* Tiny inner gradient on top of the panel BG — gives the surface a
-     subtle "lit from above" feel instead of reading as a flat slab. */
+  /* FF6 windowbox treatment:
+       - Outer 1px dark frame (the box-shadow ring) plus a 1px inner
+         light frame creates the iconic "double-bordered" feel
+       - Top-edge gradient highlight reads as "lit from above"
+       - Slight bottom inner shadow for depth */
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0) 30%),
+    linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0) 32%, rgba(0,0,0,0.18) 100%),
     var(--panel-bg);
-  border: 1px solid var(--hud-border-soft);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--panel-fg);
   display: flex;
   flex-direction: column;
   font-size: 13px;
   overflow: hidden;
-  box-shadow: var(--shadow-md);
+  /* Double-frame: outer dark ring via box-shadow, inner light line via
+     existing border. */
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    var(--shadow-md);
   /* Bigger radius — softer corners. The retro identity stays through
      font/colour, not boxy edges. */
   border-radius: var(--radius-lg);
@@ -1241,6 +1259,41 @@ html, body, #root, .app-root {
 .decision-options button.primary:hover {
   background: linear-gradient(180deg, #fcd34d, var(--accent));
   box-shadow: 0 4px 10px rgba(251, 191, 36, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* ── FF6 menu cursor ─────────────────────────────────────────────────────────
+   In FF6 the active menu option had a tiny "►" pointer blink to its left.
+   We attach the same idea to decision-prompt buttons + the settings/stats
+   panel buttons on hover and keyboard focus. The cursor lives in a fixed
+   negative offset so it doesn't push surrounding layout when it appears. */
+.decision-options button,
+.stats-panel button,
+.settings-panel button,
+.tutorial-actions button {
+  position: relative;
+}
+.decision-options button:hover::before,
+.decision-options button:focus-visible::before,
+.stats-panel button:hover::before,
+.stats-panel button:focus-visible::before,
+.settings-panel button:hover::before,
+.settings-panel button:focus-visible::before,
+.tutorial-actions button:hover::before,
+.tutorial-actions button:focus-visible::before {
+  content: "▸";
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent);
+  font-size: 12px;
+  /* Soft blink — slow enough to read as "alive" not nervous. */
+  animation: ff6-cursor-blink 1s steps(2, end) infinite;
+  pointer-events: none;
+}
+@keyframes ff6-cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.25; }
 }
 
 /* Tutorial hints */
@@ -2872,6 +2925,38 @@ html, body, #root, .app-root {
   height: 100%;
   background: var(--accent);
   transition: width 200ms ease-out;
+}
+
+/* ── FF6 windowbox chrome ────────────────────────────────────────────────────
+   Shared "lit-from-above + double-framed" treatment so every floating
+   panel reads as a Final Fantasy VI dialogue window — outer dark ring,
+   inner light line, gentle top highlight + bottom inner shadow.
+   The event-log and settings panel set this inline (above) because they
+   were already styled; the rule below catches the rest. */
+.stats-panel,
+.family-tree-panel,
+.diplomacy-panel,
+.journal-panel,
+.vault-panel,
+.update-toast,
+.tutorial-card,
+.onboarding-card,
+.title-card {
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0) 32%, rgba(0,0,0,0.18) 100%) !important;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    var(--shadow-md) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.decision-prompt {
+  /* Already has the parchment radial — augment with the same double-ring
+     so it sits in the same chrome family as the panels. */
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 18px 44px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 1px 0 rgba(255, 255, 255, 0.05) inset !important;
 }
 
 /* ── Accessibility: UI text scale ────────────────────────────────────────────

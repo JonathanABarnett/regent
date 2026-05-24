@@ -9,6 +9,7 @@ import { DiplomacyPanel } from "./ui/DiplomacyPanel";
 import { SettingsPanel } from "./ui/SettingsPanel";
 import { PhotoMode } from "./ui/PhotoMode";
 import { UpdateToast } from "./ui/UpdateToast";
+import { UiSound } from "./ui/UiSound";
 import { KingdomCard } from "./ui/KingdomCard";
 import { JournalPanel } from "./ui/JournalPanel";
 import { AchievementToast } from "./ui/AchievementToast";
@@ -1407,6 +1408,10 @@ export function App() {
       {/* Tauri-only; no-ops on the web demo. Hides itself if no
           updater endpoint is configured. */}
       <UpdateToast />
+      {/* FF6-style menu blip/confirm on button hover + click. Reads
+          live volume from the store, so muting in Settings disables
+          UI sound too. */}
+      <UiSound getAudio={() => audioRef.current} />
     </div>
   );
 }

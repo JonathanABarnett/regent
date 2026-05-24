@@ -395,6 +395,44 @@ export class AudioEngine {
     }
   }
 
+  /**
+   * Short menu-cursor blip — the FF6 "select item" sound. Triggered on
+   * hover/focus by the global `<UiSound>` mounter so every interactive
+   * element in the UI sounds the same. Quiet by design (amp 0.04) so
+   * a rapid hover scrub doesn't become noise.
+   *
+   * Safe to call before `unlock()` — short-circuits without an audio
+   * context. That means we can wire it to any DOM event without
+   * worrying about timing relative to the first user gesture.
+   */
+  playMenuBlip(): void {
+    if (this.muted || !this.ctx) return;
+    this.pluck(1320, 0.04, "triangle", 0.04);
+  }
+
+  /**
+   * Confirm / commit sound — the FF6 "OK" chord. A bit louder, two
+   * stacked frequencies for a brighter timbre. Use on click/keyboard
+   * commit, not hover.
+   */
+  playMenuConfirm(): void {
+    if (!this.ctx || !this.master || this.muted) return;
+    const t = this.ctx.currentTime;
+    for (const [f, delay] of [[1175, 0], [1568, 0.04]] as const) {
+      const osc = this.ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.value = f;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0, t + delay);
+      g.gain.linearRampToValueAtTime(0.08, t + delay + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + delay + 0.16);
+      osc.connect(g);
+      g.connect(this.master);
+      osc.start(t + delay);
+      osc.stop(t + delay + 0.2);
+    }
+  }
+
   private pluck(freq: number, duration: number, type: OscillatorType, amp: number) {
     if (!this.ctx || !this.master) return;
     const t = this.ctx.currentTime;
