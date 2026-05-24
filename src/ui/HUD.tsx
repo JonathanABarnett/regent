@@ -22,6 +22,10 @@ export function HUD({
   onToggleStats,
   onToggleFamilyTree,
   onToggleDiplomacy,
+  onToggleCutaway,
+  onTakePhoto,
+  onToggleChronicle,
+  cutawayActive,
 }: {
   onToggleLog: () => void;
   onToggleSettings: () => void;
@@ -29,6 +33,10 @@ export function HUD({
   onToggleStats: () => void;
   onToggleFamilyTree?: () => void;
   onToggleDiplomacy?: () => void;
+  onToggleCutaway?: () => void;
+  onTakePhoto?: () => void;
+  onToggleChronicle?: () => void;
+  cutawayActive?: boolean;
 }) {
   const stats = useGameStore((s) => s.worldStats);
   const identity = useGameStore((s) => s.identity);
@@ -65,6 +73,25 @@ export function HUD({
         </div>
       )}
       <div className="hud-right">
+        {onTakePhoto && (
+          <button
+            onClick={onTakePhoto}
+            className="hud-icon-btn"
+            title="Take a framed screenshot of the kingdom (P)"
+            aria-label="Take a photo"
+          >📷</button>
+        )}
+        {onToggleCutaway && (
+          <button
+            onClick={onToggleCutaway}
+            className={`hud-icon-btn${cutawayActive ? " active" : ""}`}
+            title={cutawayActive ? "Hide roofs — see NPCs inside (X)" : "See inside the buildings (X)"}
+            aria-label="Toggle cutaway view"
+          >🏠</button>
+        )}
+        {onToggleChronicle && (
+          <button onClick={onToggleChronicle} title="Read the kingdom's chronicle">Chronicle</button>
+        )}
         {onToggleFamilyTree && (
           <button onClick={onToggleFamilyTree} title="Family tree of the kingdom">Family</button>
         )}

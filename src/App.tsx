@@ -82,15 +82,37 @@ export function App() {
   const worldRef = useRef<World | null>(null);
   const pixiRef = useRef<PixiApp | null>(null);
   const audioRef = useRef<AudioEngine | null>(null);
-  const [logOpen, setLogOpen] = useState(false);
+  // Right-rail panels all occupy the same screen real estate (top:36px,
+  // right:8px). One slot, one open panel at a time. We store the active
+  // panel as a discriminated string and derive the per-panel booleans, so
+  // opening Family auto-closes Stats, opening Journal auto-closes Family, etc.
+  // The legacy `setXOpen(bool | (b) => !b)` shape is preserved via a setter
+  // factory so existing call sites don't need to change.
+  type RightPanel = "log" | "journal" | "family" | "diplomacy" | "stats" | null;
+  const [rightPanel, setRightPanel] = useState<RightPanel>(null);
+  const logOpen = rightPanel === "log";
+  const journalOpen = rightPanel === "journal";
+  const familyTreeOpen = rightPanel === "family";
+  const diplomacyOpen = rightPanel === "diplomacy";
+  const statsOpen = rightPanel === "stats";
+  const makeRightPanelSetter = (panel: Exclude<RightPanel, null>) =>
+    (v: boolean | ((prev: boolean) => boolean)) => {
+      setRightPanel((cur) => {
+        const wasOpen = cur === panel;
+        const next = typeof v === "function" ? v(wasOpen) : v;
+        if (next) return panel;
+        return wasOpen ? null : cur;
+      });
+    };
+  const setLogOpen = makeRightPanelSetter("log");
+  const setJournalOpen = makeRightPanelSetter("journal");
+  const setFamilyTreeOpen = makeRightPanelSetter("family");
+  const setDiplomacyOpen = makeRightPanelSetter("diplomacy");
+  const setStatsOpen = makeRightPanelSetter("stats");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [journalOpen, setJournalOpen] = useState(false);
-  const [familyTreeOpen, setFamilyTreeOpen] = useState(false);
-  const [diplomacyOpen, setDiplomacyOpen] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [petCreatorOpen, setPetCreatorOpen] = useState(false);
   const [inspected, setInspected] = useState<Structure | null>(null);
-  const [statsOpen, setStatsOpen] = useState(false);
   const [profileNpcId, setProfileNpcId] = useState<string | null>(null);
   const [kingdomCardOpen, setKingdomCardOpen] = useState(false);
   const [chronicleOpen, setChronicleOpen] = useState(false);
@@ -101,6 +123,18 @@ export function App() {
   const hasSaveRef = useRef<boolean>(!!readSave());
   /** Pending identity choices from onboarding, applied once the creator commits. */
   const pendingIdentityRef = useRef<{
+    kingdomName: string;
+    monarchName: string;
+    petName: string;
+    petKind: "dog" | "cat";
+  } | null>(null);
+  /**
+   * Last submitted onboarding draft. Survives the round-trip through the
+   * character creator so when the player clicks "← Back" we can re-mount
+   * the OnboardingModal pre-filled with the names they actually typed,
+   * not a fresh batch of random picks.
+   */
+  const [onboardingDraft, setOnboardingDraft] = useState<{
     kingdomName: string;
     monarchName: string;
     petName: string;
@@ -1016,6 +1050,13 @@ export function App() {
           onToggleStats={() => setStatsOpen((b) => !b)}
           onToggleFamilyTree={() => setFamilyTreeOpen((b) => !b)}
           onToggleDiplomacy={() => setDiplomacyOpen((b) => !b)}
+          onToggleCutaway={() => {
+            const store = useGameStore.getState();
+            store.setCutawayMode(!store.settings.cutawayMode);
+          }}
+          onTakePhoto={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "p" }))}
+          onToggleChronicle={() => setChronicleOpen((b) => !b)}
+          cutawayActive={cutawayMode}
         />
       )}
       <div ref={containerRef} className="pixi-host" />
@@ -1210,11 +1251,15 @@ export function App() {
       )}
       {!titleOpen && !identity && !creatorOpen && (
         <OnboardingModal
+          initial={onboardingDraft ?? undefined}
           onComplete={(result) => {
             // Stash the form result and open the character creator. The
             // creator's commit handler does the rest (founding journal,
-            // monarch spawn, pet adopt, initial save).
+            // monarch spawn, pet adopt, initial save). We ALSO keep a
+            // copy in `onboardingDraft` so "← Back" from the creator
+            // returns the player to their typed names, not random ones.
             pendingIdentityRef.current = result;
+            setOnboardingDraft(result);
             setCreatorOpen(true);
           }}
         />
@@ -1249,16 +1294,17 @@ export function App() {
           initialSpec={monarchSpec}
           title={
             pendingIdentityRef.current
-              ? `Design ${pendingIdentityRef.current.monarchName}`
+              ? `Step 2 of 2 — Design ${pendingIdentityRef.current.monarchName}`
               : "Customize your monarch"
           }
           ctaLabel={pendingIdentityRef.current ? "Found the kingdom" : "Save"}
-          cancelLabel={pendingIdentityRef.current ? "← Back" : "Cancel"}
+          cancelLabel={pendingIdentityRef.current ? "← Back to names" : "Cancel"}
           onCancel={() => {
-            // In first-launch flow: close creator, keep pendingIdentity so the
-            // OnboardingModal re-opens with the player's previous form values
-            // visible (OnboardingModal manages its own state, but at least the
-            // structural flow is reversible). Outside first launch: just close.
+            // First-launch flow: close creator and clear pendingIdentity
+            // so the OnboardingModal re-mounts. The modal re-reads
+            // `onboardingDraft` for its initial values, so the names the
+            // player just typed (and any pet kind choice) come right back
+            // — no silent reroll.
             if (pendingIdentityRef.current) {
               pendingIdentityRef.current = null;
             }
@@ -1333,6 +1379,9 @@ export function App() {
                 /* ignore */
               }
               pendingIdentityRef.current = null;
+              // Founding committed — discard the saved draft so a later
+              // succession or "new kingdom" path starts clean.
+              setOnboardingDraft(null);
             }
             setCreatorOpen(false);
           }}

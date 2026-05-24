@@ -43,12 +43,24 @@ export interface OnboardingResult {
   petKind: "dog" | "cat";
 }
 
-export function OnboardingModal({ onComplete }: { onComplete: (r: OnboardingResult) => void }) {
+export function OnboardingModal({
+  onComplete,
+  initial,
+}: {
+  onComplete: (r: OnboardingResult) => void;
+  /**
+   * Last-committed values from a prior pass through this modal. When the
+   * player hits "← Back" inside the character creator we re-mount this
+   * modal — without `initial` their typed names would be replaced with
+   * fresh random picks. Passing the saved draft restores them.
+   */
+  initial?: Partial<OnboardingResult>;
+}) {
   const identity = useGameStore((s) => s.identity);
-  const [kingdomName, setKingdomName] = useState(pick(KINGDOM_SUGGESTIONS));
-  const [monarchName, setMonarchName] = useState(pick(MONARCH_SUGGESTIONS));
-  const [petName, setPetName] = useState(pick(PET_SUGGESTIONS));
-  const [petKind, setPetKind] = useState<"dog" | "cat">("dog");
+  const [kingdomName, setKingdomName] = useState(initial?.kingdomName ?? pick(KINGDOM_SUGGESTIONS));
+  const [monarchName, setMonarchName] = useState(initial?.monarchName ?? pick(MONARCH_SUGGESTIONS));
+  const [petName, setPetName] = useState(initial?.petName ?? pick(PET_SUGGESTIONS));
+  const [petKind, setPetKind] = useState<"dog" | "cat">(initial?.petKind ?? "dog");
 
   if (identity) return null;
 
@@ -68,6 +80,17 @@ export function OnboardingModal({ onComplete }: { onComplete: (r: OnboardingResu
     >
       <div className="onboarding-card">
         <div className="onboarding-crest">✦</div>
+        <div className="onboarding-steps" aria-label="Founding flow">
+          <span className="onboarding-step active" aria-current="step">
+            <span className="onboarding-step-dot">1</span>
+            <span className="onboarding-step-label">Name</span>
+          </span>
+          <span className="onboarding-step-bar" />
+          <span className="onboarding-step">
+            <span className="onboarding-step-dot">2</span>
+            <span className="onboarding-step-label">Design</span>
+          </span>
+        </div>
         <h2 id="onboarding-title">A new kingdom rises</h2>
         <p className="onboarding-tagline">
           A scrap of land, a handful of villagers, and one person to lead them.
@@ -145,11 +168,11 @@ export function OnboardingModal({ onComplete }: { onComplete: (r: OnboardingResu
           </button>
         </div>
         <button className="onboarding-commit" onClick={commit}>
-          Found the kingdom of {kingdomName.trim() || "—"}
+          Next: design {monarchName.trim() || "your monarch"} →
         </button>
         <p className="onboarding-hint">
-          <kbd>P</kbd> photo · <kbd>Space</kbd> follow random NPC · <kbd>F</kbd> focus castle ·{" "}
-          <kbd>R</kbd> resume drift · <kbd>WASD</kbd> pan
+          You'll style {monarchName.trim() || "the monarch"}'s appearance next. Names can't be
+          changed once the kingdom is founded.
         </p>
       </div>
     </div>

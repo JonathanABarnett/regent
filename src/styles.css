@@ -328,6 +328,19 @@ html, body, #root, .app-root {
   position: relative;
   padding-right: 28px;
 }
+/* Icon-only HUD buttons (photo, cutaway) — square so the glyph centers cleanly,
+   and a stronger accent glow when "active" so cutaway mode reads at a glance. */
+.hud button.hud-icon-btn {
+  padding: 4px 8px;
+  font-size: 14px;
+  line-height: 1;
+}
+.hud button.hud-icon-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(251, 191, 36, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.35);
+}
 .hud-badge {
   position: absolute;
   top: 50%;
@@ -2952,6 +2965,51 @@ html, body, #root, .app-root {
   font-size: 36px;
   color: var(--accent);
   margin-bottom: 4px;
+}
+/* Stepped wizard indicator. Two pill dots with a connecting bar — the
+   active step glows in the accent colour, the upcoming step sits muted.
+   Sells the modal as "step 1 of 2", not "the entire onboarding". */
+.onboarding-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  width: 100%;
+}
+.onboarding-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--panel-muted);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.onboarding-step.active {
+  color: var(--accent);
+}
+.onboarding-step-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font-size: 11px;
+  font-weight: bold;
+  font-family: "Press Start 2P", monospace;
+  font-size: 9px;
+}
+.onboarding-step.active .onboarding-step-dot {
+  background: rgba(251, 191, 36, 0.12);
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.18);
+}
+.onboarding-step-bar {
+  width: 28px;
+  height: 1px;
+  background: var(--hud-border);
 }
 .onboarding-card h2 {
   margin: 0 0 6px;
