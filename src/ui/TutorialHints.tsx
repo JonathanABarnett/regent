@@ -28,6 +28,20 @@ const HINTS: Hint[] = [
     anchor: "free",
   },
   {
+    id: "fog",
+    title: "Scouts reveal the land",
+    body:
+      "The map starts dark beyond the castle. As your NPCs walk and patrol, they push back the fog — watch the minimap fill in over the first few in-world days. Discoveries (ruins, standing stones) trigger expedition decisions when found.",
+    anchor: "minimap",
+  },
+  {
+    id: "decisions",
+    title: "Decisions auto-resolve",
+    body:
+      "When the crown faces a choice, a prompt appears with a countdown. If you don't pick before time runs out, the default option (shown beneath the timer) is taken automatically — so you can step away without freezing the game. The hints under each button preview the consequences.",
+    anchor: "free",
+  },
+  {
     id: "stats",
     title: "Check your kingdom",
     body:
@@ -56,10 +70,17 @@ const HINTS: Hint[] = [
     anchor: "hud-journal",
   },
   {
+    id: "hud-icons",
+    title: "Three buttons worth knowing",
+    body:
+      "Top-right of the HUD: 📷 frames a clean screenshot of your kingdom (great for sharing). 🏠 toggles cutaway view — roofs fade so you can see NPCs inside their buildings. Chronicle opens the long-form story of everything that's happened.",
+    anchor: "free",
+  },
+  {
     id: "controls",
     title: "Click anything",
     body:
-      "Click an NPC to follow them. Click a building to inspect it. Drag to pan, scroll to zoom. Press P for a framed screenshot. Press ? anytime for the full keybindings.",
+      "Click an NPC to follow them. Click a building to inspect it. Drag to pan, scroll to zoom. Right-click the minimap to name a region. Press ? anytime for the full keybindings.",
     anchor: "free",
   },
 ];

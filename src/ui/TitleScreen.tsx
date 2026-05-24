@@ -9,6 +9,7 @@ import {
   readAllSlotMeta,
   setActiveSlot,
   getActiveSlot,
+  clearSaveSlot,
   SLOT_COUNT,
   type SlotMeta,
 } from "../sim/Persistence";
@@ -45,8 +46,10 @@ export function TitleScreen({
   const [pastOpen, setPastOpen] = useState(false);
   const [showSlots, setShowSlots] = useState(false);
   const [activeSlot, setActiveSlotState] = useState(getActiveSlot);
+  /** Bumps to force the slot metadata to re-read after we wipe a slot. */
+  const [slotsRev, setSlotsRev] = useState(0);
   const pastCount = useMemo(() => readArchive().length, []);
-  const slotMeta = useMemo<SlotMeta[]>(() => readAllSlotMeta(), [showSlots]);
+  const slotMeta = useMemo<SlotMeta[]>(() => readAllSlotMeta(), [showSlots, slotsRev]);
 
   // Pull the 3 most recent journal entries off the save file for the news
   // ticker. Computed once on mount because the title screen doesn't observe
@@ -135,27 +138,65 @@ export function TitleScreen({
           <div className="slot-picker">
             <div className="slot-picker-label">Choose a save slot</div>
             {slotMeta.map((meta) => (
-              <button
+              <div
                 key={meta.slot}
-                className={`slot-btn ${meta.slot === activeSlot ? "slot-active" : ""}`}
-                onClick={() => {
-                  setActiveSlot(meta.slot);
-                  setActiveSlotState(meta.slot);
-                  setShowSlots(false);
-                  if (!meta.empty) onContinue();
-                  else onNew();
-                }}
+                className={`slot-row ${meta.slot === activeSlot ? "slot-active" : ""}`}
               >
-                <span className="slot-num">Slot {meta.slot + 1}</span>
-                {meta.empty ? (
-                  <span className="slot-empty">— empty —</span>
-                ) : (
-                  <span className="slot-info">
-                    <span className="slot-name">{meta.kingdomName ?? "Unnamed"}</span>
-                    <span className="slot-sub">Y{meta.year} · {meta.population} souls</span>
-                  </span>
+                <button
+                  type="button"
+                  className="slot-btn"
+                  onClick={() => {
+                    setActiveSlot(meta.slot);
+                    setActiveSlotState(meta.slot);
+                    setShowSlots(false);
+                    if (!meta.empty) onContinue();
+                    else onNew();
+                  }}
+                >
+                  <span className="slot-num">Slot {meta.slot + 1}</span>
+                  {meta.empty ? (
+                    <span className="slot-empty">— empty —</span>
+                  ) : (
+                    <span className="slot-info">
+                      <span className="slot-name">{meta.kingdomName ?? "Unnamed"}</span>
+                      <span className="slot-sub">Y{meta.year} · {meta.population} souls</span>
+                    </span>
+                  )}
+                </button>
+                {!meta.empty && (
+                  <button
+                    type="button"
+                    className="slot-delete"
+                    title={`Permanently delete the kingdom in slot ${meta.slot + 1}`}
+                    aria-label={`Delete slot ${meta.slot + 1}`}
+                    onClick={() => {
+                      const label = meta.kingdomName ?? `slot ${meta.slot + 1}`;
+                      if (
+                        !confirm(
+                          `Permanently delete ${label}? This kingdom and its journal will be erased. ` +
+                            `(It will not be moved to Past Kingdoms.)`,
+                        )
+                      ) return;
+                      clearSaveSlot(meta.slot);
+                      // If we just wiped the active slot, reload — the title
+                      // detects "has a save" once at mount, so the Continue
+                      // button would otherwise stay live and try to load
+                      // nothing. (resetKingdom would also archive, which is
+                      // the opposite of what the player asked for.)
+                      if (meta.slot === activeSlot) {
+                        // Skip the unload-save race that would re-persist the
+                        // very kingdom we just deleted.
+                        (window as unknown as { __kingdomos_skip_save?: boolean }).__kingdomos_skip_save = true;
+                        location.reload();
+                        return;
+                      }
+                      setSlotsRev((v) => v + 1);
+                    }}
+                  >
+                    ✕
+                  </button>
                 )}
-              </button>
+              </div>
             ))}
             <button className="slot-cancel" onClick={() => setShowSlots(false)}>Cancel</button>
           </div>

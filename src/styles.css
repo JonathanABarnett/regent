@@ -9,6 +9,10 @@
   --panel-bg: rgba(10, 14, 30, 0.92);
   --panel-fg: #d6d3d1;
   --panel-muted: #78716c;
+  /* Accessibility — UI text scale multiplier. Default 1.0; user-adjustable
+     via Settings → Accessibility. Applied to the html element so all
+     rem-based + the .ui-scale-target font-size cascade picks it up. */
+  --ui-scale: 1;
   /* Modernization tokens — used by panels/modals/buttons. Subtle by design
      so the retro feel survives; the changes are corner radius softening,
      shadow depth, and motion timing. */
@@ -1090,6 +1094,29 @@ html, body, #root, .app-root {
   font-variant-numeric: tabular-nums;
   font-size: 10px;
   letter-spacing: 0.1em;
+}
+/* Urgent state — last 30s. Pulsing border + amber timer + bolder footer
+   so the auto-resolve behavior is *visually* obvious, not buried in a
+   tooltip. Without this, the FTUE audit found players read the timer
+   as flavor, not a hard deadline. */
+.decision-prompt.urgent {
+  border-color: rgba(251, 191, 36, 0.55);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.25), 0 8px 28px rgba(0,0,0,0.55);
+  animation: decision-urgent-pulse 1.4s ease-in-out infinite;
+}
+.decision-prompt.urgent .decision-timer {
+  color: #fbbf24;
+  font-size: 12px;
+  font-weight: bold;
+}
+.decision-prompt.urgent .decision-footer {
+  color: #fbbf24;
+  font-weight: bold;
+}
+.decision-timer-warn { margin-right: 4px; }
+@keyframes decision-urgent-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.25), 0 8px 28px rgba(0,0,0,0.55); }
+  50%      { box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.55), 0 8px 28px rgba(0,0,0,0.55); }
 }
 .decision-body {
   margin: 0 0 14px;
@@ -2681,7 +2708,116 @@ html, body, #root, .app-root {
   transition: background 0.15s;
 }
 .slot-btn:hover   { background: rgba(255,255,255,0.1); }
-.slot-btn.slot-active { border-color: #c8a84b; background: rgba(200,168,75,0.12); }
+/* Row wrapper lets us tuck a per-slot delete button beside the main click target
+   without breaking the "click anywhere on the row to switch slot" affordance. */
+.slot-row { display: flex; align-items: stretch; gap: 6px; }
+.slot-row .slot-btn { flex: 1; }
+.slot-row.slot-active .slot-btn { border-color: #c8a84b; background: rgba(200,168,75,0.12); }
+.slot-delete {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,180,180,0.7);
+  font-size: 12px; padding: 0 10px;
+  border-radius: var(--radius-md,6px);
+  cursor: pointer;
+}
+.slot-delete:hover {
+  background: rgba(220,38,38,0.18);
+  border-color: rgba(220,38,38,0.5);
+  color: #fca5a5;
+}
+
+/* Update toast — bottom-right corner. Sized small enough to ignore but
+   styled enough to read as actionable. Tauri-only; hidden on web demo. */
+.update-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 95;
+  width: 320px;
+  background: linear-gradient(180deg, #1a1410, #0c0a09);
+  border: 1px solid #5a3a22;
+  border-radius: var(--radius-md, 6px);
+  padding: 12px 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.55);
+  font-size: 12px;
+  color: var(--panel-fg);
+}
+.update-toast-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.update-toast-head strong { color: var(--accent); font-size: 13px; }
+.update-toast-ver {
+  font-variant-numeric: tabular-nums;
+  color: var(--panel-muted);
+  font-size: 11px;
+}
+.update-toast-notes {
+  margin: 6px 0 8px;
+  color: var(--panel-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.update-toast-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
+}
+.update-toast-actions button {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+.update-progress {
+  margin-top: 8px;
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.update-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 200ms ease-out;
+}
+
+/* ── Accessibility: UI text scale ────────────────────────────────────────────
+   --ui-scale (set on <html>) multiplies the base font-size of each UI
+   surface. We don't scale <body> directly because we don't want to
+   resize the Pixi canvas — only the HUD/panels/prompts where reading
+   matters. Layouts use fixed pixel widths so the surfaces stay
+   geometrically the same; text inside them gets bigger. */
+.hud { font-size: calc(12px * var(--ui-scale, 1)); }
+.event-log,
+.settings-panel,
+.stats-panel,
+.family-tree-panel,
+.diplomacy-panel,
+.journal-panel,
+.vault-panel,
+.chronicle-panel,
+.decision-prompt,
+.onboarding-card,
+.title-card,
+.update-toast,
+.tutorial-card {
+  font-size: calc(12px * var(--ui-scale, 1));
+}
+
+/* ── Accessibility: colorblind-friendly palette swap ───────────────────────
+   Faction dots default to red/green/blue which fails for ~8% of male
+   players. Swap to high-contrast hues (gold/cyan/magenta) when the
+   `.colorblind` class is on <html>. Weather/event categorical colours
+   stay intact since they're glyph-distinguished too. */
+html.colorblind .faction-pleased { color: #34d399 !important; }   /* green-cyan */
+html.colorblind .faction-neutral { color: #fbbf24 !important; }   /* amber */
+html.colorblind .faction-angry   { color: #ef4444 !important; }   /* red, kept */
+html.colorblind .faction-m { filter: hue-rotate(15deg) saturate(1.2); }
+html.colorblind .faction-s { filter: hue-rotate(180deg) saturate(1.2); }  /* cyan-ish */
+html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* magenta-ish */
 .slot-num  { font-size: 10px; color: var(--panel-muted); width: 40px; flex-shrink: 0; }
 .slot-empty { color: var(--panel-muted); font-style: italic; }
 .slot-name { display: block; font-weight: bold; }

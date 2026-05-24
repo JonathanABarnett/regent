@@ -314,7 +314,22 @@ export class PixiApp {
     // Cap steps higher at 4x speed so the fast-forward feels snappy
     const maxSteps = speed >= 2 ? 10 : 5;
     while (this.accumulator >= tickDuration && steps < maxSteps) {
-      this.opts.world.tick(tickDuration);
+      try {
+        this.opts.world.tick(tickDuration);
+      } catch (err) {
+        // Sim-tick exception. Log it so it surfaces in Diagnostics +
+        // (optionally) the remote crash endpoint, then skip the rest
+        // of the catch-up loop to avoid a tight crash spiral. The render
+        // step still runs, so the world freezes at the last good frame
+        // instead of going to a black screen.
+        try {
+          // Dynamic import keeps the engine layer free of UI module deps
+          // at startup; we only resolve crashLog on the rare failure path.
+          import("../lib/crashLog").then(({ recordCrash }) => recordCrash("sim.tick", err));
+        } catch { /* never let crash logging itself break the loop */ }
+        this.accumulator = 0;
+        break;
+      }
       this.accumulator -= tickDuration;
       this.lastSimTickAcc = 0;
       steps++;

@@ -8,6 +8,7 @@ import { FamilyTreePanel } from "./ui/FamilyTreePanel";
 import { DiplomacyPanel } from "./ui/DiplomacyPanel";
 import { SettingsPanel } from "./ui/SettingsPanel";
 import { PhotoMode } from "./ui/PhotoMode";
+import { UpdateToast } from "./ui/UpdateToast";
 import { KingdomCard } from "./ui/KingdomCard";
 import { JournalPanel } from "./ui/JournalPanel";
 import { AchievementToast } from "./ui/AchievementToast";
@@ -1396,6 +1397,9 @@ export function App() {
           return `Day ${day} · ${w.state.weather} · Hour ${w.state.hour.toFixed(0)}`;
         }}
       />
+      {/* Tauri-only; no-ops on the web demo. Hides itself if no
+          updater endpoint is configured. */}
+      <UpdateToast />
     </div>
   );
 }

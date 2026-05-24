@@ -1,4 +1,5 @@
 import React from "react";
+import { recordCrash } from "../lib/crashLog";
 
 interface State {
   err: unknown;
@@ -13,6 +14,9 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
 
   componentDidCatch(err: unknown) {
     console.error("[ErrorBoundary]", err);
+    // Route React render failures through the same crash sink so the
+    // Settings panel and download-log button see them too.
+    recordCrash("react.boundary", err);
   }
 
   render() {

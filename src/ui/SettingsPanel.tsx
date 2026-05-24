@@ -7,6 +7,7 @@ import {
   commitImportedSave,
   readSave,
 } from "../sim/Persistence";
+import { getCrashLog, clearCrashLog, formatCrashLog } from "../lib/crashLog";
 
 /** Fire a test world event via the kingdomos dev hook. */
 function fireTestEvent(kind: string) {
@@ -64,6 +65,8 @@ export function SettingsPanel({
   const setPadEnabled = useGameStore((s) => s.setPadEnabled);
   const setCutawayMode = useGameStore((s) => s.setCutawayMode);
   const setRetro16bit  = useGameStore((s) => s.setRetro16bit);
+  const setUiScale = useGameStore((s) => s.setUiScale);
+  const setColorblindMode = useGameStore((s) => s.setColorblindMode);
   const addWatchedPath = useGameStore((s) => s.addWatchedPath);
   const removeWatchedPath = useGameStore((s) => s.removeWatchedPath);
   const resetKingdom = useGameStore((s) => s.resetKingdom);
@@ -370,6 +373,39 @@ export function SettingsPanel({
         </section>
 
         <section>
+          <h3>Accessibility</h3>
+          <label className="row">
+            <span>UI text scale</span>
+            <span style={{ display: "inline-flex", gap: 4 }}>
+              {[0.85, 1, 1.15, 1.3].map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  className={Math.abs((settings.uiScale ?? 1) - v) < 0.01 ? "primary" : "ghost"}
+                  onClick={() => setUiScale(v)}
+                  style={{ minWidth: 36, padding: "4px 8px" }}
+                >
+                  {v === 1 ? "1×" : `${v}×`}
+                </button>
+              ))}
+            </span>
+          </label>
+          <label className="row">
+            <input
+              type="checkbox"
+              checked={!!settings.colorblindMode}
+              onChange={(e) => setColorblindMode(e.target.checked)}
+            />
+            Colorblind-friendly faction dots
+          </label>
+          <p className="tip">
+            Scale resizes HUD + panel text without touching the world canvas.
+            Colorblind mode swaps faction-loyalty colours to high-contrast
+            hues that don't rely on red/green discrimination.
+          </p>
+        </section>
+
+        <section>
           <h3>Streamer mode</h3>
           <label className="row">
             <input
@@ -448,8 +484,62 @@ export function SettingsPanel({
             </button>
           </div>
         </section>
+        <DiagnosticsSection />
       </div>
     </aside>
+  );
+}
+
+/**
+ * Diagnostics — shows the local crash log and lets the player download it
+ * for bug reports. Intentionally small: the heuristic is "if the game
+ * just blanked the screen, the player should be able to grab a useful
+ * file in under three clicks."
+ */
+function DiagnosticsSection() {
+  const [tick, setTick] = useState(0);
+  void tick;
+  const entries = getCrashLog();
+  const count = entries.length;
+  return (
+    <section>
+      <h3>Diagnostics</h3>
+      <p className="tip">
+        {count === 0
+          ? "No crashes recorded. (This is a good thing.)"
+          : `${count} crash${count === 1 ? "" : "es"} recorded — most recent: ${entries[entries.length - 1]?.message ?? "—"}`}
+      </p>
+      <div className="row" style={{ gap: 8 }}>
+        <button
+          type="button"
+          disabled={count === 0}
+          onClick={() => {
+            const text = formatCrashLog(entries);
+            const blob = new Blob([text], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `kingdomos-crashlog-${new Date().toISOString().slice(0, 10)}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
+          Download crash log
+        </button>
+        <button
+          type="button"
+          className="danger"
+          disabled={count === 0}
+          onClick={() => {
+            if (!confirm("Clear the local crash log? (This doesn't fix anything — just empties the buffer.)")) return;
+            clearCrashLog();
+            setTick((n) => n + 1);
+          }}
+        >
+          Clear log
+        </button>
+      </div>
+    </section>
   );
 }
 

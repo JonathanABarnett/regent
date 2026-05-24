@@ -69,6 +69,11 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
+        // Auto-updater. Looks at `plugins.updater.endpoints` in
+        // tauri.conf.json and signature-verifies downloaded packages
+        // against `plugins.updater.pubkey`. The frontend kicks the
+        // check on launch via @tauri-apps/plugin-updater.
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(app_state.clone())
         .invoke_handler(tauri::generate_handler![
             set_integrations,

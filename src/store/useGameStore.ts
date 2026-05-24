@@ -55,6 +55,18 @@ export interface SettingsState {
    * station. Toggleable with the X key or in Settings.
    */
   cutawayMode: boolean;
+  /**
+   * Multiplier applied to all HUD text + panel text via a CSS root
+   * variable. 1.0 is the default. Useful on small/HiDPI displays where
+   * the 11–12px UI font is hard to read. Persists across sessions.
+   */
+  uiScale: number;
+  /**
+   * Colorblind-friendly palette swap. Currently retargets the faction
+   * dots and weather glyphs so they're distinguishable without relying
+   * on red/green hue contrast. Off by default.
+   */
+  colorblindMode: boolean;
 }
 
 export interface AchievementToast {
@@ -142,6 +154,8 @@ export interface GameState {
   setPadEnabled: (b: boolean) => void;
   setCutawayMode: (b: boolean) => void;
   setRetro16bit: (b: boolean) => void;
+  setUiScale: (n: number) => void;
+  setColorblindMode: (b: boolean) => void;
   markSeenJournal: () => void;
   markSeenEvents: () => void;
 }
@@ -171,6 +185,8 @@ function loadSettings(): SettingsState {
     padEnabled: true,
     cutawayMode: false,
     retro16bit: true,
+    uiScale: 1,
+    colorblindMode: false,
   };
   if (typeof localStorage === "undefined") return fallback;
   try {
@@ -190,6 +206,18 @@ function persistSettings(s: SettingsState) {
     /* ignore quota errors */
   }
 }
+
+/**
+ * Apply accessibility settings to the document on initial mount so the
+ * scale + palette take effect before the user touches Settings. Called
+ * once during store construction; safe in SSR (no-ops without document).
+ */
+function applyA11ySettings(s: SettingsState) {
+  if (typeof document === "undefined") return;
+  document.documentElement.style.setProperty("--ui-scale", String(s.uiScale ?? 1));
+  document.documentElement.classList.toggle("colorblind", Boolean(s.colorblindMode));
+}
+applyA11ySettings(loadSettings());
 
 export const useGameStore = create<GameState>((set, get) => ({
   events: [],
@@ -348,6 +376,30 @@ export const useGameStore = create<GameState>((set, get) => ({
     set((s) => {
       const next = { ...s.settings, retro16bit: b };
       persistSettings(next);
+      return { settings: next };
+    }),
+  setUiScale: (n) =>
+    set((s) => {
+      // Clamp to a sane band — bigger than 1.5× breaks panel layouts and
+      // smaller than 0.7× makes everything illegible. Discrete steps so
+      // the value always matches one of the picker buttons.
+      const clamped = Math.max(0.7, Math.min(1.5, n));
+      const next = { ...s.settings, uiScale: clamped };
+      persistSettings(next);
+      // Apply immediately to the document so the visual effect is live
+      // without waiting for any consumer to subscribe to the change.
+      if (typeof document !== "undefined") {
+        document.documentElement.style.setProperty("--ui-scale", String(clamped));
+      }
+      return { settings: next };
+    }),
+  setColorblindMode: (b) =>
+    set((s) => {
+      const next = { ...s.settings, colorblindMode: b };
+      persistSettings(next);
+      if (typeof document !== "undefined") {
+        document.documentElement.classList.toggle("colorblind", b);
+      }
       return { settings: next };
     }),
   markSeenJournal: () =>

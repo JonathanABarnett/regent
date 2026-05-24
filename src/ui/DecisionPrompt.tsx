@@ -47,20 +47,26 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
   const mm = Math.floor(secondsLeft / 60);
   const ss = secondsLeft % 60;
   const timeStr = `${mm}:${String(ss).padStart(2, "0")}`;
-  const defaultLabel = current.defaultOnExpire
-    ? `auto-decides in ${timeStr} (${current.options[0]?.label ?? "first option"})`
-    : `expires in ${timeStr}`;
+  // Under 30s left, switch to urgent styling — pulsing border, red timer.
+  // Players reported "didn't realize it would auto-decide" — the urgency
+  // signal needs to be visual, not buried in a title attribute.
+  const urgent = secondsLeft <= 30;
+  const defaultName = current.options[0]?.label ?? "first option";
+  const footerText = current.defaultOnExpire
+    ? `Auto-decides in ${timeStr} → "${defaultName}"`
+    : `Expires in ${timeStr}`;
 
   return (
     <div
-      className="decision-prompt"
+      className={`decision-prompt${urgent ? " urgent" : ""}`}
       role="alertdialog"
       aria-labelledby="decision-title"
       aria-describedby="decision-body"
     >
       <div className="decision-header">
         <span className="decision-title" id="decision-title">{current.title}</span>
-        <span className="decision-timer" title={defaultLabel} aria-label={defaultLabel}>
+        <span className="decision-timer" title={footerText} aria-label={footerText}>
+          {urgent && <span className="decision-timer-warn" aria-hidden="true">⏳</span>}
           {timeStr}
         </span>
       </div>
@@ -78,7 +84,7 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
           </button>
         ))}
       </div>
-      <div className="decision-footer">{defaultLabel}</div>
+      <div className="decision-footer">{footerText}</div>
     </div>
   );
 }
