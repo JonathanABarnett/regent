@@ -1035,9 +1035,17 @@ export function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // The HUD is the always-on top bar (kingdom name + day + buttons). It
+  // should NOT show during the title screen, the onboarding modal, or
+  // the founding character creator — those are pre-kingdom moments and
+  // having the HUD bleed through ruins the "I'm about to design my
+  // kingdom" focus. Found in browser playtest: at the title screen the
+  // player could see the previous kingdom's quote-of-day + mood meter.
+  const preKingdomFlow = titleOpen || !identity || creatorOpen;
+
   return (
     <div className="app-root">
-      {!streamerMode && (
+      {!streamerMode && !preKingdomFlow && (
         <HUD
           onToggleLog={() => {
             // Functional updater so rapid double-clicks within one render
@@ -1160,7 +1168,7 @@ export function App() {
         onClose={() => setStatsOpen(false)}
       />
       <HelpOverlay />
-      {!streamerMode && (
+      {!streamerMode && !preKingdomFlow && (
         <MiniMap
           getWorld={() => worldRef.current}
           getCamera={() => {
@@ -1181,8 +1189,8 @@ export function App() {
           onJumpTo={(x, y) => pixiRef.current?.camera?.snapTo(x, y)}
         />
       )}
-      {!streamerMode && <DecisionPrompt getWorld={() => worldRef.current} />}
-      {!streamerMode && <SpeedControl />}
+      {!streamerMode && !preKingdomFlow && <DecisionPrompt getWorld={() => worldRef.current} />}
+      {!streamerMode && !preKingdomFlow && <SpeedControl />}
       <PerformanceHUD getWorld={() => worldRef.current} />
       {!streamerMode && <TutorialHints />}
       <StreamerOverlay />
@@ -1413,10 +1421,12 @@ export function App() {
           live volume from the store, so muting in Settings disables
           UI sound too. */}
       <UiSound getAudio={() => audioRef.current} />
-      {/* Bottom-right floating recorder. Captures live Pixi canvas
+      {/* Bottom-left floating recorder. Captures live Pixi canvas
           via MediaRecorder → downloads .webm. Used for itch.io / social
-          launch material; hidden in streamer mode. */}
-      <VideoCapture getCanvas={() => containerRef.current?.querySelector("canvas") ?? null} />
+          launch material; hidden in streamer mode + pre-kingdom flow. */}
+      {!preKingdomFlow && (
+        <VideoCapture getCanvas={() => containerRef.current?.querySelector("canvas") ?? null} />
+      )}
     </div>
   );
 }

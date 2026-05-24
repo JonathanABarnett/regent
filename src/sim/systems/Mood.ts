@@ -15,9 +15,13 @@ import type { World } from "../World";
  *
  * Read into the HUD as one of four banner labels:
  *   "the kingdom is celebrating" (>5)
- *   "the kingdom is content"      (1..5)
+ *   "the kingdom is content"      (0..5)   — includes a neutral kingdom
  *   "the kingdom is uneasy"       (-5..0)
  *   "the kingdom is anxious"      (<-5)
+ *
+ * A fresh kingdom starts at score 0 and should read as *content*, not
+ * uneasy — uneasy implies a negative event has happened. Found in
+ * browser playtest day-1 view.
  */
 
 export interface MoodSnapshot {
@@ -52,7 +56,7 @@ export class Mood {
   label(): string {
     const s = this.state.score;
     if (s > 5)  return "the kingdom is celebrating";
-    if (s > 0)  return "the kingdom is content";
+    if (s >= 0) return "the kingdom is content";
     if (s > -5) return "the kingdom is uneasy";
     return "the kingdom is anxious";
   }
@@ -61,7 +65,7 @@ export class Mood {
   tier(): "celebrating" | "content" | "uneasy" | "anxious" {
     const s = this.state.score;
     if (s > 5)  return "celebrating";
-    if (s > 0)  return "content";
+    if (s >= 0) return "content";
     if (s > -5) return "uneasy";
     return "anxious";
   }
