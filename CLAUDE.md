@@ -166,6 +166,7 @@ src/
 │   ├── AchievementToast.tsx
 │   ├── UpdateToast.tsx       # Tauri auto-updater (polls every 6h, no-op on web)
 │   ├── UiSound.tsx           # global menu-blip + confirm-chord delegator
+│   ├── FeedbackPanel.tsx     # in-app "send feedback" modal (bug/idea/love/question)
 │   ├── FamilyTreePanel.tsx   # family-tree visualization (right rail)
 │   ├── DiplomacyPanel.tsx    # off-map kingdom relations (right rail)
 │   ├── KingdomChronicle.tsx  # long-form story view
@@ -179,7 +180,8 @@ src/
 ├── lib/
 │   ├── sanitize.ts           # sanitizeName, sanitizeTwitchUser, sanitizeHexColor
 │   ├── sanitize.test.ts
-│   └── crashLog.ts           # global error sink (window.error + boundary + sim-tick)
+│   ├── crashLog.ts           # global error sink (window.error + boundary + sim-tick)
+│   └── feedback.ts           # player feedback submission (local-first + optional VITE_FEEDBACK_ENDPOINT)
 ├── App.tsx                   # root component — bootstraps everything
 └── main.tsx                  # ReactDOM root
 
@@ -227,7 +229,8 @@ docs/
 ├── TESTING.md                # adversarial input + edge-case patterns
 ├── V1_ROADMAP.md             # phased path from v0.2 → v1.0 (playtest, hardening, store, launch)
 ├── PLAYTEST_RECRUITING.md    # Phase 1 ready-to-post copy + feedback form (Bluesky, Reddit, DM templates)
-└── MARKETING.md              # 6-month launch playbook + outreach templates + honest financial reality
+├── MARKETING.md              # 6-month launch playbook + outreach templates + honest financial reality
+└── FEEDBACK.md               # in-app feedback backend setup (Cloudflare Worker → Discord webhook, or Formspree)
 
 scripts/
 ├── install-hooks.mjs         # one-time pre-commit hook installer (typecheck + tests)

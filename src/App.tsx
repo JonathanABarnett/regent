@@ -12,6 +12,7 @@ import { UpdateToast } from "./ui/UpdateToast";
 import { UiSound } from "./ui/UiSound";
 import { VideoCapture } from "./ui/VideoCapture";
 import { FoundingMoment } from "./ui/FoundingMoment";
+import { FeedbackPanel } from "./ui/FeedbackPanel";
 import { KingdomCard } from "./ui/KingdomCard";
 import { JournalPanel } from "./ui/JournalPanel";
 import { AchievementToast } from "./ui/AchievementToast";
@@ -61,6 +62,7 @@ declare global {
         bits: (user: string, bits: number) => void;
         raid: (user: string, viewers: number) => void;
       };
+      openFeedback: () => void;
     };
   }
 }
@@ -114,6 +116,7 @@ export function App() {
   const setDiplomacyOpen = makeRightPanelSetter("diplomacy");
   const setStatsOpen = makeRightPanelSetter("stats");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [petCreatorOpen, setPetCreatorOpen] = useState(false);
   const [inspected, setInspected] = useState<Structure | null>(null);
@@ -431,6 +434,9 @@ export function App() {
         raid: (user: string, viewers: number) =>
           world.publish(mapTwitchRaid(user, viewers)),
       },
+      // Open the feedback modal from any surface (HelpOverlay,
+      // future deep links, etc.) without prop-drilling a setter.
+      openFeedback: () => setFeedbackOpen(true),
     };
 
     // periodic world stats mirror — light read; cheaper than re-rendering React on every frame
@@ -1120,6 +1126,15 @@ export function App() {
           setSettingsOpen(false);
           setVaultOpen(true);
         }}
+        onOpenFeedback={() => {
+          setSettingsOpen(false);
+          setFeedbackOpen(true);
+        }}
+      />
+      <FeedbackPanel
+        open={feedbackOpen && !streamerMode}
+        onClose={() => setFeedbackOpen(false)}
+        getWorld={() => worldRef.current}
       />
       <KingdomCard
         world={worldRef.current}

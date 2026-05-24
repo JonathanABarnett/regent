@@ -43,6 +43,7 @@ export function SettingsPanel({
   onOpenKingdomCard,
   onOpenChronicle,
   onOpenVault,
+  onOpenFeedback,
 }: {
   open: boolean;
   onClose: () => void;
@@ -51,6 +52,7 @@ export function SettingsPanel({
   onOpenKingdomCard: () => void;
   onOpenChronicle: () => void;
   onOpenVault: () => void;
+  onOpenFeedback: () => void;
 }) {
   const settings = useGameStore((s) => s.settings);
   const setCrt = useGameStore((s) => s.setCrt);
@@ -483,6 +485,21 @@ export function SettingsPanel({
               add
             </button>
           </div>
+        </section>
+        <section>
+          <h3>Feedback</h3>
+          <p className="tip">
+            Got an idea, a bug, or a moment you loved? Tell the dev directly.
+            Submissions go straight to the team — no signup, no tracker.
+          </p>
+          <button
+            type="button"
+            className="primary"
+            onClick={onOpenFeedback}
+            style={{ marginTop: 4 }}
+          >
+            Send feedback
+          </button>
         </section>
         <DiagnosticsSection />
       </div>

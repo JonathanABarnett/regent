@@ -100,6 +100,22 @@ export function HelpOverlay() {
             Integrations. None are required; the world simulates without them.
           </p>
         </section>
+
+        <section className="help-feedback-cta">
+          <p>
+            Got an idea, a bug, or a moment you loved?{" "}
+            <button
+              type="button"
+              className="help-feedback-link"
+              onClick={() => {
+                setOpen(false);
+                window.kingdomos?.openFeedback();
+              }}
+            >
+              Tell the dev →
+            </button>
+          </p>
+        </section>
       </div>
     </div>
   );
