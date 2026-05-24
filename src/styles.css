@@ -178,19 +178,22 @@ html, body, #root, .app-root {
   top: 38px;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 580px;
-  padding: 4px 14px;
+  /* Generous range — narrow windows get the full available width,
+     wide windows are capped so the line stays readable. */
+  max-width: min(900px, calc(100vw - 32px));
+  padding: 5px 16px;
   font-style: italic;
   font-size: 11px;
+  line-height: 1.45;
   color: rgba(253, 230, 138, 0.85);
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(253, 230, 138, 0.18);
-  border-radius: 12px;
+  border-radius: 8px;
   text-align: center;
   pointer-events: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Wrap onto multiple lines instead of truncating — quotes are often
+     two sentences and read fine on 2-3 lines. */
+  white-space: normal;
   z-index: 15;
 }
 .hud .badge {
