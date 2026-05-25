@@ -377,6 +377,7 @@ export class Consequences {
             this.journal.write(
               `${monarchName} stood in the ${surname}s' small courtyard this afternoon and held the child for a moment. The neighbours were quietly proud. The chronicler wrote down what the baby was wearing.`,
               "milestone",
+              { fromDecision: true },
             );
             w.consequences.schedule({
               kind: "welcome_petition_echo",
@@ -394,6 +395,7 @@ export class Consequences {
             this.journal.write(
               `A silver cup, hammered the night before, was sent to the ${surname} household with a brief note in ${monarchName}'s hand. The family wept a little when it arrived. Then they put it on the mantle.`,
               "milestone",
+              { fromDecision: true },
             );
             w.consequences.schedule({
               kind: "welcome_petition_echo",
@@ -410,6 +412,7 @@ export class Consequences {
             this.journal.write(
               `The crown sent back a kind note thanking the ${surname}s and asking after the child's health, but declining the ceremony — the kingdom was, after all, only days old. The family understood. They named the child anyway.`,
               "event",
+              { fromDecision: true },
             );
             this.world.consequences.schedule({
               kind: "welcome_petition_echo",

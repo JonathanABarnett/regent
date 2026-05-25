@@ -38,12 +38,16 @@ export class Journal {
   write(
     text: string,
     kind: SavedJournalEntry["kind"] = "event",
-    target?: string | { targetStructureId?: string },
+    target?: string | { targetStructureId?: string; fromDecision?: boolean },
   ) {
     const targetStructureId =
       typeof target === "string"
         ? target
         : target?.targetStructureId;
+    const fromDecision =
+      typeof target === "object" && target !== null
+        ? target.fromDecision
+        : undefined;
     this.onEntry({
       id: `j_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       day: this.world.state.day,
@@ -52,6 +56,7 @@ export class Journal {
       text,
       kind,
       targetStructureId,
+      fromDecision,
     });
   }
 

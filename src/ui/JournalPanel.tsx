@@ -183,9 +183,21 @@ export function JournalPanel({
               </h3>
               {!isCollapsed && <ul>
                 {group.entries.map((e) => (
-                  <li key={e.id} className={`entry kind-${e.kind}`}>
+                  <li
+                    key={e.id}
+                    className={`entry kind-${e.kind}${e.fromDecision ? " from-decision" : ""}`}
+                  >
                     <span className="entry-icon" aria-hidden="true">{kindIcon[e.kind]}</span>
                     <span className="entry-text">
+                      {e.fromDecision && (
+                        <span
+                          className="entry-decision-badge"
+                          title="This happened because of a choice you made"
+                          aria-label="From your decision"
+                        >
+                          ✦ Your decision
+                        </span>
+                      )}
                       {linkifyNpcNames(e.text, npcNames, onSelectNpc)}
                       {e.note && (
                         <span className="entry-note-line" title="Your note">

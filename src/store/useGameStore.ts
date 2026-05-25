@@ -170,7 +170,12 @@ function loadSettings(): SettingsState {
   const fallback: SettingsState = {
     crt: false,
     audioVolume: 0.4,
-    simSpeed: 1,
+    // Playtest signal: at 1× speed the early world feels dead because
+    // events are minutes apart. Default new installs to 2× — visible
+    // motion per real minute makes "your kingdom is alive" actually
+    // read as true. Veterans keep their persisted setting; only the
+    // brand-new install ever sees this default.
+    simSpeed: 2,
     integrations: {
       narrative: true,
       system: true,

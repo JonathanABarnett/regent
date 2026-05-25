@@ -422,6 +422,14 @@ export interface SavedJournalEntry {
    * in the markdown export.
    */
   note?: string;
+  /**
+   * Marks this entry as the direct consequence of a player choice — fires
+   * a small ✦ ribbon in the JournalPanel so the player can see, at a
+   * glance, which lines exist because of something they decided. The
+   * "I don't matter" complaint comes from invisible causation; this is
+   * the visible version. Optional + opt-in per `Journal.write()` call.
+   */
+  fromDecision?: boolean;
 }
 
 export interface SavedNpc {
@@ -694,6 +702,7 @@ export function validateSave(rawInput: unknown): SaveData | null {
           item.note === undefined
             ? undefined
             : safeString(item.note, 240) || undefined,
+        fromDecision: item.fromDecision === true ? true : undefined,
       });
     }
   }

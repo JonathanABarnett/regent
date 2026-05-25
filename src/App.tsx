@@ -14,6 +14,7 @@ import { VideoCapture } from "./ui/VideoCapture";
 import { FoundingMoment } from "./ui/FoundingMoment";
 import { FeedbackPanel } from "./ui/FeedbackPanel";
 import { FeedbackMoments } from "./ui/FeedbackMoments";
+import { IntroCarousel } from "./ui/IntroCarousel";
 import { KingdomCard } from "./ui/KingdomCard";
 import { JournalPanel } from "./ui/JournalPanel";
 import { AchievementToast } from "./ui/AchievementToast";
@@ -127,6 +128,12 @@ export function App() {
   const [vaultOpen, setVaultOpen] = useState(false);
   // Show the title screen on first paint. Dismissed by Continue / New / etc.
   const [titleOpen, setTitleOpen] = useState(true);
+  // Intro carousel gates the title screen on a brand-new install. The
+  // carousel itself reads its own seen-flag from localStorage in an
+  // effect and calls onDone immediately if the player has already seen
+  // it — so existing players never see the title screen blocked. New
+  // players see 3 cards explaining the genre BEFORE clicking BEGIN.
+  const [introOpen, setIntroOpen] = useState(true);
   // Detect "has a saved kingdom" once on mount.
   const hasSaveRef = useRef<boolean>(!!readSave());
   /** Pending identity choices from onboarding, applied once the creator commits. */
@@ -1251,7 +1258,10 @@ export function App() {
           pixiRef.current?.camera.snapTo(npc.pos.x, npc.pos.y);
         }}
       />
-      {titleOpen && (
+      {introOpen && (
+        <IntroCarousel onDone={() => setIntroOpen(false)} />
+      )}
+      {titleOpen && !introOpen && (
         <TitleScreen
           hasSave={hasSaveRef.current}
           onContinue={() => setTitleOpen(false)}

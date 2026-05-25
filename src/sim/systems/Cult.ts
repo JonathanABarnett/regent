@@ -117,7 +117,7 @@ export class Cult {
           onChoose: (w) => {
             w.factions.adjust("scholars", -1);
             const line = TOLERATE_LINES[Math.floor(this.rand() * TOLERATE_LINES.length)];
-            this.journal.write(line, "milestone");
+            this.journal.write(line, "milestone", { fromDecision: true });
             // Downstream chain: the kingdom is going to feel this for
             // months. Two growth echoes, then a forced follow-on
             // decision at +90 days.
@@ -150,7 +150,7 @@ export class Cult {
           onChoose: (w) => {
             if (w.economy.state.gold >= 10) w.economy.state.gold -= 10;
             const line = INVESTIGATE_LINES[Math.floor(this.rand() * INVESTIGATE_LINES.length)];
-            this.journal.write(line, "milestone");
+            this.journal.write(line, "milestone", { fromDecision: true });
             // Downstream: investigation produces reports for the crown
             // over the next month. No decision required, but the player
             // sees the work happening.
@@ -174,7 +174,7 @@ export class Cult {
           onChoose: (w) => {
             w.reputation.adjust(-5);
             const line = SUPPRESS_LINES[Math.floor(this.rand() * SUPPRESS_LINES.length)];
-            this.journal.write(line, "milestone");
+            this.journal.write(line, "milestone", { fromDecision: true });
             // Downstream: the shrine stands locked. Two quiet echoes
             // over the next month so the choice isn't forgotten the
             // moment it's made.

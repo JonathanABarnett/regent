@@ -1116,6 +1116,30 @@ html, body, #root, .app-root {
 .entry.kind-weather .entry-icon { color: #94a3b8; }
 .entry.kind-milestone { background: rgba(251, 191, 36, 0.08); }
 .entry.kind-milestone .entry-icon { color: #fbbf24; }
+
+/* "Your decision" marker — a small inline ribbon prepended to entries
+   that exist because of a player choice. Playtest signal was that
+   players couldn't see causation; this is the visible version. Subtle
+   enough that scanning the journal still works for ambient browsing,
+   loud enough that the cause-and-effect lines pop. */
+.entry.from-decision {
+  border-left: 2px solid rgba(251, 191, 36, 0.45);
+  background: rgba(251, 191, 36, 0.07);
+}
+.entry-decision-badge {
+  display: inline-block;
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  background: rgba(251, 191, 36, 0.14);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 999px;
+  padding: 1px 7px 2px;
+  margin-right: 6px;
+  vertical-align: 1px;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
+}
 .entry.kind-system { color: var(--panel-muted); }
 .entry.kind-system .entry-icon { color: var(--panel-muted); }
 .journal-footer {
@@ -3473,6 +3497,142 @@ html, body, #root, .app-root {
 @keyframes feedback-moment-out {
   from { opacity: 1; transform: translateX(0); }
   to   { opacity: 0; transform: translateX(12px); }
+}
+
+/* ── Intro carousel ──────────────────────────────────────────────────────────
+   Three cards explaining the genre to a brand-new player BEFORE they
+   reach the title screen. Modal-style, full-screen dim backdrop,
+   centered card with paged content. Once dismissed, never reappears
+   (localStorage flag). */
+.intro-carousel {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(8, 10, 22, 0.96), rgba(20, 14, 8, 0.96));
+  backdrop-filter: blur(6px);
+  padding: 24px;
+  animation: intro-fade-in 380ms ease-out;
+}
+.intro-card {
+  position: relative;
+  width: min(540px, 100%);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0) 32%, rgba(0,0,0,0.18) 100%),
+    var(--panel-bg);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 24px 60px rgba(0, 0, 0, 0.6),
+    0 0 28px rgba(251, 191, 36, 0.15);
+  padding: 28px 32px 22px;
+  text-align: center;
+  color: var(--panel-fg);
+}
+.intro-skip {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--panel-muted);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.intro-skip:hover { color: var(--accent); }
+.intro-emoji {
+  font-size: 44px;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+.intro-title {
+  font-family: var(--font-pixel);
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin: 0 0 12px;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.7), 2px 2px 0 rgba(0, 0, 0, 0.35);
+}
+.intro-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--panel-fg);
+  margin: 0 auto 18px;
+  max-width: 440px;
+}
+.intro-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 18px 0 14px;
+}
+.intro-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.intro-dot.active {
+  background: var(--accent);
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2);
+}
+.intro-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.intro-actions button {
+  font: inherit;
+  font-size: 12px;
+  padding: 8px 18px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 1px solid var(--hud-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--panel-fg);
+  letter-spacing: 0.04em;
+}
+.intro-actions button.primary {
+  background: linear-gradient(180deg, var(--accent), #d97706);
+  color: #1a1410;
+  border-color: rgba(251, 191, 36, 0.7);
+  font-weight: bold;
+  box-shadow: 0 2px 6px rgba(251, 191, 36, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.intro-actions button.primary:hover {
+  background: linear-gradient(180deg, #fcd34d, var(--accent));
+}
+.intro-actions button.ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.intro-hint {
+  margin: 6px 0 0;
+  font-size: 10px;
+  color: var(--panel-muted);
+}
+.intro-hint kbd {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--hud-border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: var(--font-body);
+  font-size: 9px;
+}
+@keyframes intro-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* ── FF6 windowbox chrome ────────────────────────────────────────────────────
