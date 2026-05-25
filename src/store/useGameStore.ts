@@ -127,6 +127,11 @@ export interface GameState {
      *  and an heir ascended). Watched by FeedbackMoments to fire the
      *  monarch-death prompt at the peak emotional moment. */
     generation?: number;
+    /** Featured advisor — the oldest living non-monarch NPC. Surfaces
+     *  as a portrait chip in the HUD so the player has one named human
+     *  to care about beyond their own monarch. Re-elected automatically
+     *  when the current advisor dies (next-oldest takes the role). */
+    advisor?: { id: string; name: string; role: string; trait?: string };
   };
   pushEvent: (e: ExternalEvent) => void;
   clearEvents: () => void;

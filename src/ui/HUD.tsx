@@ -25,6 +25,7 @@ export function HUD({
   onToggleCutaway,
   onTakePhoto,
   onToggleChronicle,
+  onSelectAdvisor,
   cutawayActive,
 }: {
   onToggleLog: () => void;
@@ -36,6 +37,9 @@ export function HUD({
   onToggleCutaway?: () => void;
   onTakePhoto?: () => void;
   onToggleChronicle?: () => void;
+  /** Click handler for the advisor chip — typically opens the NPC profile
+   *  modal (App.tsx wires this to setProfileNpcId). */
+  onSelectAdvisor?: (npcId: string) => void;
   cutawayActive?: boolean;
 }) {
   const stats = useGameStore((s) => s.worldStats);
@@ -51,6 +55,18 @@ export function HUD({
     <header className="hud">
       <div className="hud-left">
         <span className="badge" title={greeting}>{identity?.kingdomName ?? "KingdomOS"}</span>
+        {stats.advisor && (
+          <button
+            type="button"
+            className="hud-advisor"
+            onClick={() => onSelectAdvisor?.(stats.advisor!.id)}
+            title={`${stats.advisor.name} — your closest advisor (${stats.advisor.role}${stats.advisor.trait ? ", " + stats.advisor.trait : ""}). Click to learn about them.`}
+            aria-label={`Open advisor profile: ${stats.advisor.name}`}
+          >
+            <span className="hud-advisor-icon" aria-hidden="true">◍</span>
+            <span className="hud-advisor-name">{stats.advisor.name}</span>
+          </button>
+        )}
         <span className="day">{stats.dayOfWeek ? `${stats.dayOfWeek} ·` : ""} Day {stats.day} · Y{stats.year}</span>
         <span className="season">{seasonIcon[stats.season] ?? "·"} {stats.season}</span>
         <span className="clock">{hourLabel}</span>

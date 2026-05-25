@@ -469,6 +469,29 @@ export function App() {
         moodLabel: world.mood.label(),
         moodTier: world.mood.tier(),
         generation: world.succession.state.generation,
+        // Featured advisor — the oldest living named non-monarch NPC.
+        // No schema change required: just a derived view of the roster
+        // that auto-promotes when the current advisor dies.
+        advisor: (() => {
+          const candidates = world.npcs.filter(
+            (n) => n.role !== "monarch" && !!n.name,
+          );
+          if (candidates.length === 0) return undefined;
+          // Highest age wins; ties broken by lowest id for stability
+          // across renders (no jitter if two NPCs share an age).
+          let best = candidates[0];
+          for (const n of candidates) {
+            const a = n.age ?? 0;
+            const b = best.age ?? 0;
+            if (a > b || (a === b && n.id < best.id)) best = n;
+          }
+          return {
+            id: best.id,
+            name: best.name!,
+            role: best.role,
+            trait: best.trait,
+          };
+        })(),
       });
     }, 500);
 
@@ -1090,6 +1113,7 @@ export function App() {
           }}
           onTakePhoto={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "p" }))}
           onToggleChronicle={() => setChronicleOpen((b) => !b)}
+          onSelectAdvisor={(npcId) => setProfileNpcId(npcId)}
           cutawayActive={cutawayMode}
         />
       )}
