@@ -82,14 +82,17 @@ export class FoundingDay {
       castle.id,
     );
 
-    // 4. Schedule the welcome petition — fires in 2 in-world days,
-    // which is roughly 1.5 real minutes at standard speed. Demonstrates
-    // the choice → consequence loop before the player decides whether
-    // to refund.
-    this.world.consequences.schedule({
-      kind: "welcome_petition",
-      fireInDays: 2,
-      sourceId: "founding_day",
-    });
+    // 4. Propose the Welcome Petition IMMEDIATELY (not on a day +2
+    //    schedule like the original implementation). Playtest signal
+    //    from three first-time players: at 1× speed, day +2 = 1.5 real
+    //    minutes of staring at a quiet world before anything
+    //    interactive — and they all quit before then. Now the first
+    //    thing they touch in the kingdom is a choice, not a wait.
+    //
+    //    The petition's onChoose still schedules a +14-day echo, so
+    //    the consequence chain pattern shows itself within the first
+    //    10 minutes of session (the original promise) — just without
+    //    the dead-air opening.
+    this.world.consequences.proposeWelcomePetitionNow("founding_day");
   }
 }

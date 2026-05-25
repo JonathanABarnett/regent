@@ -323,19 +323,39 @@ export class Consequences {
   }
 
   // ── Founding: Welcome Petition ──────────────────────────────────────
-  // The player's first decision. Fires ~2 in-world days after founding
-  // so a new player sees the choice loop within a real minute or two.
-  // All three options are warm, all three schedule a +14-day echo so
-  // the player feels the consequence chain immediately in their first
-  // session — that's the refund-prevention payload.
+  // The player's FIRST decision in any new kingdom. Called directly
+  // from FoundingDay.fire() so the choice arrives in the same beat as
+  // the fireworks — playtest signal was "nothing I do matters," and
+  // having the first interaction be a passive 90-second wait absolutely
+  // confirmed that read. Now the first thing the player touches is a
+  // choice, not a wait.
+  //
+  // All three options are warm; all three schedule a +14-day echo so
+  // the player sees the consequence chain pattern in their first
+  // session. That's the proof that choices echo forward — the headline
+  // pitch made visible.
+
+  proposeWelcomePetitionNow(sourceId?: string): void {
+    if (this.world.decisions.current()) {
+      // Don't stack on top of another decision (vanishingly unlikely
+      // this early, but be defensive — reschedule to retry next day).
+      this.schedule({ kind: "welcome_petition", fireInDays: 1, sourceId });
+      return;
+    }
+    this._proposeWelcomePetition(sourceId);
+  }
 
   private _fireWelcomePetition(c: ScheduledConsequence): void {
     if (this.world.decisions.current()) {
-      // Don't stack on top of another decision (vanishingly unlikely
-      // this early, but be defensive).
+      // Reschedule rather than drop.
       this.schedule({ kind: "welcome_petition", fireInDays: 1, sourceId: c.sourceId });
       return;
     }
+    this._proposeWelcomePetition(c.sourceId);
+  }
+
+  private _proposeWelcomePetition(sourceId?: string): void {
+    void sourceId; // accepted for symmetry; the prompt doesn't currently use it
     const monarch = this.world.npcs.find((n) => n.role === "monarch");
     const monarchName = monarch?.name ?? "the monarch";
     // Pick a random new-arrival surname for the family.
