@@ -39,8 +39,11 @@
   --font-pixel: "Press Start 2P", "VT323", "Courier New", monospace;
   font-family: var(--font-body);
   /* VT323 reads about 1px smaller than Courier at the same px size — bump
-     the base body size so panels feel the same visual weight as before. */
-  font-size: 14px;
+     the base body size so panels feel the same visual weight as before.
+     Originally 14px; playtest feedback said most things read too small,
+     so bumping the floor by ~1px makes paragraphs immediately more
+     readable without needing the accessibility scale override. */
+  font-size: 15px;
   color-scheme: dark;
 }
 
@@ -154,10 +157,10 @@ html, body, #root, .app-root {
   align-items: center;
   /* Slightly more breathing room. Pixel font + dense info chips were
      squeezed at 6px — 8px reads as the same HUD but less "menu bar". */
-  padding: 8px 12px;
+  padding: 9px 12px;
   background: linear-gradient(180deg, rgba(15, 18, 36, 0.94) 0%, rgba(15, 18, 36, 0.74) 100%);
   border-bottom: 1px solid var(--hud-border-soft);
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0.04em;
   user-select: none;
   pointer-events: auto;
@@ -216,7 +219,7 @@ html, body, #root, .app-root {
    than the time itself so new players read it as a glanceable cue,
    not a primary fact. */
 .clock-tod {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--panel-muted);
   letter-spacing: 0.05em;
   margin-left: 2px;
@@ -230,7 +233,7 @@ html, body, #root, .app-root {
   display: inline-flex !important;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
   color: #d6d3d1;
   border-color: rgba(163, 230, 53, 0.28) !important;
   background: rgba(163, 230, 53, 0.05) !important;
@@ -423,13 +426,13 @@ html, body, #root, .app-root {
      Diplomacy / Stats / Journal / Events / Settings) which live in
      the same band. Drop it below the HUD strip so it sits in clear
      space, aligned right so it doesn't intrude on the centered quote. */
-  top: 48px;
+  top: 50px;
   right: 12px;
-  font-size: 10px;
+  font-size: 12px;
   font-style: italic;
-  padding: 2px 8px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.35);
+  padding: 3px 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.4);
   pointer-events: none;
   z-index: 15;
   letter-spacing: 0.03em;
@@ -440,15 +443,15 @@ html, body, #root, .app-root {
 .hud-mood.mood-anxious     { color: #fca5a5; border: 1px solid rgba(252, 165, 165, 0.35); }
 .hud-quote {
   position: absolute;
-  top: 48px;
+  top: 50px;
   left: 50%;
   transform: translateX(-50%);
   /* Generous range — narrow windows get the full available width,
      wide windows are capped so the line stays readable. */
   max-width: min(900px, calc(100vw - 32px));
-  padding: 5px 16px;
+  padding: 6px 16px;
   font-style: italic;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.45;
   color: rgba(253, 230, 138, 0.85);
   background: rgba(0, 0, 0, 0.4);
@@ -1281,7 +1284,7 @@ html, body, #root, .app-root {
 }
 .decision-footer {
   margin-top: 8px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--panel-muted);
   font-style: italic;
   text-align: right;
@@ -1295,15 +1298,15 @@ html, body, #root, .app-root {
 }
 .decision-opt-label { font-weight: 500; }
 .decision-opt-hint {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
 .decision-timer {
   color: var(--panel-muted);
   font-variant-numeric: tabular-nums;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.1em;
 }
 /* Urgent state — last 30s. Pulsing border + amber timer + bolder footer
@@ -3758,7 +3761,7 @@ html, body, #root, .app-root {
    resize the Pixi canvas — only the HUD/panels/prompts where reading
    matters. Layouts use fixed pixel widths so the surfaces stay
    geometrically the same; text inside them gets bigger. */
-.hud { font-size: calc(13px * var(--ui-scale, 1)); }
+.hud { font-size: calc(14px * var(--ui-scale, 1)); }
 .event-log,
 .settings-panel,
 .stats-panel,
@@ -3772,7 +3775,7 @@ html, body, #root, .app-root {
 .title-card,
 .update-toast,
 .tutorial-card {
-  font-size: calc(14px * var(--ui-scale, 1));
+  font-size: calc(15px * var(--ui-scale, 1));
 }
 
 /* ── Accessibility: colorblind-friendly palette swap ───────────────────────
