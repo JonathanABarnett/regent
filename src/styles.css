@@ -419,7 +419,11 @@ html, body, #root, .app-root {
 }
 .hud-mood {
   position: absolute;
-  top: 4px;
+  /* Was top: 4px — collided with the right-side buttons (Family /
+     Diplomacy / Stats / Journal / Events / Settings) which live in
+     the same band. Drop it below the HUD strip so it sits in clear
+     space, aligned right so it doesn't intrude on the centered quote. */
+  top: 48px;
   right: 12px;
   font-size: 10px;
   font-style: italic;
