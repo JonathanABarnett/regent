@@ -190,9 +190,12 @@ html, body, #root, .app-root {
 }
 .hud-left > .hud-advisor {
   /* Interactive — button reset + cursor pointer. Sit alongside the
-     other chips but feel clickable. */
+     other chips but feel clickable. Sized to match the rest of the
+     HUD chip row (14px) — the previous 13px read smaller than the
+     surrounding day/season/clock chips, which is the wrong hierarchy
+     (the advisor is a primary feature, not a tertiary label). */
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--accent);
   border-color: rgba(251, 191, 36, 0.32);
   background: rgba(251, 191, 36, 0.06);
@@ -233,7 +236,7 @@ html, body, #root, .app-root {
   display: inline-flex !important;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 14px;
   color: #d6d3d1;
   border-color: rgba(163, 230, 53, 0.28) !important;
   background: rgba(163, 230, 53, 0.05) !important;
@@ -428,9 +431,9 @@ html, body, #root, .app-root {
      space, aligned right so it doesn't intrude on the centered quote. */
   top: 50px;
   right: 12px;
-  font-size: 12px;
+  font-size: 14px;
   font-style: italic;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.4);
   pointer-events: none;
@@ -467,10 +470,13 @@ html, body, #root, .app-root {
 .hud .badge {
   font-family: var(--font-pixel);
   font-weight: bold;
-  font-size: 11px;
+  /* Press Start 2P at 11px reads smaller than the surrounding VT323
+     14px chips because the pixel font has tighter vertical metrics.
+     Bump to 13px so the kingdom name visually matches the row weight. */
+  font-size: 13px;
   color: var(--accent);
-  letter-spacing: 0.18em;
-  padding: 4px 12px;
+  letter-spacing: 0.14em;
+  padding: 5px 13px;
   background: linear-gradient(180deg, rgba(251, 191, 36, 0.08), rgba(251, 191, 36, 0.02));
   border: 1px solid rgba(251, 191, 36, 0.22);
   border-radius: 999px;
