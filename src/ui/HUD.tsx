@@ -48,6 +48,7 @@ export function HUD({
   const journalCount = useGameStore((s) => s.journal.length);
   const seen = useGameStore((s) => s.seen);
   const hourLabel = formatHour(stats.hour);
+  const tod = partOfDay(stats.hour);
   const unseenJournal = Math.max(0, journalCount - seen.journal);
   const unseenEvents = Math.max(0, eventCount - seen.events);
   const greeting = greetingFor(stats.hour, identity?.monarchName ?? "monarch");
@@ -67,9 +68,26 @@ export function HUD({
             <span className="hud-advisor-name">{stats.advisor.name}</span>
           </button>
         )}
+        {stats.goal && (
+          <span
+            className="hud-goal"
+            title={`${stats.goal.title} — ${stats.goal.description} · ${Math.round(stats.goal.progress * 100)}%`}
+          >
+            <span className="hud-goal-arrow" aria-hidden="true">→</span>
+            <span className="hud-goal-text">{stats.goal.description}</span>
+            <span className="hud-goal-progress">
+              <span
+                className="hud-goal-progress-fill"
+                style={{ width: `${Math.round(stats.goal.progress * 100)}%` }}
+              />
+            </span>
+          </span>
+        )}
         <span className="day">{stats.dayOfWeek ? `${stats.dayOfWeek} ·` : ""} Day {stats.day} · Y{stats.year}</span>
         <span className="season">{seasonIcon[stats.season] ?? "·"} {stats.season}</span>
-        <span className="clock">{hourLabel}</span>
+        <span className="clock" title={`${tod.label} · in-world time ${hourLabel}`}>
+          <span aria-hidden="true">{tod.glyph}</span> {hourLabel} <span className="clock-tod">{tod.label}</span>
+        </span>
         <span className="weather">{weatherIcon[stats.weather] ?? "·"} {stats.weather}</span>
         <span className="npcs">☖ {stats.npcCount}</span>
         <span className="factions" title={`Merchants ${factionLabel(stats.factions.merchants)} · Scholars ${factionLabel(stats.factions.scholars)} · Guard ${factionLabel(stats.factions.guard)}`}>
@@ -137,6 +155,22 @@ function formatHour(h: number) {
   const hour = Math.floor(h);
   const min = Math.floor((h - hour) * 60);
   return `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+/**
+ * "Hour 17" means nothing to a brand-new player. Prepend a glyph + a
+ * short label so the clock chip reads as natural human time-of-day.
+ * Aligned to the day/night palette tint thresholds so what the player
+ * sees on the world matches the label.
+ */
+function partOfDay(h: number): { glyph: string; label: string } {
+  const hour = Math.floor(h);
+  if (hour >= 5 && hour < 8)   return { glyph: "🌅", label: "dawn" };
+  if (hour >= 8 && hour < 12)  return { glyph: "☀", label: "morning" };
+  if (hour >= 12 && hour < 17) return { glyph: "☀", label: "afternoon" };
+  if (hour >= 17 && hour < 20) return { glyph: "🌇", label: "evening" };
+  if (hour >= 20 && hour < 23) return { glyph: "🌙", label: "night" };
+  return { glyph: "🌙", label: "late" };
 }
 
 function factionLabel(score: number): string {

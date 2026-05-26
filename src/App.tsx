@@ -47,6 +47,7 @@ import type { PetSpec } from "./engine/PetSpec";
 import { bindTrayMenu } from "./ui/TrayMenuBindings";
 import { Achievements } from "./sim/systems/Achievements";
 import { quoteOfDay } from "./sim/systems/Quotes";
+import { Aspirations } from "./sim/systems/Aspirations";
 import { AudioEngine } from "./engine/Audio";
 import type { ExternalEvent } from "./sim/events/EventSchema";
 import { ExternalEvent as Schema } from "./sim/events/EventSchema";
@@ -491,6 +492,30 @@ export function App() {
             role: best.role,
             trait: best.trait,
           };
+        })(),
+        // Current goal — pick the active aspiration with the lowest
+        // progress so the player always sees something CLOSE to
+        // completion as the "what do I do" answer. If all are
+        // unevenly distributed, the closest-to-done feels best to
+        // chase. Falls through silently if no aspirations are seeded.
+        goal: (() => {
+          const active = world.aspirations.active;
+          if (!active || active.length === 0) return undefined;
+          const defs = Aspirations.definitions();
+          let pick: { title: string; description: string; progress: number } | undefined;
+          let bestProgress = -Infinity;
+          for (const id of active) {
+            const def = defs.find((d) => d.id === id);
+            if (!def) continue;
+            const p = Math.min(1, Math.max(0, def.progress(world)));
+            // Prefer aspirations with at least some progress; tie-break
+            // by which is closest to 1.0 (more satisfying to nudge).
+            if (p > bestProgress) {
+              bestProgress = p;
+              pick = { title: def.title, description: def.description, progress: p };
+            }
+          }
+          return pick;
         })(),
       });
     }, 500);
@@ -1442,6 +1467,23 @@ export function App() {
                 // kingdom and sees nothing happen for two minutes
                 // refunds. This makes sure something happens.
                 w.foundingDay.fire();
+                // Snap the camera onto the castle so the founding
+                // fireworks land in the center of the screen, not
+                // somewhere offscreen the autopilot happened to be
+                // pointing. Playtest signal was "nothing happens" —
+                // the fireworks DID happen, just off-camera.
+                try {
+                  const castle = w.map.structures.find((s) => s.kind === "castle");
+                  const cam = pixiRef.current?.camera;
+                  if (castle && cam) {
+                    cam.snapTo(
+                      castle.pos.x + castle.size.x / 2,
+                      castle.pos.y + castle.size.y / 2,
+                    );
+                  }
+                } catch {
+                  /* ignore — camera will autopilot to castle anyway */
+                }
               }
               // Immediate save.
               try {

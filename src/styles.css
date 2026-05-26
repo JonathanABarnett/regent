@@ -174,7 +174,8 @@ html, body, #root, .app-root {
 .hud-left > .weather,
 .hud-left > .npcs,
 .hud-left > .factions,
-.hud-left > .hud-advisor {
+.hud-left > .hud-advisor,
+.hud-left > .hud-goal {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -209,6 +210,58 @@ html, body, #root, .app-root {
 .hud-advisor-name {
   font-weight: bold;
   font-variant-numeric: tabular-nums;
+}
+
+/* Subdued part-of-day label next to the clock numbers. Lower-weight
+   than the time itself so new players read it as a glanceable cue,
+   not a primary fact. */
+.clock-tod {
+  font-size: 11px;
+  color: var(--panel-muted);
+  letter-spacing: 0.05em;
+  margin-left: 2px;
+}
+
+/* Current-goal chip — the "what do I do?" answer surfaced from the
+   Aspirations system. Sits in the HUD-left chip row but reads as a
+   pursuit indicator rather than a stat. The tiny progress bar fills
+   left-to-right as the player nudges toward completion. */
+.hud-left > .hud-goal {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #d6d3d1;
+  border-color: rgba(163, 230, 53, 0.28) !important;
+  background: rgba(163, 230, 53, 0.05) !important;
+  cursor: default;
+  position: relative;
+}
+.hud-left > .hud-goal:hover {
+  border-color: rgba(163, 230, 53, 0.5) !important;
+  background: rgba(163, 230, 53, 0.1) !important;
+}
+.hud-goal-arrow {
+  color: #a3e635;
+  font-weight: bold;
+}
+.hud-goal-text {
+  font-style: italic;
+}
+.hud-goal-progress {
+  display: inline-block;
+  width: 36px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-left: 2px;
+}
+.hud-goal-progress-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #84cc16, #a3e635);
+  transition: width 400ms ease-out;
 }
 
 .hud-left > .day:hover,

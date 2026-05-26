@@ -132,6 +132,10 @@ export interface GameState {
      *  to care about beyond their own monarch. Re-elected automatically
      *  when the current advisor dies (next-oldest takes the role). */
     advisor?: { id: string; name: string; role: string; trait?: string };
+    /** Current goal — the lowest-progress active aspiration surfaced in
+     *  the HUD so a new player has ONE concrete thing to chase. Player
+     *  feedback was "what do I do?" — this is the answer chip. */
+    goal?: { title: string; description: string; progress: number };
   };
   pushEvent: (e: ExternalEvent) => void;
   clearEvents: () => void;
