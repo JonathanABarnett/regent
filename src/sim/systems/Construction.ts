@@ -169,6 +169,60 @@ export class Construction {
     return true;
   }
 
+  /**
+   * Plain-data list of every constructable, with current affordability —
+   * for the player-facing Royal Actions ("Rule") panel. No closures, so
+   * it's safe to hand to React. Affordability re-checks live economy
+   * state each call.
+   */
+  listConstructibleOptions(): Array<{
+    kind: ConstructibleKind;
+    label: string;
+    goldCost: number;
+    ironworkCost?: number;
+    tomeCost?: number;
+    buildDays: number;
+    pitch: string;
+    affordable: boolean;
+  }> {
+    const econ = this.world.economy.state;
+    return DEFS.map((d) => ({
+      kind: d.kind,
+      label: d.label,
+      goldCost: d.goldCost,
+      ironworkCost: d.ironworkCost,
+      tomeCost: d.tomeCost,
+      buildDays: d.buildDays,
+      pitch: d.pitch,
+      affordable:
+        econ.gold >= d.goldCost &&
+        (!d.ironworkCost || econ.ironwork >= d.ironworkCost) &&
+        (!d.tomeCost || econ.tomes >= d.tomeCost),
+    }));
+  }
+
+  /**
+   * Player-initiated build by kind — looks up the def (with its onFinish
+   * closure) internally and routes through startBuild so the UI never has
+   * to hold a closure. Returns false if already building, can't afford,
+   * or no site is free.
+   */
+  startBuildByKind(kind: ConstructibleKind): boolean {
+    const def = DEFS.find((d) => d.kind === kind);
+    if (!def) return false;
+    return this.startBuild(def);
+  }
+
+  /** Current build status for the Rule panel ("Mill — 3 days left"). */
+  activeBuildInfo(): { label: string; daysLeft: number } | null {
+    if (!this.active) return null;
+    const def = DEFS.find((d) => d.kind === this.active!.kind);
+    return {
+      label: def?.label ?? this.active.kind,
+      daysLeft: Math.max(0, this.active.finishesOnDay - this.world.state.day),
+    };
+  }
+
   private proposeBuild() {
     // Pick a def the player can afford
     const affordable = DEFS.filter((d) => {

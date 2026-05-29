@@ -26,6 +26,7 @@ export function HUD({
   onTakePhoto,
   onToggleChronicle,
   onSelectAdvisor,
+  onOpenRule,
   cutawayActive,
 }: {
   onToggleLog: () => void;
@@ -40,6 +41,8 @@ export function HUD({
   /** Click handler for the advisor chip — typically opens the NPC profile
    *  modal (App.tsx wires this to setProfileNpcId). */
   onSelectAdvisor?: (npcId: string) => void;
+  /** Opens the Royal Actions ("Rule") panel — the proactive-verb surface. */
+  onOpenRule?: () => void;
   cutawayActive?: boolean;
 }) {
   const stats = useGameStore((s) => s.worldStats);
@@ -107,6 +110,15 @@ export function HUD({
         </div>
       )}
       <div className="hud-right">
+        {onOpenRule && (
+          <button
+            onClick={onOpenRule}
+            className="hud-rule-btn"
+            title="Rule the kingdom — hold festivals, proclaim edicts, commission buildings, issue decrees"
+          >
+            ⚜ Rule
+          </button>
+        )}
         {onTakePhoto && (
           <button
             onClick={onTakePhoto}

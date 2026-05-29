@@ -81,4 +81,54 @@ describe("Construction", () => {
     expect(w.economy.state.gold).toBe(70);
     expect(w.construction.active?.kind).toBe("watchtower");
   });
+
+  // ── Player-facing "Rule" panel accessors ────────────────────────────
+
+  it("listConstructibleOptions reflects affordability against live economy", () => {
+    const w = new World({ seed: 42 });
+    w.economy.state.gold = 35; // enough for watchtower (30), not mill (60)
+    w.economy.state.ironwork = 0;
+    w.economy.state.tomes = 0;
+    const opts = w.construction.listConstructibleOptions();
+    const watchtower = opts.find((o) => o.kind === "watchtower");
+    const mill = opts.find((o) => o.kind === "mill");
+    expect(watchtower?.affordable).toBe(true);
+    expect(mill?.affordable).toBe(false); // 60 gold + 4 ironwork
+    // Returned data is plain (no closures) — safe for React.
+    expect(typeof watchtower?.label).toBe("string");
+    expect(watchtower).not.toHaveProperty("onFinish");
+  });
+
+  it("startBuildByKind starts a build the player can afford", () => {
+    const w = new World({ seed: 42 });
+    w.economy.state.gold = 100;
+    const ok = w.construction.startBuildByKind("watchtower");
+    expect(ok).toBe(true);
+    expect(w.construction.active?.kind).toBe("watchtower");
+    expect(w.economy.state.gold).toBe(70);
+  });
+
+  it("startBuildByKind refuses when one is already building", () => {
+    const w = new World({ seed: 42 });
+    w.economy.state.gold = 1000;
+    expect(w.construction.startBuildByKind("watchtower")).toBe(true);
+    expect(w.construction.startBuildByKind("mill")).toBe(false);
+  });
+
+  it("startBuildByKind returns false for an unknown kind", () => {
+    const w = new World({ seed: 42 });
+    w.economy.state.gold = 1000;
+    // @ts-expect-error — deliberately passing an invalid kind
+    expect(w.construction.startBuildByKind("castle")).toBe(false);
+  });
+
+  it("activeBuildInfo reports label + days left, null when idle", () => {
+    const w = new World({ seed: 42 });
+    expect(w.construction.activeBuildInfo()).toBeNull();
+    w.economy.state.gold = 100;
+    w.construction.startBuildByKind("watchtower");
+    const info = w.construction.activeBuildInfo();
+    expect(info?.label).toBe("Watchtower");
+    expect(info?.daysLeft).toBeGreaterThan(0);
+  });
 });

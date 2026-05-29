@@ -3457,6 +3457,240 @@ html, body, #root, .app-root {
   to   { opacity: 1; }
 }
 
+/* ── "Rule" HUD button + Royal Actions panel ─────────────────────────────────
+   The Rule button is the most prominent action affordance in the HUD — a
+   filled gold pill, not an outline, because it's THE answer to "what do I
+   do?". It leads the right-side button group. */
+.hud-rule-btn {
+  font: inherit;
+  font-weight: bold;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  padding: 6px 16px !important;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 191, 36, 0.8) !important;
+  background: linear-gradient(180deg, var(--accent), #d97706) !important;
+  color: #1a1410 !important;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.hud-rule-btn:hover {
+  background: linear-gradient(180deg, #fcd34d, var(--accent)) !important;
+  box-shadow: 0 3px 12px rgba(251, 191, 36, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.royal-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 115;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: feedback-fade-in 200ms ease-out;
+}
+.royal-card {
+  width: min(620px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 32%, rgba(0,0,0,0.2) 100%),
+    var(--panel-bg);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.6), var(--shadow-lg);
+  padding: 18px 22px 18px;
+  color: var(--panel-fg);
+  font-size: 14px;
+}
+.royal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.royal-header h3 {
+  margin: 0;
+  font-family: var(--font-pixel);
+  font-size: 15px;
+  color: var(--accent);
+  flex: 1;
+}
+.royal-treasury {
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: #fcd34d;
+  letter-spacing: 0.03em;
+}
+.royal-close {
+  background: none;
+  border: none;
+  color: var(--panel-muted);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.royal-close:hover { color: var(--accent); }
+.royal-intro {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--panel-muted);
+  line-height: 1.45;
+}
+.royal-flash {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(163, 230, 53, 0.45);
+  background: rgba(163, 230, 53, 0.1);
+  color: #d9f99d;
+  animation: feedback-fade-in 200ms ease-out;
+}
+.royal-section {
+  border-top: 1px solid var(--hud-border);
+  padding: 14px 0 4px;
+}
+.royal-section:first-of-type { border-top: none; }
+.royal-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.royal-section-head h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--panel-fg);
+  letter-spacing: 0.04em;
+}
+.royal-cost {
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: #fcd34d;
+}
+.royal-active {
+  font-size: 12px;
+  font-style: italic;
+  color: #a3e635;
+}
+.royal-desc {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--panel-muted);
+}
+.royal-do {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 1px solid var(--hud-border);
+  background: rgba(255,255,255,0.04);
+  color: var(--panel-fg);
+}
+.royal-do.primary {
+  background: linear-gradient(180deg, var(--accent), #d97706);
+  color: #1a1410;
+  border-color: rgba(251, 191, 36, 0.7);
+  font-weight: bold;
+  box-shadow: 0 2px 6px rgba(251, 191, 36, 0.22), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.royal-do.primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #fcd34d, var(--accent));
+}
+.royal-do:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.royal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.royal-tile {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 11px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--hud-border);
+  border-radius: var(--radius-md);
+  color: var(--panel-fg);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--motion-fast), background-color var(--motion-fast), transform var(--motion-fast);
+}
+.royal-tile:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: rgba(251, 191, 36, 0.08);
+  transform: translateY(-1px);
+}
+.royal-tile:disabled { opacity: 0.5; cursor: not-allowed; }
+.royal-tile.active {
+  border-color: var(--accent);
+  background: rgba(251, 191, 36, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.3);
+}
+.royal-tile-label { font-weight: bold; font-size: 13px; }
+.royal-tile-blurb { font-size: 12px; color: var(--panel-muted); line-height: 1.35; }
+.royal-tile-tag {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-top: 2px;
+}
+.royal-tile-tag.dim { color: var(--panel-muted); }
+.royal-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--hud-border);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  color: var(--panel-fg);
+  font: inherit;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.royal-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.18);
+}
+.royal-decree-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.royal-select {
+  flex: 1;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--hud-border);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  color: var(--panel-fg);
+  font: inherit;
+  font-size: 13px;
+}
+.royal-foot {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--hud-border);
+  font-size: 12px;
+  font-style: italic;
+  color: var(--panel-muted);
+  text-align: center;
+}
+
 /* Help overlay → "tell the dev" inline button */
 .help-feedback-cta {
   border-top: 1px solid var(--hud-border);

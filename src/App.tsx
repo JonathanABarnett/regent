@@ -15,6 +15,7 @@ import { FoundingMoment } from "./ui/FoundingMoment";
 import { FeedbackPanel } from "./ui/FeedbackPanel";
 import { FeedbackMoments } from "./ui/FeedbackMoments";
 import { IntroCarousel } from "./ui/IntroCarousel";
+import { RoyalActions } from "./ui/RoyalActions";
 import { KingdomCard } from "./ui/KingdomCard";
 import { JournalPanel } from "./ui/JournalPanel";
 import { AchievementToast } from "./ui/AchievementToast";
@@ -120,6 +121,7 @@ export function App() {
   const setStatsOpen = makeRightPanelSetter("stats");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [royalOpen, setRoyalOpen] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [petCreatorOpen, setPetCreatorOpen] = useState(false);
   const [inspected, setInspected] = useState<Structure | null>(null);
@@ -1139,6 +1141,7 @@ export function App() {
           onTakePhoto={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "p" }))}
           onToggleChronicle={() => setChronicleOpen((b) => !b)}
           onSelectAdvisor={(npcId) => setProfileNpcId(npcId)}
+          onOpenRule={() => setRoyalOpen((b) => !b)}
           cutawayActive={cutawayMode}
         />
       )}
@@ -1192,6 +1195,11 @@ export function App() {
       <FeedbackPanel
         open={feedbackOpen && !streamerMode}
         onClose={() => setFeedbackOpen(false)}
+        getWorld={() => worldRef.current}
+      />
+      <RoyalActions
+        open={royalOpen && !streamerMode}
+        onClose={() => setRoyalOpen(false)}
         getWorld={() => worldRef.current}
       />
       {/* Opportunistic feedback prompts at 10-min session mark + first

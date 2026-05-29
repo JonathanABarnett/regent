@@ -168,6 +168,7 @@ src/
 │   ├── UiSound.tsx           # global menu-blip + confirm-chord delegator
 │   ├── FeedbackPanel.tsx     # in-app "send feedback" modal (bug/idea/love/question)
 │   ├── FeedbackMoments.tsx   # opportunistic prompts (10-min mark + year-1 rollover)
+│   ├── RoyalActions.tsx      # "Rule" panel — proactive verbs (festival/edict/build/decree)
 │   ├── FamilyTreePanel.tsx   # family-tree visualization (right rail)
 │   ├── DiplomacyPanel.tsx    # off-map kingdom relations (right rail)
 │   ├── KingdomChronicle.tsx  # long-form story view
