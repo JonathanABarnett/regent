@@ -2954,7 +2954,7 @@ html, body, #root, .app-root {
   border-radius: var(--radius-md,6px); padding: 14px 16px;
   margin: 12px 0; display: flex; flex-direction: column; gap: 8px;
 }
-.slot-picker-label { font-size: 11px; color: var(--panel-muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 4px; }
+.slot-picker-label { font-size: 13px; color: var(--panel-muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 4px; }
 .slot-btn {
   display: flex; align-items: center; gap: 10px;
   background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
@@ -4025,10 +4025,10 @@ html.colorblind .faction-angry   { color: #ef4444 !important; }   /* red, kept *
 html.colorblind .faction-m { filter: hue-rotate(15deg) saturate(1.2); }
 html.colorblind .faction-s { filter: hue-rotate(180deg) saturate(1.2); }  /* cyan-ish */
 html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* magenta-ish */
-.slot-num  { font-size: 10px; color: var(--panel-muted); width: 40px; flex-shrink: 0; }
+.slot-num  { font-size: 12px; color: var(--panel-muted); width: 44px; flex-shrink: 0; }
 .slot-empty { color: var(--panel-muted); font-style: italic; }
 .slot-name { display: block; font-weight: bold; }
-.slot-sub  { font-size: 10px; color: var(--panel-muted); }
+.slot-sub  { font-size: 12px; color: var(--panel-muted); }
 .slot-cancel {
   background: none; border: 1px solid rgba(255,255,255,0.08);
   color: var(--panel-muted); font-size: 11px; padding: 6px 12px;
@@ -4074,7 +4074,7 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
 .title-tagline {
   margin: 12px 0 24px;
   color: var(--panel-muted);
-  font-size: 12px;
+  font-size: 15px;
   font-style: italic;
   line-height: 1.6;
 }
@@ -4097,12 +4097,12 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
 .title-monarch-name {
   color: var(--accent);
   font-weight: bold;
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: 0.05em;
 }
 .title-monarch-sub {
   color: var(--panel-muted);
-  font-size: 11px;
+  font-size: 13px;
   margin-top: 2px;
 }
 .title-news {
@@ -4112,7 +4112,7 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
   text-align: left;
 }
 .title-news-label {
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.2em;
   color: var(--accent);
   text-transform: uppercase;
@@ -4129,13 +4129,13 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
 }
 .title-news-entry {
   display: grid;
-  grid-template-columns: 50px 1fr;
+  grid-template-columns: 56px 1fr;
   gap: 8px;
-  font-size: 10px;
+  font-size: 13px;
   line-height: 1.4;
   color: var(--panel-fg);
   padding: 2px 0;
-  opacity: 0.85;
+  opacity: 0.9;
 }
 .title-news-day {
   color: var(--panel-muted);
@@ -4163,7 +4163,7 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
   border: 1px solid var(--hud-border);
   padding: 12px 24px;
   font: inherit;
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
@@ -4184,7 +4184,7 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
 }
 .title-footer {
   color: var(--panel-muted);
-  font-size: 10px;
+  font-size: 12px;
   margin: 0;
   letter-spacing: 0.1em;
 }

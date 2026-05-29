@@ -5,7 +5,7 @@
  *   - Kind-specific icon based on achievement id category
  *   - Richer slide-in animation (from bottom-right)
  *   - "View in journal" button that opens the journal panel
- *   - Auto-dismiss after 6 seconds; click anywhere to dismiss early
+ *   - Auto-dismiss after 11 seconds; click anywhere to dismiss early
  *   - Hidden achievements show "???" title until revealed
  */
 
@@ -50,10 +50,15 @@ export function AchievementToast({
   const dismiss = useGameStore((s) => s.dismissAchievementToast);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Auto-dismiss after 6 seconds.
+  // Auto-dismiss after 11 seconds. Was 6s — playtest feedback was that
+  // the first achievement ("First Dispatch", which fires the instant a
+  // courier rides out at founding) vanished while the player was still
+  // reading the Welcome Petition and figuring out the world. 11s gives
+  // a comfortable read; it still auto-clears so later-game achievements
+  // don't pile up. Click anywhere / the × to dismiss early.
   useEffect(() => {
     if (!toast) return;
-    timerRef.current = setTimeout(dismiss, 6000);
+    timerRef.current = setTimeout(dismiss, 11000);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };

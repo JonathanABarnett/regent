@@ -53,22 +53,17 @@ export function FoundingMoment({ onOpenJournal }: { onOpenJournal: () => void })
     if (!kingdomName) return;
     const seen = loadSeen();
     if (seen.has(kingdomName)) return;
-    // Wait 5 seconds so the player has settled into the world view
-    // and the founding-day events have started visibly playing.
-    const showAt = window.setTimeout(() => setVisible(true), 5000);
-    // Auto-dismiss after 12 more seconds.
-    const hideAt = window.setTimeout(() => setDismissing(true), 5000 + 12000);
-    const removeAt = window.setTimeout(() => {
-      setVisible(false);
-      const next = loadSeen();
-      next.add(kingdomName);
-      saveSeen(next);
-    }, 5000 + 12000 + 400);
-    return () => {
-      clearTimeout(showAt);
-      clearTimeout(hideAt);
-      clearTimeout(removeAt);
-    };
+    // Wait ~8 seconds so the founding burst (fireworks, courier, the
+    // Welcome Petition prompt) has settled before this orientation card
+    // slides in — otherwise it competes for attention in the exact
+    // moment the player is trying to read everything at once.
+    //
+    // Crucially: NO auto-dismiss. Playtest feedback was that early
+    // toasts vanish while the player is mid-read. This card has explicit
+    // "Read the chronicle" / "Later" buttons — it stays until the player
+    // chooses one. (It's one-time per kingdom, so it won't nag.)
+    const showAt = window.setTimeout(() => setVisible(true), 8000);
+    return () => clearTimeout(showAt);
   }, [kingdomName]);
 
   function dismiss(): void {
