@@ -51,7 +51,7 @@ const STEPS: Step[] = [
     id: "decision",
     title: "Your court brings you choices",
     body:
-      "When a decision is needed, it appears here. Read it, pick when you're ready — the timer is generous and won't rush you. The hints under each option preview what happens.",
+      "When a decision is needed, it appears here. The hints under each option preview what happens. There's a countdown — if you don't choose in time, your court goes with the safe default shown at the bottom.",
     target: ".decision-prompt",
   },
   {

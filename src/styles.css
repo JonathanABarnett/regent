@@ -453,16 +453,26 @@ html, body, #root, .app-root {
   /* Generous range — narrow windows get the full available width,
      wide windows are capped so the line stays readable. */
   max-width: min(900px, calc(100vw - 32px));
-  padding: 6px 16px;
+  padding: 8px 18px;
   font-style: italic;
-  font-size: 13px;
-  line-height: 1.45;
-  color: rgba(253, 230, 138, 0.85);
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(253, 230, 138, 0.18);
+  font-size: 15px;
+  line-height: 1.5;
+  /* Near-white warm gold at full opacity. The old 0.85-alpha gold over a
+     thin 0.4 scrim washed out against bright grass tiles — players
+     reported it was hard to read. Bright text + solid dark panel +
+     text-shadow makes it legible over ANY tile underneath. */
+  color: rgb(255, 246, 224);
+  background: rgba(18, 12, 6, 0.8);
+  border: 1px solid rgba(253, 230, 138, 0.35);
   border-radius: 8px;
   text-align: center;
   pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 1px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  /* Backdrop blur further separates the text from busy map detail behind
+     it (graceful no-op where unsupported). */
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
   /* Wrap onto multiple lines instead of truncating — quotes are often
      two sentences and read fine on 2-3 lines. */
   white-space: normal;
