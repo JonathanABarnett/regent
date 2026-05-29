@@ -266,7 +266,6 @@ export function SettingsPanel({
             Found new kingdom
           </button>
         </section>
-        <EdictsSection />
         <section>
           <h3>Visual</h3>
           <label className="row">
@@ -555,93 +554,6 @@ function DiagnosticsSection() {
         >
           Clear log
         </button>
-      </div>
-    </section>
-  );
-}
-
-/**
- * Royal Edicts picker. Reads + writes through window.kingdomos.world() so
- * the section can live in SettingsPanel without growing the panel's prop
- * surface or threading the world reference through. State updates every
- * second so the "days left" countdown stays current.
- */
-function EdictsSection() {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const id = window.setInterval(() => setTick((n) => n + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-  // touch tick so React knows this re-render is coming from the interval
-  void tick;
-
-  const k = (window as unknown as {
-    kingdomos?: {
-      world: () => {
-        edicts?: {
-          status: () => { active: string | null; daysLeft: number };
-          proclaim: (id: string) => boolean;
-          revoke: () => void;
-        };
-      };
-    };
-  }).kingdomos;
-  const world = k?.world();
-  const edicts = world?.edicts;
-  if (!edicts) return null;
-  const status = edicts.status();
-
-  // Keep the def list local to the component so we don't need a fresh import
-  // just to render labels — keeps the bundle's tree-shake clean.
-  const DEFS: Array<{ id: string; label: string; blurb: string }> = [
-    { id: "hospitality", label: "Edict of Hospitality", blurb: "Travelers arrive more often. The roads stay warm." },
-    { id: "studious", label: "Edict of Letters", blurb: "+50% tome production for seven days." },
-    { id: "frugal", label: "Edict of Thrift", blurb: "Gold accumulates +25% for seven days." },
-    { id: "open_court", label: "Edict of an Open Court", blurb: "Royal decisions linger longer before defaulting." },
-  ];
-
-  return (
-    <section>
-      <h3>Royal edicts</h3>
-      <div className="muted" style={{ fontSize: 11, fontStyle: "italic", marginBottom: 8 }}>
-        Choose one short decree; the kingdom reacts. Each lasts seven in-world days. Only one at a time.
-      </div>
-      {status.active ? (
-        <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 12, fontWeight: 600 }}>
-            Active: {DEFS.find((d) => d.id === status.active)?.label ?? status.active}
-          </div>
-          <div className="muted" style={{ fontSize: 11 }}>
-            {status.daysLeft} day{status.daysLeft === 1 ? "" : "s"} remaining.
-          </div>
-          <button
-            style={{ marginTop: 6, width: "100%" }}
-            onClick={() => edicts.revoke()}
-            title="Rescind the active edict immediately"
-          >
-            Revoke
-          </button>
-        </div>
-      ) : (
-        <div className="muted" style={{ fontSize: 11, marginBottom: 8 }}>
-          No edict currently in force.
-        </div>
-      )}
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        {DEFS.map((d) => (
-          <button
-            key={d.id}
-            onClick={() => edicts.proclaim(d.id)}
-            disabled={status.active === d.id}
-            title={d.blurb}
-            style={{ textAlign: "left", padding: "6px 8px" }}
-          >
-            <div style={{ fontWeight: 600, fontSize: 11 }}>{d.label}</div>
-            <div className="muted" style={{ fontSize: 10, fontStyle: "italic", marginTop: 1 }}>
-              {d.blurb}
-            </div>
-          </button>
-        ))}
       </div>
     </section>
   );
