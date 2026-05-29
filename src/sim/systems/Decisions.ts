@@ -40,12 +40,55 @@ export interface PendingDecision {
 export class Decisions {
   private queue: PendingDecision[] = [];
   private listeners = new Set<(current: PendingDecision | null) => void>();
+  /**
+   * Wall-clock ms at which the sim was paused, or null when running.
+   * Decision windows are wall-clock (`expiresAt = Date.now() + N`), so a
+   * pause (the guided tutorial, or a manual speed-0) would otherwise let
+   * the real clock march past `expiresAt` — burning the player's reading
+   * time and auto-resolving the moment they unpause. While frozen we stop
+   * the countdown (effectiveNow is pinned) and on unfreeze we shift every
+   * queued window forward by exactly the paused duration, so the player
+   * gets back every second the pause took.
+   */
+  private frozenAt: number | null = null;
 
   constructor(private world: World) {}
 
   propose(d: PendingDecision) {
     this.queue.push(d);
     this.notify();
+  }
+
+  /** Pin the decision clock. Idempotent — safe to call every paused frame. */
+  freeze() {
+    if (this.frozenAt === null) this.frozenAt = Date.now();
+  }
+
+  /**
+   * Resume the decision clock, crediting the queued windows with the
+   * elapsed paused time. Idempotent — safe to call every running frame.
+   */
+  unfreeze() {
+    if (this.frozenAt === null) return;
+    const pausedMs = Date.now() - this.frozenAt;
+    this.frozenAt = null;
+    if (pausedMs > 0) {
+      for (const d of this.queue) d.expiresAt += pausedMs;
+      // Push a fresh snapshot so the UI redraws with the shifted window.
+      this.notify();
+    }
+  }
+
+  isFrozen(): boolean {
+    return this.frozenAt !== null;
+  }
+
+  /**
+   * The clock the UI should measure remaining time against — pinned while
+   * frozen so the displayed countdown holds steady during a pause.
+   */
+  effectiveNow(): number {
+    return this.frozenAt ?? Date.now();
   }
 
   resolve(id: string, choiceId: string) {
@@ -66,6 +109,10 @@ export class Decisions {
 
   /** Called periodically from World.tick to expire abandoned decisions. */
   tick(nowMs: number) {
+    // While frozen no real time should count against a decision. World.tick
+    // doesn't run when paused, so this normally can't be reached mid-freeze;
+    // it's a belt-and-suspenders guard against any stray tick.
+    if (this.frozenAt !== null) return;
     let mutated = false;
     for (let i = this.queue.length - 1; i >= 0; i--) {
       const d = this.queue[i];

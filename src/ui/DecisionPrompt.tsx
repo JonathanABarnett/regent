@@ -43,7 +43,10 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
   const w = getWorld();
   if (!w) return null;
 
-  const secondsLeft = Math.max(0, Math.floor((current.expiresAt - Date.now()) / 1000));
+  // Measure against the decisions clock, which is pinned while the sim is
+  // paused (guided tutorial / manual pause). That keeps the countdown
+  // visibly frozen during a pause instead of ticking toward auto-decide.
+  const secondsLeft = Math.max(0, Math.floor((current.expiresAt - w.decisions.effectiveNow()) / 1000));
   const mm = Math.floor(secondsLeft / 60);
   const ss = secondsLeft % 60;
   const timeStr = `${mm}:${String(ss).padStart(2, "0")}`;

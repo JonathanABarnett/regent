@@ -143,6 +143,61 @@ describe("Decisions", () => {
     expect(w.decisions.current()?.id).toBe("second");
   });
 
+  it("freeze pins effectiveNow; unfreeze releases it", () => {
+    const w = new World({ seed: 42 });
+    expect(w.decisions.isFrozen()).toBe(false);
+    w.decisions.freeze();
+    expect(w.decisions.isFrozen()).toBe(true);
+    const pinned = w.decisions.effectiveNow();
+    // effectiveNow is stable while frozen (same value on repeat reads).
+    expect(w.decisions.effectiveNow()).toBe(pinned);
+    w.decisions.unfreeze();
+    expect(w.decisions.isFrozen()).toBe(false);
+  });
+
+  it("freeze is idempotent — second freeze doesn't re-pin the clock", () => {
+    const w = new World({ seed: 42 });
+    w.decisions.freeze();
+    const first = w.decisions.effectiveNow();
+    w.decisions.freeze();
+    expect(w.decisions.effectiveNow()).toBe(first);
+  });
+
+  it("unfreeze shifts queued windows forward by the paused duration", () => {
+    const w = new World({ seed: 42 });
+    const before = Date.now() + 60_000;
+    w.decisions.propose({
+      id: "p",
+      title: "P",
+      body: "",
+      expiresAt: before,
+      defaultOnExpire: true,
+      options: [{ id: "a", label: "A", onChoose: () => {} }],
+    });
+    w.decisions.freeze();
+    // While frozen, a tick must NOT expire anything even if the wall clock
+    // has nominally passed expiresAt.
+    w.decisions.tick(before + 5000);
+    expect(w.decisions.current()?.id).toBe("p");
+    w.decisions.unfreeze();
+    // The window was credited the paused time, so it's still in the future.
+    expect(w.decisions.current()!.expiresAt).toBeGreaterThanOrEqual(before);
+  });
+
+  it("unfreeze without a prior freeze is a no-op", () => {
+    const w = new World({ seed: 42 });
+    const exp = Date.now() + 60_000;
+    w.decisions.propose({
+      id: "p",
+      title: "P",
+      body: "",
+      expiresAt: exp,
+      options: [{ id: "a", label: "A", onChoose: () => {} }],
+    });
+    w.decisions.unfreeze();
+    expect(w.decisions.current()!.expiresAt).toBe(exp);
+  });
+
   it("throwing onChoose doesn't break the queue", () => {
     const w = new World({ seed: 42 });
     w.decisions.propose({

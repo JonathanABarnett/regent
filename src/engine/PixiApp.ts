@@ -340,6 +340,11 @@ export class PixiApp {
     if (speed === 0) {
       // paused: don't advance sim time, but still render the last state
       this.alpha = 0;
+      // Pin interactive decision timers while paused so a paused tutorial
+      // (or a manual speed-0) doesn't burn the petition countdown — and so
+      // unpausing doesn't instantly auto-resolve a decision whose wall-clock
+      // window elapsed during the pause. Idempotent per frame.
+      this.opts.world.decisions.freeze();
       return;
     }
     // Sim is dead. Don't try anymore. The render loop keeps going so
@@ -349,6 +354,9 @@ export class PixiApp {
       this.alpha = 0;
       return;
     }
+    // Running again — credit the paused wall-time back to decision windows.
+    // Idempotent: a no-op on every frame that wasn't preceded by a pause.
+    this.opts.world.decisions.unfreeze();
     this.accumulator += realDt * speed;
     let steps = 0;
     // Cap steps higher at 4x speed so the fast-forward feels snappy
