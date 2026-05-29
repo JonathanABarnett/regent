@@ -4221,6 +4221,16 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
 .title-actions button.primary:hover {
   background: #fcd34d;
 }
+/* "How to Play" — a tinted ghost so it stands out as the new-player
+   entry point without competing with the primary Continue/Begin CTA. */
+.title-actions button.title-howto {
+  border-color: rgba(251, 191, 36, 0.4);
+  color: var(--accent);
+}
+.title-actions button.title-howto:hover {
+  border-color: var(--accent);
+  background: rgba(251, 191, 36, 0.08);
+}
 .title-footer {
   color: var(--panel-muted);
   font-size: 12px;

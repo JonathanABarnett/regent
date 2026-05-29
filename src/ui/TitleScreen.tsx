@@ -231,6 +231,22 @@ export function TitleScreen({
           >
             {hasSave ? "New Kingdom" : "Begin"}
           </button>
+          <button
+            className="ghost title-howto"
+            title="A short, paused walkthrough of what everything does"
+            onClick={() => {
+              // Arm the guided tour, then drop into the game so it can
+              // run (the tour highlights in-game HUD elements, so it needs
+              // a founded kingdom). Continue an existing realm if there is
+              // one; otherwise start a fresh kingdom — either way the
+              // paused tour fires a few seconds after the world loads.
+              useGameStore.getState().setShowTutorial(true);
+              if (hasSave) onContinue();
+              else onNew();
+            }}
+          >
+            ❓ How to Play
+          </button>
           <button className="ghost" onClick={onSettings}>
             Settings
           </button>
