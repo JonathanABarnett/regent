@@ -46,11 +46,16 @@ function saveSeen(set: Set<string>): void {
 export function FoundingMoment({ onOpenJournal }: { onOpenJournal: () => void }) {
   const identity = useGameStore((s) => s.identity);
   const kingdomName = identity?.kingdomName;
+  // When the first-launch guided tour is still pending (showTutorial),
+  // it covers the same "here's your chronicle" beat — so this toast
+  // stays out of the way to avoid a first-play pile-on. Returning
+  // players (tour already done/skipped) get this lighter nudge instead.
+  const tourPending = useGameStore((s) => s.settings.showTutorial);
   const [visible, setVisible] = useState(false);
   const [dismissing, setDismissing] = useState(false);
 
   useEffect(() => {
-    if (!kingdomName) return;
+    if (!kingdomName || tourPending) return;
     const seen = loadSeen();
     if (seen.has(kingdomName)) return;
     // Wait ~8 seconds so the founding burst (fireworks, courier, the
@@ -64,7 +69,7 @@ export function FoundingMoment({ onOpenJournal }: { onOpenJournal: () => void })
     // chooses one. (It's one-time per kingdom, so it won't nag.)
     const showAt = window.setTimeout(() => setVisible(true), 8000);
     return () => clearTimeout(showAt);
-  }, [kingdomName]);
+  }, [kingdomName, tourPending]);
 
   function dismiss(): void {
     setDismissing(true);

@@ -144,8 +144,12 @@ export function HUD({
         {onToggleDiplomacy && (
           <button onClick={onToggleDiplomacy} title="Diplomatic relations with off-map kingdoms">Diplomacy</button>
         )}
-        <button onClick={onToggleStats} title="Kingdom stats">Stats</button>
-        <button onClick={onToggleJournal} className={unseenJournal > 0 ? "has-badge" : ""}>
+        <button onClick={onToggleStats} title="Kingdom stats" data-tour="stats">Stats</button>
+        <button
+          onClick={onToggleJournal}
+          className={unseenJournal > 0 ? "has-badge" : ""}
+          data-tour="journal"
+        >
           Journal ({journalCount})
           {unseenJournal > 0 && (
             <span className="hud-badge">{unseenJournal > 99 ? "99+" : unseenJournal}</span>

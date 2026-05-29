@@ -1381,7 +1381,7 @@ html, body, #root, .app-root {
 .decision-options button,
 .stats-panel button,
 .settings-panel button,
-.tutorial-actions button {
+.tour-actions button {
   position: relative;
 }
 .decision-options button:hover::before,
@@ -1390,8 +1390,8 @@ html, body, #root, .app-root {
 .stats-panel button:focus-visible::before,
 .settings-panel button:hover::before,
 .settings-panel button:focus-visible::before,
-.tutorial-actions button:hover::before,
-.tutorial-actions button:focus-visible::before {
+.tour-actions button:hover::before,
+.tour-actions button:focus-visible::before {
   content: "▸";
   position: absolute;
   left: -10px;
@@ -1408,80 +1408,119 @@ html, body, #root, .app-root {
   50%, 100% { opacity: 0.25; }
 }
 
-/* Tutorial hints */
-.tutorial-overlay {
+/* ── Guided tour (spotlight FTUE) ────────────────────────────────────────────
+   A focused first-launch tour that highlights real HUD elements one at a
+   time. The "spotlight" is a ring element whose enormous box-shadow dims
+   everything outside it, so the targeted control reads bright against a
+   darkened world. A tooltip sits beside the ring with the step text. */
+.tour-overlay {
   position: fixed;
   inset: 0;
-  z-index: 45;
-  pointer-events: auto;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(2px);
-  animation: tut-fade-in 0.4s ease-out;
+  z-index: 120;
+  animation: tour-fade-in 0.35s ease-out;
 }
-.tutorial-overlay.anchor-hud-stats { align-items: flex-start; justify-content: flex-end; padding: 60px 16px 0 0; }
-.tutorial-overlay.anchor-hud-journal { align-items: flex-start; justify-content: flex-end; padding: 60px 100px 0 0; }
-.tutorial-overlay.anchor-minimap { align-items: flex-end; justify-content: flex-start; padding: 0 0 180px 16px; }
-.tutorial-overlay.anchor-speed { align-items: flex-end; justify-content: flex-end; padding: 0 16px 60px 0; }
-@keyframes tut-fade-in {
+@keyframes tour-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-.tutorial-card {
-  background: linear-gradient(180deg, #1a1410, #0c0a09);
-  border: 1px solid var(--accent);
-  padding: 16px 20px 18px;
-  max-width: 340px;
-  color: var(--panel-fg);
-  cursor: default;
-  font-size: 12px;
-  box-shadow: 0 16px 40px rgba(251, 191, 36, 0.25);
+/* Click-catcher. Transparent when a ring is present (the ring's shadow
+   does the dimming); dims the screen itself for centered steps. */
+.tour-backdrop {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
 }
-.tutorial-step {
-  font-size: 9px;
+.tour-backdrop.has-ring {
+  background: transparent;
+  backdrop-filter: none;
+}
+/* The spotlight ring — punches a bright hole in a dimmed screen via a
+   huge box-shadow spread, and outlines the target in accent gold. */
+.tour-ring {
+  position: fixed;
+  border-radius: 10px;
+  border: 2px solid var(--accent);
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.62),
+    0 0 18px rgba(251, 191, 36, 0.5);
+  pointer-events: none;
+  animation: tour-ring-pulse 1.6s ease-in-out infinite;
+}
+@keyframes tour-ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.62), 0 0 14px rgba(251,191,36,0.4); }
+  50%      { box-shadow: 0 0 0 9999px rgba(0,0,0,0.62), 0 0 24px rgba(251,191,36,0.7); }
+}
+.tour-tip {
+  position: fixed;
+  width: min(320px, calc(100vw - 24px));
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 32%, rgba(0,0,0,0.2) 100%),
+    var(--panel-bg);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.6), 0 18px 44px rgba(0,0,0,0.5);
+  padding: 16px 18px 14px;
+  color: var(--panel-fg);
+  font-size: 15px;
+}
+/* Centered welcome / closing card. */
+.tour-tip-center {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(400px, calc(100vw - 32px));
+  text-align: center;
+}
+.tour-step-count {
+  font-size: 11px;
   letter-spacing: 0.2em;
   color: var(--panel-muted);
   text-transform: uppercase;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
-.tutorial-card h4 {
-  margin: 0 0 6px;
+.tour-tip h4 {
+  margin: 0 0 8px;
   color: var(--accent);
+  font-family: var(--font-pixel);
   font-size: 13px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+  line-height: 1.5;
 }
-.tutorial-card p {
+.tour-tip p {
   margin: 0 0 14px;
   line-height: 1.5;
+  font-size: 15px;
   color: var(--panel-fg);
 }
-.tutorial-actions {
+.tour-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
 }
-.tutorial-actions button {
-  background: transparent;
+.tour-tip-center .tour-actions { justify-content: center; }
+.tour-actions button {
+  background: rgba(255,255,255,0.04);
   color: var(--panel-fg);
   border: 1px solid var(--hud-border);
-  padding: 6px 14px;
+  padding: 8px 16px;
   font: inherit;
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
-.tutorial-actions button.ghost:hover { color: var(--accent); border-color: var(--accent); }
-.tutorial-actions button.primary {
-  background: var(--accent);
+.tour-actions button.ghost:hover { color: var(--accent); border-color: var(--accent); }
+.tour-actions button.primary {
+  background: linear-gradient(180deg, var(--accent), #d97706);
   color: #1a1410;
-  border-color: var(--accent);
+  border-color: rgba(251, 191, 36, 0.7);
   font-weight: bold;
+  box-shadow: 0 2px 6px rgba(251,191,36,0.22), inset 0 1px 0 rgba(255,255,255,0.25);
 }
-.tutorial-actions button.primary:hover { background: #fcd34d; }
+.tour-actions button.primary:hover { background: linear-gradient(180deg, #fcd34d, var(--accent)); }
 
 /* Performance HUD */
 .perf-hud {
@@ -3969,7 +4008,7 @@ html, body, #root, .app-root {
 .journal-panel,
 .vault-panel,
 .update-toast,
-.tutorial-card,
+.tour-tip,
 .onboarding-card,
 .title-card {
   background-image:
@@ -4008,7 +4047,7 @@ html, body, #root, .app-root {
 .onboarding-card,
 .title-card,
 .update-toast,
-.tutorial-card,
+.tour-tip,
 .royal-card,
 .feedback-card {
   font-size: calc(16px * var(--ui-scale, 1));
