@@ -98,6 +98,10 @@ export interface GameState {
   journal: SavedJournalEntry[];
   achievements: Record<string, string>;
   achievementToast: AchievementToast | null;
+  /** True while the first-launch guided tour is on screen. Freezes the
+   *  sim (speedMultiplier returns 0) and pauses toast auto-dismiss so a
+   *  new player can read + click through without the world moving on. */
+  tourActive: boolean;
   identity: KingdomIdentity | null;
   monarchSpec: CharacterSpec;
   petSpec: PetSpec;
@@ -163,6 +167,7 @@ export interface GameState {
   setTwitchChannel: (s: string) => void;
   setShowPerfHud: (b: boolean) => void;
   setShowTutorial: (b: boolean) => void;
+  setTourActive: (b: boolean) => void;
   setMusicEnabled: (b: boolean) => void;
   setPadEnabled: (b: boolean) => void;
   setCutawayMode: (b: boolean) => void;
@@ -248,6 +253,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   journal: [],
   achievements: {},
   achievementToast: null,
+  tourActive: false,
   identity: null,
   monarchSpec: DEFAULT_SPEC,
   petSpec: defaultPetSpec("dog"),
@@ -379,6 +385,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       persistSettings(next);
       return { settings: next };
     }),
+  setTourActive: (b) => set({ tourActive: b }),
   setMusicEnabled: (b) =>
     set((s) => {
       const next = { ...s.settings, musicEnabled: b };

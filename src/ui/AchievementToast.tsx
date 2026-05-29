@@ -48,6 +48,7 @@ export function AchievementToast({
 }) {
   const toast = useGameStore((s) => s.achievementToast);
   const dismiss = useGameStore((s) => s.dismissAchievementToast);
+  const tourActive = useGameStore((s) => s.tourActive);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-dismiss after 11 seconds. Was 6s — playtest feedback was that
@@ -58,11 +59,15 @@ export function AchievementToast({
   // don't pile up. Click anywhere / the × to dismiss early.
   useEffect(() => {
     if (!toast) return;
+    // While the guided tour is paused over the scene, don't run the
+    // dismiss timer — the toast would otherwise vanish behind the
+    // frozen tutorial. It resumes counting once the tour closes.
+    if (tourActive) return;
     timerRef.current = setTimeout(dismiss, 11000);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [toast, dismiss]);
+  }, [toast, dismiss, tourActive]);
 
   if (!toast) return null;
 

@@ -82,22 +82,31 @@ const RING_PAD = 6;
 export function TutorialHints() {
   const enabled = useGameStore((s) => s.settings.showTutorial);
   const setShowTutorial = useGameStore((s) => s.setShowTutorial);
+  const setTourActive = useGameStore((s) => s.setTourActive);
   const identity = useGameStore((s) => s.identity);
   const [idx, setIdx] = useState(0);
   const [open, setOpen] = useState(false);
   // Bounding rect of the current step's target (null = centered card).
   const [rect, setRect] = useState<DOMRect | null>(null);
 
-  // Start the tour ~4s after founding — the fireworks have visibly begun
-  // and the Welcome Petition is on screen (the tour points at it), but
-  // it's early enough that we guide the player BEFORE they sit there
-  // confused. The FoundingMoment toast suppresses itself while the tour
-  // is pending, so there's no pile-on.
+  // Start the tour ~3s after founding — long enough for the founding
+  // fanfare to register, then the tour opens and PAUSES the world
+  // (tourActive freezes the sim), so the player reads + clicks through
+  // a still scene. The Welcome Petition is already on screen for step 3.
   useEffect(() => {
     if (!enabled || !identity) return;
-    const t = window.setTimeout(() => setOpen(true), 4000);
+    const t = window.setTimeout(() => {
+      setIdx(0); // always start from step 1 (matters for Settings → replay)
+      setOpen(true);
+    }, 3000);
     return () => clearTimeout(t);
   }, [enabled, identity]);
+
+  // Freeze the world while the tour is on screen; unfreeze when it's done.
+  useEffect(() => {
+    setTourActive(open);
+    return () => setTourActive(false);
+  }, [open, setTourActive]);
 
   // Auto-skip steps whose target element isn't present, and measure the
   // rect of the current target. Re-measures on resize so the spotlight

@@ -391,6 +391,9 @@ export function App() {
       speedMultiplier: () => {
         const store = useGameStore.getState();
         if (!store.identity) return 0;
+        // Freeze the world while the guided tour is up so a new player
+        // can read + click through without things moving or vanishing.
+        if (store.tourActive) return 0;
         return store.settings.simSpeed;
       },
     });

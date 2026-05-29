@@ -69,6 +69,7 @@ export function SettingsPanel({
   const setRetro16bit  = useGameStore((s) => s.setRetro16bit);
   const setUiScale = useGameStore((s) => s.setUiScale);
   const setColorblindMode = useGameStore((s) => s.setColorblindMode);
+  const setShowTutorial = useGameStore((s) => s.setShowTutorial);
   const addWatchedPath = useGameStore((s) => s.addWatchedPath);
   const removeWatchedPath = useGameStore((s) => s.removeWatchedPath);
   const resetKingdom = useGameStore((s) => s.resetKingdom);
@@ -404,6 +405,24 @@ export function SettingsPanel({
             Colorblind mode swaps faction-loyalty colours to high-contrast
             hues that don't rely on red/green discrimination.
           </p>
+        </section>
+
+        <section>
+          <h3>Tutorial</h3>
+          <p className="tip">
+            New to the kingdom? Replay the guided tour — it pauses the
+            world and walks you through what each control does.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setShowTutorial(true);
+              onClose();
+            }}
+            style={{ marginTop: 4 }}
+          >
+            Replay tutorial
+          </button>
         </section>
 
         <section>
