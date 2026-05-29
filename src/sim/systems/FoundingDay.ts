@@ -14,11 +14,11 @@ import { makeEvent } from "../events/EventSchema";
  *     over the castle for ~40 seconds)
  *   - A courier event publishes after a short delay (visible rider on
  *     the map, journal entry: "the seal of office was delivered")
- *   - A "welcome_petition" Consequence is scheduled for day +2 so the
- *     player sees their FIRST DECISION within ~2 in-world minutes at
- *     standard speed. The petition's options each schedule +14-day
- *     follow-ups, demonstrating the chain pattern within their first
- *     session.
+ *   - The Welcome Petition fires IMMEDIATELY (not on a day +2 schedule —
+ *     playtest showed players quit before a delayed first decision).
+ *     The first thing the player touches in the world is a choice. Its
+ *     options each schedule a +14-day follow-up, demonstrating the
+ *     consequence-chain pattern within their first session.
  *
  * Idempotent: a `fired` flag prevents re-firing after save/load or
  * a second call. Survives the Persistence round-trip.

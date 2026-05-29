@@ -51,15 +51,12 @@ export function JournalPanel({
   onClose,
   onNavigateToStructure,
   onSelectNpc,
-  eventLogOpen,
 }: {
   open: boolean;
   onClose: () => void;
   onNavigateToStructure?: (structureId: string) => void;
   /** Open the NPC profile panel for an NPC id. */
   onSelectNpc?: (npcId: string) => void;
-  /** When the event log is also open, the journal slides left to make room. */
-  eventLogOpen?: boolean;
 }) {
   const journal = useGameStore((s) => s.journal);
   const clearJournal = useGameStore((s) => s.clearJournal);
@@ -88,7 +85,7 @@ export function JournalPanel({
   if (!open) return null;
   return (
     <aside
-      className={`journal-panel${eventLogOpen ? " with-event-log" : ""}`}
+      className="journal-panel"
       role="complementary"
       aria-label="Kingdom journal"
     >

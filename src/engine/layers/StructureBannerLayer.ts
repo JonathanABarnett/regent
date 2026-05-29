@@ -1,6 +1,8 @@
 import { Container, Graphics } from "pixi.js";
 import type { OverworldMap } from "../../sim/Map";
 import type { Structure } from "../../sim/types";
+import { mulberry32, hashId } from "../../lib/rng";
+import { approxSpriteHeightTiles } from "./structureMetrics";
 
 /**
  * Per-structure decorative banners.
@@ -155,42 +157,3 @@ export class StructureBannerLayer {
   }
 }
 
-/**
- * Rough visible-sprite-height in tile units per structure kind. Mirrors
- * the table in WinterCapLayer — kept independent so this layer doesn't
- * depend on a sibling layer.
- */
-function approxSpriteHeightTiles(kind: string): number {
-  switch (kind) {
-    case "castle":           return 5;
-    case "town":             return 4;
-    case "library":          return 4;
-    case "forge":            return 3.5;
-    case "mill":             return 3.5;
-    case "astronomers_tower":return 4.5;
-    case "watchtower":       return 2.5;
-    case "shrine":           return 2.5;
-    default:                  return 3;
-  }
-}
-
-/** djb2-style string → unsigned-32 hash. */
-function hashId(id: string): number {
-  let h = 5381 >>> 0;
-  for (let i = 0; i < id.length; i++) {
-    h = (((h << 5) + h) + id.charCodeAt(i)) >>> 0;
-  }
-  return h >>> 0;
-}
-
-/** mulberry32 — same impl as elsewhere in the engine. */
-function mulberry32(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}

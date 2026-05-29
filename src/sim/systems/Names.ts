@@ -3,6 +3,8 @@
  * so a kingdom regenerated from the same seed always produces the same residents.
  */
 
+import { mulberry32 } from "../../lib/rng";
+
 const FIRST_NAMES = [
   // Original 32
   "Berta", "Olen", "Mira", "Pell", "Thaddeus", "Sera", "Roan", "Imla",
@@ -35,17 +37,6 @@ const ROLE_TITLES: Record<string, string[]> = {
   guard: ["the Keeper", "the Watchful"],
   villager: ["", ""], // no title for villagers
 };
-
-function mulberry32(seed: number) {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6D2B79F5) >>> 0;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 export function generateName(role: string, seed: number): string {
   const rand = mulberry32(seed);

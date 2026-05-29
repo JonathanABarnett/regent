@@ -2,6 +2,8 @@ import { Container, Graphics } from "pixi.js";
 import type { OverworldMap } from "../../sim/Map";
 import type { Structure } from "../../sim/types";
 import type { SpriteFactory } from "../SpriteFactory";
+import { mulberry32, hashId } from "../../lib/rng";
+import { approxSpriteHeightTiles } from "./structureMetrics";
 
 /**
  * Snow caps on building roofs during winter.
@@ -136,50 +138,4 @@ export class WinterCapLayer {
 
     return g;
   }
-}
-
-/**
- * Rough sprite-height estimate (in tile units) for each structure kind.
- * The actual sprite texture might be slightly taller — over-estimating
- * by half a tile is preferable to drawing the cap *below* the roof line.
- */
-function approxSpriteHeightTiles(kind: string): number {
-  switch (kind) {
-    case "castle":           return 5;
-    case "town":             return 4;
-    case "library":          return 4;
-    case "forge":            return 3.5;
-    case "mine":             return 3.5;
-    case "mill":             return 3.5;
-    case "astronomers_tower":return 4.5;
-    case "watchtower":       return 2.5;
-    case "shrine":           return 2.5;
-    case "obelisk":          return 2.5;
-    case "ruin":             return 2;
-    case "camp":             return 2;
-    case "wellspring":       return 1.5;
-    default:                  return 2;
-  }
-}
-
-/** djb2-style string → unsigned-32 hash. Deterministic across runs. */
-function hashId(id: string): number {
-  let h = 5381 >>> 0;
-  for (let i = 0; i < id.length; i++) {
-    h = (((h << 5) + h) + id.charCodeAt(i)) >>> 0;
-  }
-  return h >>> 0;
-}
-
-/** mulberry32 — same as world.rand. Tiny inline copy keeps the layer free
- *  of sim imports (architectural rule: engine doesn't import from sim). */
-function mulberry32(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
