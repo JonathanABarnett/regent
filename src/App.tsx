@@ -52,7 +52,14 @@ import { Aspirations } from "./sim/systems/Aspirations";
 import { AudioEngine } from "./engine/Audio";
 import type { ExternalEvent } from "./sim/events/EventSchema";
 import { ExternalEvent as Schema } from "./sim/events/EventSchema";
-import { readSave, writeSave, applySave, serialize } from "./sim/Persistence";
+import {
+  readSave,
+  writeSave,
+  applySave,
+  serialize,
+  readPendingNewGame,
+  clearPendingNewGame,
+} from "./sim/Persistence";
 
 declare global {
   interface Window {
@@ -130,7 +137,11 @@ export function App() {
   const [chronicleOpen, setChronicleOpen] = useState(false);
   const [vaultOpen, setVaultOpen] = useState(false);
   // Show the title screen on first paint. Dismissed by Continue / New / etc.
-  const [titleOpen, setTitleOpen] = useState(true);
+  // Exception: if the "How to Play" walkthrough wiped + reloaded to start a
+  // fresh kingdom, skip straight past the title into the creation flow.
+  // Read-only here (StrictMode double-invokes initializers); the flag is
+  // cleared in an effect below so it can't leak into a later boot.
+  const [titleOpen, setTitleOpen] = useState(() => !readPendingNewGame());
   // Intro carousel gates the title screen on a brand-new install. The
   // carousel itself reads its own seen-flag from localStorage in an
   // effect and calls onDone immediately if the player has already seen
@@ -158,6 +169,11 @@ export function App() {
     petName: string;
     petKind: "dog" | "cat";
   } | null>(null);
+  // Consume the one-shot "start fresh" flag after the initial render has
+  // already read it. Idempotent, so StrictMode's double-effect is harmless.
+  useEffect(() => {
+    clearPendingNewGame();
+  }, []);
   const crt = useGameStore((s) => s.settings.crt);
   const integrations = useGameStore((s) => s.settings.integrations);
   const watchedPaths = useGameStore((s) => s.settings.watchedPaths);

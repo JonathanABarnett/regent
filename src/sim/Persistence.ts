@@ -103,6 +103,30 @@ export function setActiveSlot(slot: number): void {
   try { localStorage.setItem(ACTIVE_SLOT_KEY, String(slot)); } catch { /* ignore */ }
 }
 
+/**
+ * One-shot "start a fresh kingdom on next boot" flag.
+ *
+ * The "How to Play" walkthrough must always begin with founding a new
+ * kingdom (not replaying the tour over an existing save). For a player who
+ * already has a save, founding fresh means wiping + reloading to get a
+ * clean World — and the reload severs all JS state, so the intent to land
+ * in the creation flow (rather than back on the title screen) has to ride
+ * across the reload in storage. App reads this on boot.
+ */
+const PENDING_NEW_GAME_KEY = "kingdomos.pendingNewGame";
+
+export function markPendingNewGame(): void {
+  try { localStorage.setItem(PENDING_NEW_GAME_KEY, "1"); } catch { /* ignore */ }
+}
+
+export function readPendingNewGame(): boolean {
+  try { return localStorage.getItem(PENDING_NEW_GAME_KEY) === "1"; } catch { return false; }
+}
+
+export function clearPendingNewGame(): void {
+  try { localStorage.removeItem(PENDING_NEW_GAME_KEY); } catch { /* ignore */ }
+}
+
 export interface SaveData {
   version: number;
   /** ISO-8601 timestamp the save was written */

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { ExternalEvent } from "../sim/events/EventSchema";
 import type { SavedJournalEntry } from "../sim/Persistence";
+import { clearSave } from "../sim/Persistence";
 import { summarize, appendToArchive } from "../sim/KingdomArchive";
 import type { CharacterSpec } from "../engine/CharacterSpec";
 import { DEFAULT_SPEC } from "../engine/CharacterSpec";
@@ -335,6 +336,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
     try {
       localStorage.removeItem("kingdomos.kingdom.v1");
+    } catch {
+      /* ignore */
+    }
+    // Also clear the *active* slot — a player on slot 1/2 wouldn't be wiped
+    // by the legacy slot-0 key removal above, which would leave the old
+    // kingdom to reload after this reset (and re-load underneath the fresh
+    // creation flow). clearSave targets whatever slot is active.
+    try {
+      clearSave();
     } catch {
       /* ignore */
     }

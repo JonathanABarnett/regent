@@ -10,6 +10,7 @@ import {
   setActiveSlot,
   getActiveSlot,
   clearSaveSlot,
+  markPendingNewGame,
   SLOT_COUNT,
   type SlotMeta,
 } from "../sim/Persistence";
@@ -233,16 +234,33 @@ export function TitleScreen({
           </button>
           <button
             className="ghost title-howto"
-            title="A short, paused walkthrough of what everything does"
+            title="Found a fresh kingdom with a step-by-step, paused walkthrough"
             onClick={() => {
-              // Arm the guided tour, then drop into the game so it can
-              // run (the tour highlights in-game HUD elements, so it needs
-              // a founded kingdom). Continue an existing realm if there is
-              // one; otherwise start a fresh kingdom — either way the
-              // paused tour fires a few seconds after the world loads.
+              // The walkthrough is meant to be a first-time experience: you
+              // create your king + kingdom, THEN the paused spotlight tour
+              // points at the live HUD. So always start a fresh kingdom here
+              // rather than replaying the tour over whatever realm happens to
+              // be loaded (that confused testers — "where do I make a king?").
               useGameStore.getState().setShowTutorial(true);
-              if (hasSave) onContinue();
-              else onNew();
+              if (hasSave) {
+                // Don't bury an existing realm without consent.
+                if (
+                  !confirm(
+                    "Start the walkthrough? It founds a brand-new kingdom — " +
+                      "your current realm will be archived to Past Kingdoms.",
+                  )
+                ) {
+                  // Declined — disarm the tour so a later Continue doesn't
+                  // surprise them with it over their existing kingdom.
+                  useGameStore.getState().setShowTutorial(false);
+                  return;
+                }
+                // Ride the intent across the wipe+reload so we land in the
+                // creation flow, not back on this title screen.
+                markPendingNewGame();
+              }
+              // No save → onNew just opens onboarding (no reload needed).
+              onNew();
             }}
           >
             ❓ How to Play
