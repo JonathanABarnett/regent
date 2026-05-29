@@ -2,12 +2,15 @@
  * Programmatic Web Audio engine. No sound files are loaded.
  *
  * Layers:
- *   1. Ambient pad — three sine/triangle oscillators tuned to a mode that
- *      shifts with season + time-of-day. Always playing, cross-fading.
+ *   1. Sparse melody — a short 3-5 note phrase every 15-40s, drawn from
+ *      the season's scale and the time-of-day register. Toggleable.
  *   2. Event SFX — short procedural blips on courier arrivals, forge hits,
  *      research entries, fireworks, storms.
  *
- * Total runtime cost is trivial (a handful of oscillators + a low-pass).
+ * (A continuous ambient drone pad used to be layer 0, but players found
+ * the constant hum annoying, so it was removed entirely — only the
+ * intermittent melody + event SFX remain.)
+ *
  * No audio context is created until the user first interacts with the page —
  * browsers block autoplay otherwise.
  */
@@ -30,9 +33,6 @@ function semitonesToFreq(root: number, semitones: number): number {
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
-  private padGain: GainNode | null = null;
-  private padOscs: OscillatorNode[] = [];
-  private filter: BiquadFilterNode | null = null;
   private muted = true;
   private currentVolume = 0.4;
   private currentSeason: string | null = null;
@@ -40,13 +40,8 @@ export class AudioEngine {
   private offEvent: (() => void) | null = null;
   /** Melody layer — sparse phrases scheduled every 15-40s. */
   private melodyTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Disabled separately from the pad so a player who likes the drone but
-   *  not the melody can keep just the drone. Hooked up via setMelodyEnabled. */
+  /** Toggle for the sparse melody layer. Hooked up via setMelodyEnabled. */
   private melodyEnabled = true;
-  /** Ambient drone pad toggle — independent of melody and SFX.
-   *  Defaults OFF (players found the constant hum annoying); the store
-   *  syncs the persisted/migrated value via setPadEnabled at startup. */
-  private padEnabled = false;
 
   attach(world: World) {
     // Subscribe early so we don't miss events even before unmute.
@@ -72,7 +67,6 @@ export class AudioEngine {
       clearTimeout(this.melodyTimer);
       this.melodyTimer = null;
     }
-    this.stopPad();
     try {
       this.ctx?.close();
     } catch {
@@ -80,8 +74,6 @@ export class AudioEngine {
     }
     this.ctx = null;
     this.master = null;
-    this.padGain = null;
-    this.filter = null;
   }
 
   setVolume(v: number) {
@@ -100,13 +92,12 @@ export class AudioEngine {
     }
   }
 
-  /** Called every ~1s from the App effect to refresh pad voicing if season/band changed. */
+  /** Called every ~1s from the App effect. Tracks the current season +
+   *  time-of-day band so the melody layer picks the right scale/register. */
   updateContext(season: string, band: string) {
     if (!this.ctx || this.muted) return;
-    if (season === this.currentSeason && band === this.currentBand) return;
     this.currentSeason = season;
     this.currentBand = band;
-    this.retunePad(season, band);
   }
 
   private unlock(world: World) {
@@ -121,28 +112,9 @@ export class AudioEngine {
     this.muted = false;
     this.master = this.ctx.createGain();
     this.master.gain.value = this.currentVolume;
-    this.filter = this.ctx.createBiquadFilter();
-    // Lowpass to keep the pad airy. With sine voices we don't need an
-    // aggressive cutoff but a gentle one rounds off any aliasing artifacts.
-    // High-shelf-like setting (~2500Hz, Q=0.5) gives the pad presence without
-    // making the SFX feel filtered (they pass through the master, not here).
-    this.filter.type = "lowpass";
-    this.filter.frequency.value = 2400;
-    this.filter.Q.value = 0.5;
-    this.padGain = this.ctx.createGain();
-    // Quiet enough that SFX always sit clearly on top. The drone is meant to
-    // be felt more than heard — players who want it louder can crank the
-    // master volume slider in Settings.
-    //
-    // Start at the flag's gain, NOT a hardcoded 0.18 — otherwise the drone
-    // hums on first audio-unlock even when padEnabled is false (the App's
-    // setPadEnabled effect runs before the audio context exists, so it
-    // no-ops, and enableMusic would override it). Pad defaults off now.
-    this.padGain.gain.value = this.padEnabled ? 0.18 : 0;
-    this.padGain.connect(this.filter);
-    this.filter.connect(this.master);
+    // Melody + all SFX connect straight to master → destination. (There's
+    // no longer a pad bus / lowpass filter — the drone was removed.)
     this.master.connect(this.ctx.destination);
-    this.startPad();
     this.updateContext(world.state.season, world.dayNight.bandAt(world.state.time));
     this.scheduleNextMelody();
   }
@@ -156,111 +128,6 @@ export class AudioEngine {
     } else if (on && this.ctx && !this.melodyTimer) {
       this.scheduleNextMelody();
     }
-  }
-
-  /**
-   * Toggle the ambient drone pad (independent of melody and SFX).
-   * Achieved by ramping padGain to/from 0 over 0.4s rather than tearing
-   * down the oscillators — keeps the toggle instant and the start cheap.
-   */
-  setPadEnabled(on: boolean) {
-    this.padEnabled = on;
-    if (!this.ctx || !this.padGain) return;
-    const t = this.ctx.currentTime;
-    // 0.18 is the chosen "on" gain (see startPad comments)
-    this.padGain.gain.setTargetAtTime(on ? 0.18 : 0, t, 0.15);
-  }
-
-  // ── Ambient pad ─────────────────────────────────────────────────────────
-  //
-  // The drone is intentionally subtle — it's "atmosphere," not "music." Three
-  // sine voices (root, fifth, octave) up an octave from the original A2 to
-  // avoid sub-bass hum. Each voice is detuned ±5-9 cents so the stack
-  // doesn't sound like a synth chord but like air moving through a hall.
-  // A very slow tremolo (≈0.1 Hz) keeps it from being flat. Master padGain
-  // is gentle (~0.18) so SFX and the melody layer always sit on top.
-
-  private startPad() {
-    if (!this.ctx || !this.padGain) return;
-    const root = 220; // A3 — an octave above the old A2 to avoid bass hum
-    // Root + fifth + octave is the classic open-fifth ambient stack.
-    const offsets = [0, 7, 12];
-    // Per-voice cents detune (±7-9c) for warmth without being audibly out of tune.
-    const detuneCents = [-7, +4, +9];
-
-    for (let i = 0; i < offsets.length; i++) {
-      const osc = this.ctx.createOscillator();
-      osc.type = "sine"; // sine is clean at low frequencies, triangles buzz
-      osc.frequency.value = semitonesToFreq(root, offsets[i]);
-      osc.detune.value = detuneCents[i];
-
-      // Lower-frequency voices get slightly less gain — flattens the spectrum
-      const baseGain = i === 0 ? 0.42 : i === 1 ? 0.38 : 0.32;
-      const g = this.ctx.createGain();
-      g.gain.value = baseGain;
-
-      // Slow tremolo — different phase per voice so they don't pulse in unison
-      const lfo = this.ctx.createOscillator();
-      lfo.type = "sine";
-      lfo.frequency.value = 0.07 + Math.random() * 0.06;
-      const lfoGain = this.ctx.createGain();
-      lfoGain.gain.value = 0.08; // shallow depth — 0.18 was way too obvious
-
-      lfo.connect(lfoGain);
-      lfoGain.connect(g.gain);
-      osc.connect(g);
-      g.connect(this.padGain);
-      osc.start();
-      lfo.start();
-      this.padOscs.push(osc);
-      this.padOscs.push(lfo);
-    }
-  }
-
-  private retunePad(season: string, band: string) {
-    if (!this.ctx) return;
-    const scale = SEASON_SCALES[season] ?? SEASON_SCALES.spring;
-    // dawn/night are lower; day/dusk are higher
-    const rootByBand: Record<string, number> = {
-      dawn: 98,    // G2
-      day: 130.8,  // C3
-      dusk: 116.5, // A#2
-      night: 87.3, // F2
-    };
-    const root = rootByBand[band] ?? 110;
-    const padOscNodes = this.padOscs.filter((o) => o.type !== "sine"); // skip LFOs
-    // Re-target frequencies smoothly
-    let voice = 0;
-    for (const osc of padOscNodes) {
-      const offset = scale[voice % scale.length];
-      try {
-        osc.frequency.setTargetAtTime(
-          semitonesToFreq(root, offset),
-          this.ctx.currentTime,
-          0.8,
-        );
-      } catch {
-        /* osc may already be detuning */
-      }
-      voice++;
-    }
-    if (this.filter) {
-      // brighter during day, mellower at night
-      const target = band === "day" ? 1800 : band === "dawn" || band === "dusk" ? 1300 : 900;
-      this.filter.frequency.setTargetAtTime(target, this.ctx.currentTime, 1.2);
-    }
-  }
-
-  private stopPad() {
-    for (const node of this.padOscs) {
-      try {
-        node.stop();
-        node.disconnect();
-      } catch {
-        /* already stopped */
-      }
-    }
-    this.padOscs = [];
   }
 
   // ── Event SFX ───────────────────────────────────────────────────────────

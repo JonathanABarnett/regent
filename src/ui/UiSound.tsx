@@ -22,15 +22,11 @@ import { useGameStore } from "../store/useGameStore";
  */
 export function UiSound({ getAudio }: { getAudio: () => AudioEngine | null }) {
   const audioVolume = useGameStore((s) => s.settings.audioVolume);
-  const padEnabled = useGameStore((s) => s.settings.padEnabled);
 
   useEffect(() => {
     // Single muted gate: audio volume at 0 → no blips. Lets the player
-    // disable UI sound without touching pad/melody by zeroing the
-    // master slider. The padEnabled flag is a *secondary* mute that
-    // also disables blips — if you've turned off ambient sound, you
-    // probably don't want chirpy UI sounds either.
-    if (audioVolume <= 0 || !padEnabled) return;
+    // disable UI sound by zeroing the master slider.
+    if (audioVolume <= 0) return;
 
     /** Last-fired timestamp per source kind, so a hover storm doesn't
      *  fire 30 blips in a frame. 80ms is short enough to feel
@@ -73,7 +69,7 @@ export function UiSound({ getAudio }: { getAudio: () => AudioEngine | null }) {
       document.removeEventListener("pointerover", onPointerOver, { capture: true });
       document.removeEventListener("click", onClick, { capture: true });
     };
-  }, [audioVolume, padEnabled, getAudio]);
+  }, [audioVolume, getAudio]);
 
   return null;
 }

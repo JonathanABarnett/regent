@@ -351,7 +351,7 @@ export function App() {
       }
     });
 
-    // Audio: programmatic ambient pad + event SFX. Unlocks on first interaction.
+    // Audio: programmatic sparse melody + event SFX. Unlocks on first interaction.
     const audio = new AudioEngine();
     audioRef.current = audio;
     audio.attach(world);
@@ -668,17 +668,11 @@ export function App() {
     audioRef.current?.setVolume(audioVolume);
   }, [audioVolume]);
 
-  // Live music toggle → audio engine
+  // Live music toggle → audio engine (the sparse melody layer)
   const musicEnabled = useGameStore((s) => s.settings.musicEnabled);
   useEffect(() => {
     audioRef.current?.setMelodyEnabled(musicEnabled);
   }, [musicEnabled]);
-
-  // Live ambient drone-pad toggle → audio engine
-  const padEnabled = useGameStore((s) => s.settings.padEnabled);
-  useEffect(() => {
-    audioRef.current?.setPadEnabled(padEnabled);
-  }, [padEnabled]);
 
   // Live cutaway / dollhouse mode toggle → rendering pipeline
   const cutawayMode = useGameStore((s) => s.settings.cutawayMode);

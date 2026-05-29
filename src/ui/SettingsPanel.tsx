@@ -64,7 +64,6 @@ export function SettingsPanel({
   const setTwitchChannel = useGameStore((s) => s.setTwitchChannel);
   const setShowPerfHud = useGameStore((s) => s.setShowPerfHud);
   const setMusicEnabled = useGameStore((s) => s.setMusicEnabled);
-  const setPadEnabled = useGameStore((s) => s.setPadEnabled);
   const setCutawayMode = useGameStore((s) => s.setCutawayMode);
   const setRetro16bit  = useGameStore((s) => s.setRetro16bit);
   const setUiScale = useGameStore((s) => s.setUiScale);
@@ -312,14 +311,6 @@ export function SettingsPanel({
               onChange={(e) => setShowPerfHud(e.target.checked)}
             />
             Show performance overlay (FPS + counts)
-          </label>
-          <label className="row">
-            <input
-              type="checkbox"
-              checked={settings.padEnabled}
-              onChange={(e) => setPadEnabled(e.target.checked)}
-            />
-            Ambient drone pad (the quiet background hum)
           </label>
           <label className="row">
             <input

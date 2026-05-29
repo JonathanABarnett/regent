@@ -39,10 +39,8 @@ export interface SettingsState {
   showPerfHud: boolean;
   /** Show the first-launch tutorial hints. Auto-true on first boot. */
   showTutorial: boolean;
-  /** Sparse melody layer on top of the ambient drone pad. */
+  /** Sparse intermittent melody layer (every 15-40s). */
   musicEnabled: boolean;
-  /** Ambient drone pad (the low background hum). Toggleable independently. */
-  padEnabled: boolean;
   /**
    * Render the world at 480×270 then CSS-upscale for authentic chunky
    * 16-bit pixel feel. Requires a page reload to take effect.
@@ -169,7 +167,6 @@ export interface GameState {
   setShowTutorial: (b: boolean) => void;
   setTourActive: (b: boolean) => void;
   setMusicEnabled: (b: boolean) => void;
-  setPadEnabled: (b: boolean) => void;
   setCutawayMode: (b: boolean) => void;
   setRetro16bit: (b: boolean) => void;
   setUiScale: (n: number) => void;
@@ -179,8 +176,6 @@ export interface GameState {
 }
 
 const STORAGE_KEY = "kingdomos.settings.v1";
-/** Marker for the one-time "silence the ambient drone" migration. */
-const PAD_MIGRATION_KEY = "kingdomos.padMigration.v1";
 
 function loadSettings(): SettingsState {
   const fallback: SettingsState = {
@@ -207,11 +202,6 @@ function loadSettings(): SettingsState {
     showPerfHud: false,
     showTutorial: true,
     musicEnabled: true,
-    // Ambient drone pad OFF by default. Playtest feedback: the constant
-    // low hum was annoying. The sparse melody (musicEnabled) and event
-    // SFX stay on; only the continuous drone is silenced. Re-enableable
-    // in Settings for anyone who wants the atmosphere.
-    padEnabled: false,
     cutawayMode: false,
     retro16bit: true,
     uiScale: 1,
@@ -221,18 +211,9 @@ function loadSettings(): SettingsState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return fallback;
-    let merged: SettingsState = { ...fallback, ...JSON.parse(raw) };
-    // One-time migration: silence the ambient drone for everyone exactly
-    // once. Existing players had it persisted ON (the old default); this
-    // forces it OFF a single time so the "annoying hum" goes away without
-    // their action. The marker means we never re-force it — if they turn
-    // it back on in Settings afterward, it stays on.
-    if (localStorage.getItem(PAD_MIGRATION_KEY) !== "done") {
-      merged = { ...merged, padEnabled: false };
-      localStorage.setItem(PAD_MIGRATION_KEY, "done");
-      persistSettings(merged);
-    }
-    return merged;
+    // Merge persisted over defaults. (A legacy `padEnabled` key may exist
+    // in old saves — it's simply ignored now that the drone pad is gone.)
+    return { ...fallback, ...JSON.parse(raw) };
   } catch {
     return fallback;
   }
@@ -406,12 +387,6 @@ export const useGameStore = create<GameState>((set, get) => ({
   setMusicEnabled: (b) =>
     set((s) => {
       const next = { ...s.settings, musicEnabled: b };
-      persistSettings(next);
-      return { settings: next };
-    }),
-  setPadEnabled: (b) =>
-    set((s) => {
-      const next = { ...s.settings, padEnabled: b };
       persistSettings(next);
       return { settings: next };
     }),

@@ -44,7 +44,7 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
             <li>
               <strong>simplex-noise</strong> — terrain generation
             </li>
-            <li>Web Audio API — programmatic ambient pad + SFX</li>
+            <li>Web Audio API — programmatic melody + SFX</li>
           </ul>
         </section>
 
