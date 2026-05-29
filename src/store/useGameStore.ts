@@ -179,6 +179,8 @@ export interface GameState {
 }
 
 const STORAGE_KEY = "kingdomos.settings.v1";
+/** Marker for the one-time "silence the ambient drone" migration. */
+const PAD_MIGRATION_KEY = "kingdomos.padMigration.v1";
 
 function loadSettings(): SettingsState {
   const fallback: SettingsState = {
@@ -205,7 +207,11 @@ function loadSettings(): SettingsState {
     showPerfHud: false,
     showTutorial: true,
     musicEnabled: true,
-    padEnabled: true,
+    // Ambient drone pad OFF by default. Playtest feedback: the constant
+    // low hum was annoying. The sparse melody (musicEnabled) and event
+    // SFX stay on; only the continuous drone is silenced. Re-enableable
+    // in Settings for anyone who wants the atmosphere.
+    padEnabled: false,
     cutawayMode: false,
     retro16bit: true,
     uiScale: 1,
@@ -215,7 +221,18 @@ function loadSettings(): SettingsState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return fallback;
-    return { ...fallback, ...JSON.parse(raw) };
+    let merged: SettingsState = { ...fallback, ...JSON.parse(raw) };
+    // One-time migration: silence the ambient drone for everyone exactly
+    // once. Existing players had it persisted ON (the old default); this
+    // forces it OFF a single time so the "annoying hum" goes away without
+    // their action. The marker means we never re-force it — if they turn
+    // it back on in Settings afterward, it stays on.
+    if (localStorage.getItem(PAD_MIGRATION_KEY) !== "done") {
+      merged = { ...merged, padEnabled: false };
+      localStorage.setItem(PAD_MIGRATION_KEY, "done");
+      persistSettings(merged);
+    }
+    return merged;
   } catch {
     return fallback;
   }

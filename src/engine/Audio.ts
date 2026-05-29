@@ -43,8 +43,10 @@ export class AudioEngine {
   /** Disabled separately from the pad so a player who likes the drone but
    *  not the melody can keep just the drone. Hooked up via setMelodyEnabled. */
   private melodyEnabled = true;
-  /** Ambient drone pad toggle — independent of melody and SFX. */
-  private padEnabled = true;
+  /** Ambient drone pad toggle — independent of melody and SFX.
+   *  Defaults OFF (players found the constant hum annoying); the store
+   *  syncs the persisted/migrated value via setPadEnabled at startup. */
+  private padEnabled = false;
 
   attach(world: World) {
     // Subscribe early so we don't miss events even before unmute.
@@ -131,7 +133,12 @@ export class AudioEngine {
     // Quiet enough that SFX always sit clearly on top. The drone is meant to
     // be felt more than heard — players who want it louder can crank the
     // master volume slider in Settings.
-    this.padGain.gain.value = 0.18;
+    //
+    // Start at the flag's gain, NOT a hardcoded 0.18 — otherwise the drone
+    // hums on first audio-unlock even when padEnabled is false (the App's
+    // setPadEnabled effect runs before the audio context exists, so it
+    // no-ops, and enableMusic would override it). Pad defaults off now.
+    this.padGain.gain.value = this.padEnabled ? 0.18 : 0;
     this.padGain.connect(this.filter);
     this.filter.connect(this.master);
     this.master.connect(this.ctx.destination);
