@@ -43,8 +43,10 @@
      decisive floor of 16px (was 14 → 15 → 16). VT323 is a tall, thin
      terminal face; it carries 16px comfortably without feeling oversized.
      Players who want even larger have the accessibility scale slider
-     (1.15× / 1.3×) which multiplies on top of this. */
-  font-size: 16px;
+     (1.15× / 1.3×) which multiplies on top of this. Bumped 16 → 17 after a
+     fourth "still too small" — paired with bigger panel/HUD/rail bases
+     below. */
+  font-size: 17px;
   color-scheme: dark;
 }
 
@@ -161,7 +163,7 @@ html, body, #root, .app-root {
   padding: 9px 12px;
   background: linear-gradient(180deg, rgba(15, 18, 36, 0.94) 0%, rgba(15, 18, 36, 0.74) 100%);
   border-bottom: 1px solid var(--hud-border-soft);
-  font-size: 15px;
+  font-size: 16px;
   letter-spacing: 0.04em;
   user-select: none;
   pointer-events: auto;
@@ -196,7 +198,7 @@ html, body, #root, .app-root {
      surrounding day/season/clock chips, which is the wrong hierarchy
      (the advisor is a primary feature, not a tertiary label). */
   font: inherit;
-  font-size: 15px;
+  font-size: 16px;
   color: var(--accent);
   border-color: rgba(251, 191, 36, 0.32);
   background: rgba(251, 191, 36, 0.06);
@@ -209,7 +211,7 @@ html, body, #root, .app-root {
   color: #fcd34d;
 }
 .hud-advisor-icon {
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1;
   margin-right: 1px;
   color: var(--accent);
@@ -223,7 +225,7 @@ html, body, #root, .app-root {
    than the time itself so new players read it as a glanceable cue,
    not a primary fact. */
 .clock-tod {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--panel-muted);
   letter-spacing: 0.05em;
   margin-left: 2px;
@@ -237,7 +239,7 @@ html, body, #root, .app-root {
   display: inline-flex !important;
   align-items: center;
   gap: 6px;
-  font-size: 15px;
+  font-size: 16px;
   color: #d6d3d1;
   border-color: rgba(163, 230, 53, 0.28) !important;
   background: rgba(163, 230, 53, 0.05) !important;
@@ -455,7 +457,7 @@ html, body, #root, .app-root {
   max-width: min(900px, calc(100vw - 32px));
   padding: 8px 18px;
   font-style: italic;
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1.5;
   /* Near-white warm gold at full opacity. The old 0.85-alpha gold over a
      thin 0.4 scrim washed out against bright grass tiles — players
@@ -2658,7 +2660,7 @@ html, body, #root, .app-root {
   top: 0;
   bottom: 0;
   z-index: 89;
-  width: 320px;
+  width: 360px;
   max-width: 90vw;
   background: rgba(10, 12, 24, 0.97);
   border-left: 1px solid rgba(255,255,255,0.08);
@@ -2709,7 +2711,7 @@ html, body, #root, .app-root {
   min-width: 0;
 }
 .npc-profile-name {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bold;
   color: #f1f5f9;
   margin: 0 0 4px;
@@ -2724,7 +2726,7 @@ html, body, #root, .app-root {
   margin-bottom: 4px;
 }
 .npc-role-badge {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -2732,13 +2734,13 @@ html, body, #root, .app-root {
   border-radius: 20px;
 }
 .npc-trait-badge {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--panel-muted);
   font-style: italic;
   padding: 2px 0;
 }
 .npc-profile-age {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--panel-muted);
 }
 .npc-profile-close {
@@ -2764,7 +2766,7 @@ html, body, #root, .app-root {
   gap: 14px;
 }
 .npc-profile-backstory {
-  font-size: 11px;
+  font-size: 13px;
   font-style: italic;
   color: var(--panel-muted);
   line-height: 1.6;
@@ -2775,7 +2777,7 @@ html, body, #root, .app-root {
   border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0;
 }
 .npc-profile-section h3 {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.15em;
@@ -2786,7 +2788,7 @@ html, body, #root, .app-root {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 11px;
+  font-size: 13px;
   color: #cbd5e1;
 }
 .npc-profile-family {
@@ -2853,18 +2855,18 @@ html, body, #root, .app-root {
 .npc-mention.kind-event     { border-color: #60a5fa; }
 .npc-mention.kind-weather   { border-color: #94a3b8; }
 .npc-mention-day {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--panel-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 .npc-mention-text {
-  font-size: 11px;
+  font-size: 13px;
   color: #cbd5e1;
   line-height: 1.5;
 }
 .npc-profile-empty {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--panel-muted);
   font-style: italic;
   margin: 0;
@@ -4044,7 +4046,7 @@ html, body, #root, .app-root {
    resize the Pixi canvas — only the HUD/panels/prompts where reading
    matters. Layouts use fixed pixel widths so the surfaces stay
    geometrically the same; text inside them gets bigger. */
-.hud { font-size: calc(15px * var(--ui-scale, 1)); }
+.hud { font-size: calc(16px * var(--ui-scale, 1)); }
 .event-log,
 .settings-panel,
 .stats-panel,
@@ -4059,8 +4061,9 @@ html, body, #root, .app-root {
 .update-toast,
 .tour-tip,
 .royal-card,
-.feedback-card {
-  font-size: calc(16px * var(--ui-scale, 1));
+.feedback-card,
+.npc-profile-panel {
+  font-size: calc(18px * var(--ui-scale, 1));
 }
 
 /* ── Accessibility: colorblind-friendly palette swap ───────────────────────

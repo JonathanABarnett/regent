@@ -370,7 +370,7 @@ export function SettingsPanel({
           <label className="row">
             <span>UI text scale</span>
             <span style={{ display: "inline-flex", gap: 4 }}>
-              {[0.85, 1, 1.15, 1.3].map((v) => (
+              {[0.85, 1, 1.15, 1.3, 1.5].map((v) => (
                 <button
                   key={v}
                   type="button"
