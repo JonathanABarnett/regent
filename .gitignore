@@ -44,3 +44,6 @@ lerna-debug.log*
 # Local user state
 inbox/
 *.local
+
+# agent visual-verification scratch (screenshots, one-shot receiver)
+clips/

@@ -425,10 +425,9 @@ export class SpriteFactory {
     const rand = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
 
     if (kind === "forest") {
-      const AUTUMN_CROWN  = ["#c2410c", "#d97706", "#b45309", "#92400e"];
-      const WINTER_CROWN  = ["#dbeafe", "#bfdbfe", "#e0f2fe", "#cffafe"];
+      const AUTUMN_CROWN  = ["#c2410c", "#d97706"];
+      const WINTER_CROWN  = ["#dbeafe", "#bfdbfe"];
       const WINTER_GROUND = "#d1d5db";
-      const trunk = "#3c1f0a";
 
       // Ground
       if (season === "winter") {
@@ -444,26 +443,13 @@ export class SpriteFactory {
         }
       }
 
-      // Trunk
-      const tx = 8 + variant * 4;
-      const ty = 6;
-      g.rect(tx + 6, ty + 12, 4, 8).fill(trunk);
-      g.rect(tx + 6, ty + 12, 1, 8).fill(lightenHex(trunk, 0.25));
-
-      // Crown
+      // Tree — same per-variant silhouette as the base tile (shared helper),
+      // so the woods keep their shapes across seasons; only the palette and
+      // the winter snow cap change.
       const palette = season === "winter" ? WINTER_CROWN : AUTUMN_CROWN;
-      const [c0, c1, c2] = palette;
-      g.rect(tx + 2, ty, 12, 12).fill(c0);
-      g.rect(tx + 4, ty - 2, 8, 4).fill(c1);
-      g.rect(tx, ty + 2, 4, 8).fill(c1);
-      g.rect(tx + 12, ty + 2, 4, 8).fill(c1);
-      // highlight
-      g.rect(tx + 3, ty + 1, 4, 1).fill(lightenHex(c2, 0.3));
-      if (season === "winter") {
-        // snow drip on crown tip
-        g.rect(tx + 5, ty - 3, 6, 2).fill("#ffffff");
-        g.rect(tx + 5, ty - 1, 2, 2).fill("#e0f2fe");
-      }
+      drawTreeSprite(g, variant, palette[0], palette[1], {
+        snowCap: season === "winter",
+      });
 
     } else if (kind === "plain") {
       if (season === "winter") {
@@ -572,38 +558,24 @@ export class SpriteFactory {
         const y = Math.floor(rand() * T);
         g.rect(x, y, 1, 1).fill(lightenHex(c1, 0.22));
       }
-      // tree
-      const tx = 8 + variant * 4;
-      const ty = 6;
-      // trunk — darkened further so the silhouette survives night tint
-      const trunk = "#3c1f0a";
-      g.rect(tx + 6, ty + 12, 4, 8).fill(trunk);
-      // crown — main mass + side bushes + top crest. We push a bright
-      // accent pixel cluster so the green stays distinguishable from the
-      // trunk under heavy color-multiplier tinting.
-      g.rect(tx + 2, ty, 12, 12).fill(c1);
-      g.rect(tx + 4, ty - 2, 8, 4).fill(c2);
-      g.rect(tx, ty + 2, 4, 8).fill(c2);
-      g.rect(tx + 12, ty + 2, 4, 8).fill(c2);
-      // Crown highlight crescent (upper-left, lit by implicit sun)
-      g.rect(tx + 3, ty + 1, 4, 1).fill(lightenHex(c2, 0.35));
-      g.rect(tx + 3, ty + 2, 2, 2).fill(lightenHex(c2, 0.35));
-      // Trunk highlight + base shadow
-      g.rect(tx + 6, ty + 12, 1, 8).fill(lightenHex(trunk, 0.25));
-      g.rect(tx + 5, ty + 19, 6, 1).fill("#000000");
+      // tree — silhouette varies by tile variant (round / pine / oak / twin)
+      drawTreeSprite(g, variant, c1, c2);
     } else if (kind === "hill") {
       g.rect(0, 0, T, T).fill(base);
-      // Mound highlight — bigger, with a brighter crest row so it still
-      // reads as a hill after the night-palette tint multiplies it down.
+      // Mound highlight — position shifts per variant so a hill range
+      // reads as rolling terrain instead of one stamped tile repeated.
+      const mx = 4 + (variant * 3) % 7;
+      const my = 3 + (variant % 2) * 3;
       for (let y = 0; y < 8; y++) {
-        g.rect(6 + y, 4 + y, 20 - y * 2, 1).fill(c1);
+        g.rect(mx + y, my + y, 20 - y * 2, 1).fill(c1);
       }
       // Crest row — single brighter line at the top of the mound
-      g.rect(13, 4, 6, 1).fill(c2);
-      // A second smaller mound to the right, offset by variant
-      const m2x = 18 + variant;
-      g.rect(m2x, 18, 8, 4).fill(c1);
-      g.rect(m2x + 2, 17, 4, 1).fill(c2);
+      g.rect(mx + 7, my, 6, 1).fill(c2);
+      // A second smaller mound, offset by variant
+      const m2x = 16 + variant * 2;
+      const m2y = 17 + (variant % 3) * 2;
+      g.rect(m2x, m2y, 8, 4).fill(c1);
+      g.rect(m2x + 2, m2y - 1, 4, 1).fill(c2);
       // Some grass speckle on the slopes — keeps the tile from looking
       // like a flat color block
       for (let i = 0; i < 12; i++) {
@@ -613,26 +585,72 @@ export class SpriteFactory {
       }
     } else if (kind === "mountain") {
       g.rect(0, 0, T, T).fill(base);
-      // peak triangle
-      for (let y = 0; y < 16; y++) {
-        g.rect(16 - y, 28 - y, y * 2, 1).fill(c2);
+      // rocky ground speckle
+      for (let i = 0; i < 8; i++) {
+        g.rect(Math.floor(rand() * T), Math.floor(rand() * T), 1, 1).fill(darkenHex(base, 0.1));
       }
+      // back ridge — single-tone, alternates sides per variant so a range
+      // reads as overlapping peaks instead of one stamped tile repeated
+      const bx = variant % 2 === 0 ? 23 : 7;
+      for (let r = 0; r < 10; r++) {
+        const hw = Math.min(6, Math.max(1, Math.round(r * 0.7)));
+        g.rect(bx - hw, 11 + r, hw * 2, 1).fill(darkenHex(c1, 0.18));
+      }
+      // main peak — lit west face, shadowed east face, snow cap on top.
+      // Apex position + height shift per variant; variant 0 stays bare
+      // rock so ranges mix capped + uncapped peaks.
+      const ax = 12 + (variant % 2) * 3;
+      const h = 20 + (variant % 3);
+      const ay = 26 - h;
+      const capRows = variant === 0 ? 0 : 5 + (variant % 2);
+      for (let r = 1; r <= h; r++) {
+        const hw = Math.min(11, Math.max(1, Math.round(r * 0.62)));
+        const y = ay + r;
+        if (r <= capRows) {
+          g.rect(ax - hw, y, hw, 1).fill("#f5f5f4");
+          g.rect(ax, y, hw, 1).fill("#d6d3d1");
+        } else {
+          g.rect(ax - hw, y, hw, 1).fill(c1);
+          g.rect(ax, y, hw, 1).fill(darkenHex(base, 0.22));
+        }
+      }
+      // apex + central ridge shading down the lit/shadow boundary
+      g.rect(ax, ay, 1, 1).fill(capRows ? "#ffffff" : c2);
+      g.rect(ax, ay + capRows + 1, 1, h - capRows).fill(darkenHex(base, 0.35));
+      // snow dribbles trailing below the cap line
+      if (capRows) {
+        g.rect(ax - 3, ay + capRows + 1, 2, 2).fill("#f5f5f4");
+        g.rect(ax + 2, ay + capRows + 1, 1, 2).fill("#e7e5e4");
+      }
+      // scree at the foot
+      g.rect(ax - 8, 26, 3, 1).fill(darkenHex(base, 0.15));
+      g.rect(ax + 5, 26, 4, 1).fill(darkenHex(base, 0.15));
     } else if (kind === "snow") {
       g.rect(0, 0, T, T).fill(base);
-      for (let y = 0; y < 12; y++) {
-        g.rect(16 - y, 28 - y, y * 2, 1).fill(c1);
+      // soft drift mounds with pale-blue shadows for depth on white
+      const shadow = "#cbd5e1";
+      g.rect(9, 11, 10, 1).fill(c2);
+      g.rect(7, 12, 14, 2).fill(c2);
+      g.rect(5, 14, 18, 2).fill(c1);
+      g.rect(5, 16, 18, 1).fill(shadow);
+      // second smaller drift, offset per variant
+      const dx = 17 + variant;
+      g.rect(dx + 2, 20, 6, 1).fill(c2);
+      g.rect(dx, 21, 10, 2).fill(c1);
+      g.rect(dx, 23, 10, 1).fill(shadow);
+      // sparkle pixels — sun glinting off the crust
+      for (let i = 0; i < 5; i++) {
+        g.rect(Math.floor(rand() * T), Math.floor(rand() * T), 1, 1).fill("#ffffff");
       }
+      // wind-scoured streaks
+      g.rect(4 + variant * 2, 26, 5, 1).fill(shadow);
+      g.rect(20 - variant, 6, 4, 1).fill(shadow);
     }
-    // The hard 1px frame on every tile was what made the map read as a
-    // *checkerboard* rather than terrain. Only the geological tiles
-    // (hill/mountain/snow) keep a frame, and even then we soften it with
-    // alpha so adjacent tiles blend more cleanly.
-    if (kind === "hill" || kind === "mountain" || kind === "snow") {
-      g.rect(0, 0, T, 1).fill({ color: edge, alpha: 0.6 });
-      g.rect(0, T - 1, T, 1).fill({ color: edge, alpha: 0.6 });
-      g.rect(0, 0, 1, T).fill({ color: edge, alpha: 0.6 });
-      g.rect(T - 1, 0, 1, T).fill({ color: edge, alpha: 0.6 });
-    }
+    // No per-tile frames — the old hill/mountain/snow 1px frame made those
+    // regions read as a checkerboard of outlined squares. Biome boundaries
+    // are now handled by TransitionLayer (dithered fringe) + EdgeLayer
+    // (elevation shadows); tile interiors should be frameless terrain.
+    void edge;
     return this.rt(g, T, T);
   }
 
@@ -2064,4 +2082,95 @@ function parseHexLocal(hex: string): { r: number; g: number; b: number } {
 }
 function rgbHexLocal(r: number, g: number, b: number): string {
   return "#" + [r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Draw one tree silhouette into a 32px forest tile. Four genuinely distinct
+ * shapes keyed by tile variant — round broadleaf, tall pine, broad oak, and
+ * twin saplings — so a forest reads as woodland instead of one stamped
+ * sprite repeated in a grid.
+ *
+ * Shared by the base tile builder AND the seasonal (autumn/winter) builder
+ * so a tile keeps its silhouette across seasons — only the palette and the
+ * optional snow cap change. crownMain/crownLight are the two crown tones;
+ * the trunk is fixed dark so it survives the night tint.
+ */
+function drawTreeSprite(
+  g: Graphics,
+  variant: number,
+  crownMain: string,
+  crownLight: string,
+  opts?: { snowCap?: boolean },
+): void {
+  const trunk = "#3c1f0a";
+  const hi = lightenHex(crownLight, 0.35);
+  const snow = !!opts?.snowCap;
+
+  switch (variant % 4) {
+    case 0: { // round broadleaf (the classic)
+      const tx = 7, ty = 6;
+      g.rect(tx + 6, ty + 12, 4, 8).fill(trunk);
+      g.rect(tx + 6, ty + 12, 1, 8).fill(lightenHex(trunk, 0.25));
+      g.rect(tx + 2, ty, 12, 12).fill(crownMain);
+      g.rect(tx + 4, ty - 2, 8, 4).fill(crownLight);
+      g.rect(tx, ty + 2, 4, 8).fill(crownLight);
+      g.rect(tx + 12, ty + 2, 4, 8).fill(crownLight);
+      g.rect(tx + 3, ty + 1, 4, 1).fill(hi);
+      g.rect(tx + 3, ty + 2, 2, 2).fill(hi);
+      g.rect(tx + 5, ty + 19, 6, 1).fill("#000000");
+      if (snow) {
+        g.rect(tx + 4, ty - 3, 8, 2).fill("#ffffff");
+        g.rect(tx + 5, ty - 1, 3, 2).fill("#e0f2fe");
+      }
+      break;
+    }
+    case 1: { // tall pine — three narrowing tiers
+      const tx = 9, ty = 3;
+      g.rect(tx + 5, ty + 16, 3, 6).fill(trunk);
+      g.rect(tx + 5, ty + 16, 1, 6).fill(lightenHex(trunk, 0.25));
+      g.rect(tx, ty + 10, 13, 6).fill(darkenHex(crownMain, 0.1));
+      g.rect(tx + 2, ty + 5, 9, 6).fill(crownMain);
+      g.rect(tx + 4, ty, 5, 6).fill(crownLight);
+      g.rect(tx + 4, ty + 1, 1, 3).fill(hi);
+      g.rect(tx + 4, ty + 21, 6, 1).fill("#000000");
+      if (snow) {
+        g.rect(tx + 4, ty - 1, 5, 2).fill("#ffffff");
+        g.rect(tx + 2, ty + 5, 9, 1).fill("#e0f2fe");
+        g.rect(tx, ty + 10, 13, 1).fill("#e0f2fe");
+      }
+      break;
+    }
+    case 2: { // broad oak — wide low crown
+      const tx = 7, ty = 7;
+      g.rect(tx + 7, ty + 11, 4, 8).fill(trunk);
+      g.rect(tx + 7, ty + 11, 1, 8).fill(lightenHex(trunk, 0.25));
+      g.rect(tx - 1, ty + 2, 18, 9).fill(crownMain);
+      g.rect(tx + 3, ty - 1, 11, 5).fill(crownLight);
+      g.rect(tx + 4, ty, 4, 2).fill(hi);
+      g.rect(tx - 1, ty + 10, 18, 1).fill(darkenHex(crownMain, 0.2));
+      g.rect(tx + 5, ty + 18, 8, 1).fill("#000000");
+      if (snow) {
+        g.rect(tx + 3, ty - 2, 11, 2).fill("#ffffff");
+        g.rect(tx + 6, ty, 4, 1).fill("#e0f2fe");
+      }
+      break;
+    }
+    default: { // twin saplings — small pair, staggered depth
+      g.rect(8, 16, 2, 5).fill(trunk);
+      g.rect(5, 9, 8, 8).fill(crownMain);
+      g.rect(7, 7, 4, 3).fill(crownLight);
+      g.rect(6, 10, 2, 1).fill(hi);
+      g.rect(7, 20, 4, 1).fill("#000000");
+      g.rect(20, 16, 3, 7).fill(trunk);
+      g.rect(16, 7, 10, 10).fill(crownMain);
+      g.rect(18, 5, 6, 3).fill(crownLight);
+      g.rect(17, 8, 3, 1).fill(hi);
+      g.rect(19, 22, 5, 1).fill("#000000");
+      if (snow) {
+        g.rect(7, 6, 4, 2).fill("#ffffff");
+        g.rect(18, 4, 6, 2).fill("#ffffff");
+      }
+      break;
+    }
+  }
 }

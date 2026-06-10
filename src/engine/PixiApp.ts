@@ -20,6 +20,7 @@ import { CrtOverlay } from "./layers/CrtOverlay";
 import { BorderLayer } from "./layers/BorderLayer";
 import { CutawayLayer } from "./layers/CutawayLayer";
 import { EdgeLayer } from "./layers/EdgeLayer";
+import { TransitionLayer } from "./layers/TransitionLayer";
 import { RoadLayer } from "./layers/RoadLayer";
 import { DecorLayer } from "./layers/DecorLayer";
 import { NightLightsLayer } from "./layers/NightLightsLayer";
@@ -69,6 +70,7 @@ export class PixiApp {
   borderLayer!: BorderLayer;
   cutawayLayer!: CutawayLayer;
   edgeLayer!: EdgeLayer;
+  transitionLayer!: TransitionLayer;
   roadLayer!: RoadLayer;
   decorLayer!: DecorLayer;
   nightLightsLayer!: NightLightsLayer;
@@ -128,6 +130,14 @@ export class PixiApp {
       return;
     }
 
+    // Dev-only debug handle. Headless/occluded tabs throttle rAF to zero,
+    // which stops the ticker — agent-driven visual verification then needs
+    // a way to force a render + extract pixels (renderer.extract works
+    // without rAF). Stripped from production builds by the DEV guard.
+    if (import.meta.env.DEV) {
+      (window as unknown as { __KINGDOMOS_PIXI?: PixiApp }).__KINGDOMOS_PIXI = this;
+    }
+
     // pixel-perfect: native canvas is tiny, CSS stretches it up
     const canvas = this.app.canvas;
     canvas.style.imageRendering = "pixelated";
@@ -170,6 +180,7 @@ export class PixiApp {
 
     this.tileRenderer = new TileRenderer(this.opts.world.map, this.factory);
     this.edgeLayer = new EdgeLayer(this.opts.world.map);
+    this.transitionLayer = new TransitionLayer(this.opts.world.map);
     this.roadLayer  = new RoadLayer(this.opts.world.map);
     this.decorLayer = new DecorLayer(this.opts.world.map);
     this.structureLayer = new StructureLayer(this.opts.world.map, this.factory);
@@ -187,8 +198,9 @@ export class PixiApp {
     this.entityLayer.cutawayLayer = this.cutawayLayer;
 
     // Layer order (bottom → top):
-    //   tiles → roads → decor → edge-transitions → border → structures → night-lights → cutaway → entities → weather
+    //   tiles → biome-fringe → roads → decor → edge-transitions → border → structures → night-lights → cutaway → entities → weather
     this.worldStage.addChild(this.tileRenderer.container);
+    this.worldStage.addChild(this.transitionLayer.container);
     this.worldStage.addChild(this.roadLayer.container);
     this.worldStage.addChild(this.decorLayer.container);
     this.worldStage.addChild(this.edgeLayer.container);
@@ -436,6 +448,8 @@ export class PixiApp {
     this.tileRenderer.animate(simTime);
     // Edge-transition shadows between biomes — same viewport bounds as tiles.
     this.edgeLayer.update(minX, minY, maxX, maxY);
+    // Dithered biome-fringe transitions (grass over sand, sand into shallows).
+    this.transitionLayer.update(minX, minY, maxX, maxY, this.opts.world.state.season);
     // Reconcile is cheap: it walks the structure list and adds any new ones.
     // Called every frame so newly-constructed buildings (mill, watchtower,
     // shrine) appear without restarting the renderer.
