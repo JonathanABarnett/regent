@@ -29,6 +29,7 @@ import { DecisionPrompt } from "./ui/DecisionPrompt";
 import { SpeedControl } from "./ui/SpeedControl";
 import { PerformanceHUD } from "./ui/PerformanceHUD";
 import { TutorialHints } from "./ui/TutorialHints";
+import { DripHints } from "./ui/DripHints";
 import {
   mapTwitchFollow,
   mapTwitchSub,
@@ -1443,6 +1444,9 @@ export function App() {
       {!streamerMode && !preKingdomFlow && <SpeedControl />}
       <PerformanceHUD getWorld={() => worldRef.current} />
       {!streamerMode && <TutorialHints />}
+      {/* Post-tour contextual teaching — one small hint at a time, minutes
+          apart, only when the screen is calm. */}
+      {!streamerMode && !preKingdomFlow && <DripHints getWorld={() => worldRef.current} />}
       <StreamerOverlay />
       <AchievementToast onOpenJournal={() => setJournalOpen(true)} />
       <FamilyTreePanel

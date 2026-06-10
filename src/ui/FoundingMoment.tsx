@@ -55,7 +55,18 @@ export function FoundingMoment({ onOpenJournal }: { onOpenJournal: () => void })
   const [dismissing, setDismissing] = useState(false);
 
   useEffect(() => {
-    if (!kingdomName || tourPending) return;
+    if (!kingdomName) return;
+    if (tourPending) {
+      // The guided tour will run for this kingdom, and its journal step
+      // covers this exact beat. Consume the card permanently — otherwise
+      // it would slide in ~8s after the tour closes and re-teach what
+      // step 7 just said, right while the player faces their first
+      // petition countdown.
+      const next = loadSeen();
+      next.add(kingdomName);
+      saveSeen(next);
+      return;
+    }
     const seen = loadSeen();
     if (seen.has(kingdomName)) return;
     // Wait ~8 seconds so the founding burst (fireworks, courier, the

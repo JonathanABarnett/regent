@@ -38,7 +38,7 @@ const CARDS: Card[] = [
     emoji: "🏰",
     title: "Your kingdom lives on its own.",
     body:
-      "NPCs walk schedules, the seasons turn, the chronicle writes itself. You can leave the window open while you work and come back to a story. You don't have to do anything for the world to keep going.",
+      "Villagers walk their days, the seasons turn, the chronicle writes itself. Leave it open beside your work — or close it entirely. The kingdom keeps aging either way, and the steward reports what you missed when you return.",
   },
   {
     emoji: "✦",

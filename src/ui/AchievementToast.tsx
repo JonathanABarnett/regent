@@ -69,7 +69,12 @@ export function AchievementToast({
     };
   }, [toast, dismiss, tourActive]);
 
-  if (!toast) return null;
+  // While the guided tour is on screen, don't render at all — the founding
+  // achievement ("First Dispatch") fires seconds before the tour opens and
+  // would otherwise sit frozen in the corner through all eight steps,
+  // competing with the spotlight. State is kept; the toast appears (with a
+  // fresh dismiss timer) the moment the tour closes.
+  if (!toast || tourActive) return null;
 
   const isHidden = toast.id.startsWith("hidden_");
   const icon = achievementIcon(toast.id);

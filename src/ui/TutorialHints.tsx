@@ -38,7 +38,7 @@ const STEPS: Step[] = [
     id: "welcome",
     title: "A quick tour",
     body:
-      "Six short steps to show you what's where. You can skip anytime — the kingdom runs on its own regardless.",
+      "Eight short steps to show you what's where. You can skip anytime — the kingdom runs on its own regardless.",
   },
   {
     id: "rule",
@@ -62,6 +62,20 @@ const STEPS: Step[] = [
     target: ".hud-goal",
   },
   {
+    id: "people",
+    title: "These are your people",
+    body:
+      "This is your closest advisor — one of many villagers with names, families, and opinions. Hover anyone on the map to meet them; click for their full story. The crown can even bless a favorite (3 a day — they remember).",
+    target: ".hud-advisor",
+  },
+  {
+    id: "time",
+    title: "Time itself obeys",
+    body:
+      "Pause, play, or fast-forward here. And the kingdom keeps aging while the game is closed — come back tomorrow and the steward will report what you missed.",
+    target: ".speed-control",
+  },
+  {
     id: "journal",
     title: "Your story is written here",
     body:
@@ -72,7 +86,7 @@ const STEPS: Step[] = [
     id: "closing",
     title: "That's the whole loop",
     body:
-      "Watch the world live, or steer it when the mood takes you. Press ? anytime for the full controls. Enjoy your reign.",
+      "Watch the world live, or steer it when the mood takes you. Prefer fewer interruptions — or more? Settings → Reign style is your dial. Press ? anytime for controls. Enjoy your reign.",
   },
 ];
 

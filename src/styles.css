@@ -5024,3 +5024,39 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
 }
 .npc-bless-btn:disabled { opacity: 0.55; cursor: default; }
 .npc-bless-btn.blessed { background: rgba(251, 191, 36, 0.16); }
+
+/* Drip hints — one-at-a-time contextual teaching after the tour */
+.drip-hint {
+  position: fixed;
+  top: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 10px 14px;
+  background: rgba(12, 15, 32, 0.94);
+  border: 1px solid rgba(253, 230, 138, 0.35);
+  border-radius: 999px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  animation: dripHintIn 360ms ease;
+}
+@keyframes dripHintIn {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+.drip-hint-icon { font-size: 17px; flex-shrink: 0; }
+.drip-hint-text { color: #e7e5e4; font-size: 14px; line-height: 1.45; }
+.drip-hint-ok {
+  flex-shrink: 0;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(253, 230, 138, 0.45);
+  color: #fcd34d;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.drip-hint-ok:hover { background: rgba(251, 191, 36, 0.22); }
