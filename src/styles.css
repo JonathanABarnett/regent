@@ -4976,3 +4976,51 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
 .install-prompt-icon { font-size: 20px; }
 .install-prompt p { margin: 6px 0 10px; color: #e7e5e4; line-height: 1.5; font-size: 14px; }
 .install-prompt-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* Reign style — the engagement dial in Settings */
+.reign-style-row {
+  display: flex;
+  gap: 8px;
+}
+.reign-style-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm, 4px);
+  color: #e7e5e4;
+  cursor: pointer;
+  transition: border-color var(--motion-fast, 160ms), background-color var(--motion-fast, 160ms);
+}
+.reign-style-btn:hover { border-color: rgba(253, 230, 138, 0.4); }
+.reign-style-btn.active {
+  border-color: rgba(253, 230, 138, 0.75);
+  background: rgba(251, 191, 36, 0.08);
+}
+.reign-style-label { font-weight: bold; font-size: 14px; }
+.reign-style-blurb { font-size: 12px; color: var(--panel-muted); line-height: 1.35; }
+
+/* Royal favor — bless button in the NPC profile footer */
+.npc-profile-footer { display: flex; flex-direction: column; gap: 8px; }
+.npc-bless-btn {
+  width: 100%;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(253, 230, 138, 0.45);
+  color: #fcd34d;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color var(--motion-fast, 160ms), border-color var(--motion-fast, 160ms);
+}
+.npc-bless-btn:hover:not(:disabled) {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: rgba(253, 230, 138, 0.8);
+}
+.npc-bless-btn:disabled { opacity: 0.55; cursor: default; }
+.npc-bless-btn.blessed { background: rgba(251, 191, 36, 0.16); }

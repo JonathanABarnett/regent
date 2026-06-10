@@ -185,6 +185,7 @@ export function App() {
     clearPendingNewGame();
   }, []);
   const crt = useGameStore((s) => s.settings.crt);
+  const reignStyle = useGameStore((s) => s.settings.reignStyle);
   const integrations = useGameStore((s) => s.settings.integrations);
   const watchedPaths = useGameStore((s) => s.settings.watchedPaths);
   const audioVolume = useGameStore((s) => s.settings.audioVolume);
@@ -202,6 +203,16 @@ export function App() {
   const setMonarchSpec = useGameStore((s) => s.setMonarchSpec);
   const petSpec = useGameStore((s) => s.petSpec);
   const setPetSpec = useGameStore((s) => s.setPetSpec);
+
+  // Reign style → the sim's decision appetite. Lives as a plain field on
+  // World so the sim never imports the store; this effect keeps it synced
+  // (the boot effect also applies it at world creation).
+  useEffect(() => {
+    const w = worldRef.current;
+    if (!w) return;
+    w.decisionAppetite =
+      reignStyle === "handsOff" ? 0.45 : reignStyle === "handsOn" ? 1.8 : 1;
+  }, [reignStyle]);
 
   // ── Tauri settings sync ───────────────────────────────────────────────────
   // Push integration toggles and watched paths to the Rust backend whenever
@@ -261,6 +272,13 @@ export function App() {
       }
     }
     worldRef.current = world;
+    // Apply the persisted reign style now — the sync effect may have run
+    // before the world existed.
+    {
+      const style = useGameStore.getState().settings.reignStyle;
+      world.decisionAppetite =
+        style === "handsOff" ? 0.45 : style === "handsOn" ? 1.8 : 1;
+    }
 
     // Wire journal entries from the sim into the Zustand store. Hydrate first
     // from save so the panel shows history before any new entries arrive.
@@ -319,6 +337,21 @@ export function App() {
       if (ev.kind === "storm" || (ev.kind === "custom" && ev.payload.label === "lightning")) {
         el.classList.add("lightning-flash");
         setTimeout(() => el.classList.remove("lightning-flash"), 180);
+      }
+
+      // Pet delight (player petted the pet) → happy chirp + achievement.
+      if (
+        ev.kind === "custom" &&
+        typeof ev.payload.label === "string" &&
+        ev.payload.label.startsWith("pet_delight:")
+      ) {
+        audioRef.current?.chimeFor("life");
+        const petName = ev.payload.label.slice("pet_delight:".length) || "the pet";
+        useGameStore.getState().unlockAchievement(
+          "pet_the_pet",
+          "A Very Good Steward",
+          `Petted ${petName}. The kingdom's affairs waited, as they should.`,
+        );
       }
     });
 

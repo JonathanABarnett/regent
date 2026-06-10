@@ -138,9 +138,10 @@ export class Immigration {
     if (day - this.lastWandererDay < WANDERER_INTERVAL) return;
     // Require meaningful frontier expansion beyond the starting bubble.
     if (this.world.exploration.radius < 32) return;
-    // Prosperity bonus: flush treasury attracts more people.
+    // Prosperity bonus: flush treasury attracts more people. The reign-style
+    // dial scales arrival frequency too — wanderers are interactive asks.
     const bonus = this.world.economy.state.gold > 80 ? 0.2 : 0;
-    if (this.rand() > WANDERER_CHANCE + bonus) return;
+    if (this.rand() > (WANDERER_CHANCE + bonus) * this.world.decisionAppetite) return;
 
     this.lastWandererDay = day;
     this._proposeWandererDecision();

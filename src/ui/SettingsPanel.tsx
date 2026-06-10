@@ -68,6 +68,7 @@ export function SettingsPanel({
   const setRetro16bit  = useGameStore((s) => s.setRetro16bit);
   const setUiScale = useGameStore((s) => s.setUiScale);
   const setColorblindMode = useGameStore((s) => s.setColorblindMode);
+  const setReignStyle = useGameStore((s) => s.setReignStyle);
   const setShowTutorial = useGameStore((s) => s.setShowTutorial);
   const addWatchedPath = useGameStore((s) => s.addWatchedPath);
   const removeWatchedPath = useGameStore((s) => s.removeWatchedPath);
@@ -265,6 +266,33 @@ export function SettingsPanel({
           >
             Found new kingdom
           </button>
+        </section>
+        <section>
+          <h3>Reign style</h3>
+          <p className="tip" style={{ marginTop: 0 }}>
+            How often should the kingdom ask for you? The world lives on its
+            own either way — this only tunes petitions and decisions.
+          </p>
+          <div className="reign-style-row">
+            {(
+              [
+                { id: "handsOff", label: "🌿 Hands-off", blurb: "A calm window. Rare, patient asks." },
+                { id: "balanced", label: "⚖ Balanced", blurb: "The intended cadence." },
+                { id: "handsOn", label: "👑 Hands-on", blurb: "A busy court that wants its monarch." },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                className={`reign-style-btn${settings.reignStyle === opt.id ? " active" : ""}`}
+                onClick={() => setReignStyle(opt.id)}
+                title={opt.blurb}
+              >
+                <span className="reign-style-label">{opt.label}</span>
+                <span className="reign-style-blurb">{opt.blurb}</span>
+              </button>
+            ))}
+          </div>
         </section>
         <section>
           <h3>Visual</h3>

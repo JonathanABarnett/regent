@@ -98,6 +98,9 @@ export interface Pet {
    * uses a player-designed appearance.
    */
   spriteKey?: string;
+  /** Sim-time until which the pet shows a delighted heart (just petted).
+   *  Transient — set by World.petThePet, never persisted. */
+  heartUntil?: number;
 }
 
 export type NPCTrait =
@@ -146,6 +149,9 @@ export interface NPC {
   /** display label / speech bubble text (transient) */
   speech?: string;
   speechUntil?: number;
+  /** Sim-time until which this NPC glows with the crown's favor (heart
+   *  indicator). Transient — set by World.blessNpc, never persisted. */
+  blessedUntil?: number;
 }
 
 export type WeatherKind = "clear" | "cloudy" | "rain" | "storm" | "snow";

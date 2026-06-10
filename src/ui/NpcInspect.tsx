@@ -34,6 +34,9 @@ export function NpcInspect({
   // Track the current hover NPC id in a ref so the click handler can read it
   // without a stale closure.
   const hoverIdRef = useRef<string | null>(null);
+  // The royal pet is hoverable + clickable too — clicking pets it.
+  const [petHover, setPetHover] = useState<{ name: string; screen: { x: number; y: number } } | null>(null);
+  const hoverPetIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let raf = 0;
@@ -74,6 +77,28 @@ export function NpcInspect({
             bestDist = d;
           }
         }
+        // The royal pet competes with NPCs for the hover — whichever is
+        // nearer wins. Clicking a hovered pet pets it (no profile panel).
+        let bestPet: { id: string; name: string } | null = null;
+        let bestPetDist = 1.2;
+        for (const p of world.pets) {
+          const d = Math.hypot(p.pos.x - tileX, p.pos.y - tileY);
+          if (d < bestPetDist) {
+            bestPet = { id: p.id, name: p.name };
+            bestPetDist = d;
+          }
+        }
+        if (bestPet && bestPetDist < bestDist) {
+          hoverPetIdRef.current = bestPet.id;
+          setPetHover({ name: bestPet.name, screen: { x: ev.clientX + 14, y: ev.clientY + 14 } });
+          setHover(null);
+          setHoveredNpc(null);
+          hoverIdRef.current = null;
+          return;
+        }
+        hoverPetIdRef.current = null;
+        setPetHover(null);
+
         if (!best) {
           setHover(null);
           setHoveredNpc(null);
@@ -104,9 +129,16 @@ export function NpcInspect({
       setHover(null);
       setHoveredNpc(null);
       hoverIdRef.current = null;
+      setPetHover(null);
+      hoverPetIdRef.current = null;
     };
-    // Click on the canvas → open the profile panel for the currently-hovered NPC.
+    // Click on the canvas → pet the hovered pet, or open the profile panel
+    // for the currently-hovered NPC.
     const onClick = () => {
+      if (hoverPetIdRef.current) {
+        getWorld()?.petThePet(hoverPetIdRef.current);
+        return;
+      }
       if (hoverIdRef.current && onClickNpc) {
         onClickNpc(hoverIdRef.current);
       }
@@ -123,6 +155,18 @@ export function NpcInspect({
       canvas?.removeEventListener("click", onClick);
     };
   }, [getCanvas, getCamera, getWorld, onClickNpc]);
+
+  if (petHover) {
+    return (
+      <div
+        className="npc-tooltip pet-tooltip"
+        style={{ left: petHover.screen.x, top: petHover.screen.y }}
+      >
+        <div className="npc-tooltip-name">🐾 {petHover.name}</div>
+        <div className="npc-tooltip-hint">click to pet</div>
+      </div>
+    );
+  }
 
   if (!hover) return null;
   const { npc, partner, parents, screen } = hover;

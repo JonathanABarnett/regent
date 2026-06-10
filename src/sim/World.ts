@@ -286,6 +286,15 @@ export class World {
   onJournal?: (entry: SavedJournalEntry) => void;
 
   /**
+   * The engagement dial — how often the world asks for the player.
+   * Scales the probability of interactive decisions (gate petitions,
+   * wanderers) without touching ambient storytelling. Set by the UI from
+   * the "reign style" setting: 0.45 hands-off · 1 balanced · 1.8 hands-on.
+   * Lives on World (not the store) so the sim stays UI-import-free.
+   */
+  decisionAppetite = 1;
+
+  /**
    * Active court effects. The UI sets the appointed-NPC ids via `setCourt`;
    * each tick the booleans are recomputed to reflect whether the appointee
    * is still alive. Reading these flags from sim systems is cheap and keeps
@@ -747,6 +756,85 @@ export class World {
     if (!pet) return;
     pet.followingNpcId = npcId;
   }
+
+  // ── Royal favor: bless a villager ───────────────────────────────────────
+  // The lightest possible verb of rule — pick a person, show them the
+  // crown noticed them. Limited per day so it stays a small ritual rather
+  // than a stat hose; the payoff is mostly emotional (heart, gratitude,
+  // the occasional journal line), with a whisper of kingdom mood.
+
+  /** Royal favors available per in-world day. */
+  static readonly ROYAL_FAVORS_PER_DAY = 3;
+
+  private favorState = { day: -1, used: 0, blessedIds: new Set<string>() };
+
+  favorsRemainingToday(): number {
+    if (this.favorState.day !== this.state.day) return World.ROYAL_FAVORS_PER_DAY;
+    return Math.max(0, World.ROYAL_FAVORS_PER_DAY - this.favorState.used);
+  }
+
+  /** Has this NPC already received today's favor? */
+  isBlessedToday(npcId: string): boolean {
+    return this.favorState.day === this.state.day && this.favorState.blessedIds.has(npcId);
+  }
+
+  blessNpc(npcId: string): { ok: boolean; reason?: "gone" | "already" | "spent" } {
+    const npc = this.npcs.find((n) => n.id === npcId);
+    if (!npc) return { ok: false, reason: "gone" };
+    if (this.favorState.day !== this.state.day) {
+      this.favorState = { day: this.state.day, used: 0, blessedIds: new Set() };
+    }
+    if (this.favorState.blessedIds.has(npcId)) return { ok: false, reason: "already" };
+    if (this.favorState.used >= World.ROYAL_FAVORS_PER_DAY) return { ok: false, reason: "spent" };
+    this.favorState.used++;
+    this.favorState.blessedIds.add(npcId);
+    npc.blessedUntil = this.state.time + 8;
+    const GRATITUDE = [
+      "The crown remembered my name!",
+      "Did you see that? The crown!",
+      "I must write to my mother.",
+      "A good day. A very good day.",
+      "I shall not wash this hand.",
+    ];
+    npc.speech = GRATITUDE[Math.floor(this.rand() * GRATITUDE.length)];
+    npc.speechUntil = this.state.time + 4;
+    this.mood.adjust(0.5);
+    // Sometimes the moment makes the chronicle — enough to feel seen,
+    // rare enough not to flood the journal at 3 favors a day.
+    if (this.rand() < 0.3 && npc.name) {
+      this.journal.write(
+        `${npc.name} received the crown's favor today. They have mentioned it, by latest count, eleven times.`,
+        "life",
+        { fromDecision: true },
+      );
+    }
+    return { ok: true };
+  }
+
+  /**
+   * Pet the royal pet. Unlimited, as it should be. Hearts, a delighted
+   * wiggle window, and a once-per-day journal line. Publishes a
+   * `pet_delight:` bus event so the UI can chirp + unlock the achievement.
+   */
+  petThePet(petId: string): boolean {
+    const pet = this.pets.find((p) => p.id === petId);
+    if (!pet) return false;
+    pet.heartUntil = this.state.time + 4;
+    this.bus.publish(makeEvent("custom", {
+      source: "internal",
+      payload: { label: `pet_delight:${pet.name}` },
+    }));
+    if (this.lastPetJournalDay !== this.state.day) {
+      this.lastPetJournalDay = this.state.day;
+      this.journal.write(
+        `${pet.name} the ${pet.kind} was, witnesses confirm, a very good ${pet.kind} today.`,
+        "life",
+      );
+    }
+    return true;
+  }
+
+  private lastPetJournalDay = -1;
 
   /**
    * Apply court appointments. Each id is checked against the live roster —

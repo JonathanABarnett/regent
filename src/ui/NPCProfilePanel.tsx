@@ -19,7 +19,7 @@
  * so there's no stale-closure risk.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useGameStore } from "../store/useGameStore";
 import type { World } from "../sim/World";
 import type { NPC } from "../sim/types";
@@ -65,6 +65,8 @@ export function NPCProfilePanel({
 }) {
   const journal = useGameStore((s) => s.journal);
   const worldStats = useGameStore((s) => s.worldStats);
+  // Bump to re-render after a blessing (the world mutates in place).
+  const [, setBlessRev] = useState(0);
 
   // Derive all NPC data from the live world on every render.
   // This is intentionally NOT memoized — the world mutates in place and
@@ -274,6 +276,29 @@ export function NPCProfilePanel({
         {/* ── Footer ── */}
         {onNavigateToNpc && (
           <div className="npc-profile-footer">
+            {world && npc.role !== "monarch" && (
+              world.isBlessedToday(npc.id) ? (
+                <button className="npc-bless-btn blessed" disabled>
+                  💛 Blessed today
+                </button>
+              ) : (
+                <button
+                  className="npc-bless-btn"
+                  disabled={world.favorsRemainingToday() === 0}
+                  onClick={() => {
+                    const r = world.blessNpc(npc.id);
+                    if (r.ok) setBlessRev((v) => v + 1);
+                  }}
+                  title={
+                    world.favorsRemainingToday() > 0
+                      ? `Grant the crown's favor — a small kindness they'll remember (${world.favorsRemainingToday()} left today)`
+                      : "The crown's favors are spent for today — more at dawn"
+                  }
+                >
+                  🙏 Bless ({world.favorsRemainingToday()} left today)
+                </button>
+              )
+            )}
             <button
               className="npc-find-btn"
               onClick={() => onNavigateToNpc(npc)}

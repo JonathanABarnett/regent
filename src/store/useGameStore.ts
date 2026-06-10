@@ -66,6 +66,13 @@ export interface SettingsState {
    * on red/green hue contrast. Off by default.
    */
   colorblindMode: boolean;
+  /**
+   * Reign style — the engagement dial. How often the world asks for the
+   * player: hands-off = a calm window you mostly watch; balanced = the
+   * default cadence; hands-on = a busy court that wants its monarch.
+   * Mapped onto World.decisionAppetite by App.
+   */
+  reignStyle: "handsOff" | "balanced" | "handsOn";
 }
 
 export interface AchievementToast {
@@ -178,6 +185,7 @@ export interface GameState {
   setRetro16bit: (b: boolean) => void;
   setUiScale: (n: number) => void;
   setColorblindMode: (b: boolean) => void;
+  setReignStyle: (s: SettingsState["reignStyle"]) => void;
   markSeenJournal: () => void;
   markSeenEvents: () => void;
 }
@@ -210,6 +218,7 @@ function loadSettings(): SettingsState {
     showTutorial: true,
     musicEnabled: true,
     cutawayMode: false,
+    reignStyle: "balanced",
     retro16bit: true,
     uiScale: 1,
     colorblindMode: false,
@@ -442,6 +451,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       if (typeof document !== "undefined") {
         document.documentElement.classList.toggle("colorblind", b);
       }
+      return { settings: next };
+    }),
+  setReignStyle: (style) =>
+    set((s) => {
+      const next = { ...s.settings, reignStyle: style };
+      persistSettings(next);
       return { settings: next };
     }),
   markSeenJournal: () =>

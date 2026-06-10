@@ -254,6 +254,29 @@ export class EntityLayer {
         sprite.texture = frames[i];
       }
       sprite.scale.x = pet.facing === "w" ? -1 : 1;
+      // Delighted heart while freshly petted — same indicator plumbing as
+      // NPCs, keyed by pet id.
+      if (pet.heartUntil && simTime < pet.heartUntil) {
+        let node = this.indicatorNodes.get(pet.id);
+        if (!node || node.kind !== "heart") {
+          if (node) { node.g.parent?.removeChild(node.g); node.g.destroy(); }
+          const ig = this.drawIndicator("heart");
+          this.container.addChild(ig);
+          node = { g: ig, kind: "heart" };
+          this.indicatorNodes.set(pet.id, node);
+        }
+        node.g.visible = true;
+        node.g.x = sprite.x - 6;
+        node.g.y = sprite.y - T * 1.1 + Math.sin(simTime * 3) * 1.5;
+        node.g.zIndex = sprite.zIndex + 2;
+      } else {
+        const node = this.indicatorNodes.get(pet.id);
+        if (node) {
+          node.g.parent?.removeChild(node.g);
+          node.g.destroy();
+          this.indicatorNodes.delete(pet.id);
+        }
+      }
     }
     for (const [id, sprite] of this.petSprites) {
       if (!seenPets.has(id)) {
@@ -359,6 +382,9 @@ export class EntityLayer {
       npc.role === "monarch" &&
       (this.world.usurper.state.active || this.world.uprising.state.active)
     ) return "alert";
+
+    // Heart: freshly blessed by the crown (royal favor)
+    if (npc.blessedUntil && simTime < npc.blessedUntil) return "heart";
 
     // Heart: just got married (partner exists AND both are idle near home)
     if (

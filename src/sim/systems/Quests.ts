@@ -1982,13 +1982,15 @@ export class Quests {
       }
     }
 
-    // Decision proposals — 25% chance per new day, mutually exclusive with arc starts.
-    if (day > 0 && this.rand() < 0.25) {
+    // Decision proposals — 25% base chance per new day, mutually exclusive
+    // with arc starts. decisionAppetite is the player's reign-style dial:
+    // hands-off players get fewer interruptions, hands-on a busier court.
+    if (day > 0 && this.rand() < 0.25 * this.world.decisionAppetite) {
       this.proposeRandomDecision();
     }
 
     // Late-game bonus decisions — only roll after year 2.
-    if (day > 0 && this.world.state.year >= 2 && this.rand() < 0.12) {
+    if (day > 0 && this.world.state.year >= 2 && this.rand() < 0.12 * this.world.decisionAppetite) {
       this.proposeLateGameDecision();
     }
   }
@@ -2000,10 +2002,12 @@ export class Quests {
     const rand = this.rand;
     const flavor = FLAVOR_NAMES[Math.floor(rand() * FLAVOR_NAMES.length)];
     // Royal Advisor seat extends the decision window so the player has more
-    // time before auto-expiry. 90s base, 180s with advisor.
+    // time before auto-expiry. 90s base, 180s with advisor. Hands-off reign
+    // style also stretches the window — fewer asks AND more patient ones.
     const expiresAt = Date.now() +
-      (this.world.courtEffects.advisorSeated ? 180_000 : 90_000) +
-      (this.world.edictEffects.openCourt ? 60_000 : 0);
+      ((this.world.courtEffects.advisorSeated ? 180_000 : 90_000) +
+        (this.world.edictEffects.openCourt ? 60_000 : 0)) *
+        (this.world.decisionAppetite < 1 ? 1.5 : 1);
     const roll = rand();
     const decId = this.nextId("dec");
     // ~10 decision archetypes share the [0, 1) space.
