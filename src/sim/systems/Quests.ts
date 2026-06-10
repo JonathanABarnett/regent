@@ -1,5 +1,6 @@
 import type { World } from "../World";
 import type { Journal } from "./Journal";
+import { portraitSeedFromName } from "./Decisions";
 import { makeEvent } from "../events/EventSchema";
 import { traitFor } from "./Traits";
 import { backstoryFor } from "./Backstories";
@@ -2021,6 +2022,7 @@ export class Quests {
         id: decId,
         title: "A petition at the gates",
         body: `${capitalize(flavor)} stands at the gates asking for shelter. The guards await your word.`,
+        portraitSeed: portraitSeedFromName(flavor),
         expiresAt,
         defaultOnExpire: true,
         options: [

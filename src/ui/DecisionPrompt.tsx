@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { World } from "../sim/World";
 import type { PendingDecision } from "../sim/systems/Decisions";
+import { NpcPortrait } from "./NpcPortrait";
 
 /**
  * Bottom-center floating card asking the player to make a decision. Subscribes
@@ -12,6 +13,24 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
   // Independent 1-second tick so the timer counts down visibly even when
   // the decision itself doesn't change.
   const [, setNow] = useState(Date.now());
+  // Floating impact text — choices should feel like they DID something.
+  // Each chosen option's hint (its consequence preview) rises from the
+  // button and fades. Lives outside `current` so it survives the card
+  // unmounting the instant the decision resolves.
+  const [floats, setFloats] = useState<
+    Array<{ id: number; text: string; x: number; y: number }>
+  >([]);
+
+  function choose(decisionId: string, opt: PendingDecision["options"][number], e: React.MouseEvent) {
+    const w = getWorld();
+    if (!w) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const text = opt.hint ?? opt.label;
+    const id = performance.now();
+    setFloats((f) => [...f, { id, text, x: rect.left + rect.width / 2, y: rect.top }]);
+    window.setTimeout(() => setFloats((f) => f.filter((fl) => fl.id !== id)), 1400);
+    w.decisions.resolve(decisionId, opt.id);
+  }
 
   useEffect(() => {
     let off: (() => void) | undefined;
@@ -39,9 +58,20 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
     return () => clearInterval(id);
   }, [current]);
 
-  if (!current) return null;
+  const floatEls = floats.map((f) => (
+    <div
+      key={f.id}
+      className="decision-float"
+      style={{ left: f.x, top: f.y }}
+      aria-hidden="true"
+    >
+      {f.text}
+    </div>
+  ));
+
+  if (!current) return <>{floatEls}</>;
   const w = getWorld();
-  if (!w) return null;
+  if (!w) return <>{floatEls}</>;
 
   // Measure against the decisions clock, which is pinned while the sim is
   // paused (guided tutorial / manual pause). That keeps the countdown
@@ -68,6 +98,8 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
       : `Expires in ${timeStr}`;
 
   return (
+    <>
+    {floatEls}
     <div
       className={`decision-prompt${urgent ? " urgent" : ""}`}
       role="alertdialog"
@@ -81,13 +113,22 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
           {timeStr}
         </span>
       </div>
-      <p className="decision-body" id="decision-body">{current.body}</p>
+      {current.portraitSeed !== undefined ? (
+        <div className="decision-body-row">
+          <div className="decision-portrait">
+            <NpcPortrait seed={current.portraitSeed} size={56} />
+          </div>
+          <p className="decision-body" id="decision-body">{current.body}</p>
+        </div>
+      ) : (
+        <p className="decision-body" id="decision-body">{current.body}</p>
+      )}
       <div className="decision-options">
         {current.options.map((opt) => (
           <button
             key={opt.id}
             type="button"
-            onClick={() => w.decisions.resolve(current.id, opt.id)}
+            onClick={(e) => choose(current.id, opt, e)}
             className={opt.id === current.options[0]?.id ? "ghost" : "primary"}
           >
             <span className="decision-opt-label">{opt.label}</span>
@@ -97,5 +138,6 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
       </div>
       <div className="decision-footer">{footerText}</div>
     </div>
+    </>
   );
 }

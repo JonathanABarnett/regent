@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { ExternalEvent } from "../sim/events/EventSchema";
-import type { SavedJournalEntry } from "../sim/Persistence";
+import type { SavedJournalEntry, StewardReportData } from "../sim/Persistence";
 import { clearSave } from "../sim/Persistence";
 import { summarize, appendToArchive } from "../sim/KingdomArchive";
 import type { CharacterSpec } from "../engine/CharacterSpec";
@@ -101,6 +101,11 @@ export interface GameState {
    *  sim (speedMultiplier returns 0) and pauses toast auto-dismiss so a
    *  new player can read + click through without the world moving on. */
   tourActive: boolean;
+  /** The "while you were away" report built by runAwayProgression on
+   *  load. Non-null → the Steward's Report modal is on screen (and the
+   *  sim is held paused so the player reads it over a still kingdom).
+   *  Dismissing the modal clears it. */
+  stewardReport: StewardReportData | null;
   identity: KingdomIdentity | null;
   monarchSpec: CharacterSpec;
   petSpec: PetSpec;
@@ -167,6 +172,7 @@ export interface GameState {
   setShowPerfHud: (b: boolean) => void;
   setShowTutorial: (b: boolean) => void;
   setTourActive: (b: boolean) => void;
+  setStewardReport: (r: StewardReportData | null) => void;
   setMusicEnabled: (b: boolean) => void;
   setCutawayMode: (b: boolean) => void;
   setRetro16bit: (b: boolean) => void;
@@ -253,6 +259,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   achievements: {},
   achievementToast: null,
   tourActive: false,
+  stewardReport: null,
   identity: null,
   monarchSpec: DEFAULT_SPEC,
   petSpec: defaultPetSpec("dog"),
@@ -394,6 +401,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       return { settings: next };
     }),
   setTourActive: (b) => set({ tourActive: b }),
+  setStewardReport: (r) => set({ stewardReport: r }),
   setMusicEnabled: (b) =>
     set((s) => {
       const next = { ...s.settings, musicEnabled: b };

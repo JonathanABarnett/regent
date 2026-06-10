@@ -63,6 +63,37 @@ const HOLIDAY_DEFS: readonly HolidayDef[] = [
   { name: "midwinter", dayOffset: MIDWINTER_DAY_OFFSET, lines: MIDWINTER_LINES },
 ];
 
+/** Player-facing holiday labels for HUD anticipation chips. */
+const HOLIDAY_LABELS: Record<string, string> = {
+  founding: "Founding Day",
+  midsummer: "Midsummer",
+  harvest: "the Harvest Festival",
+  midwinter: "Midwinter",
+};
+
+/**
+ * What holiday is today or tomorrow, given an absolute in-world day
+ * (1-based since founding)? Pure calendar math — used by the HUD to give
+ * the player a daily check-in hook ("Tomorrow: the Harvest Festival")
+ * without touching sim state.
+ */
+export function upcomingHoliday(
+  absoluteDay: number,
+): { label: string; today: boolean } | null {
+  const dayInYear = ((absoluteDay - 1) % DAYS_PER_YEAR) + 1;
+  const tomorrowInYear = (dayInYear % DAYS_PER_YEAR) + 1;
+  for (const h of HOLIDAY_DEFS) {
+    const holidayDay = h.dayOffset + 1;
+    if (dayInYear === holidayDay) {
+      return { label: HOLIDAY_LABELS[h.name] ?? h.name, today: true };
+    }
+    if (tomorrowInYear === holidayDay) {
+      return { label: HOLIDAY_LABELS[h.name] ?? h.name, today: false };
+    }
+  }
+  return null;
+}
+
 export class InWorldHolidays {
   state: InWorldHolidaysSnapshot = { firedKeys: [] };
   private fired = new Set<string>();

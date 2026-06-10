@@ -4738,3 +4738,241 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
   border-color: #ef4444;
   color: #ef4444;
 }
+
+/* ── Steward's Report — the "while you were away" modal ─────────────────────── */
+.steward-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 290; /* above panels/decisions, below the title screen (300) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 6, 14, 0.72);
+  backdrop-filter: blur(2px);
+}
+.steward-card {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: linear-gradient(180deg, rgba(16, 20, 40, 0.98), rgba(10, 13, 28, 0.98));
+  border: 2px solid rgba(253, 230, 138, 0.45);
+  outline: 1px solid rgba(0, 0, 0, 0.8);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
+  padding: 22px 26px 20px;
+  text-align: center;
+}
+.steward-crest {
+  font-size: 30px;
+  margin-bottom: 4px;
+}
+.steward-card h3 {
+  font-family: var(--font-pixel);
+  color: var(--accent);
+  font-size: 18px;
+  margin: 0 0 10px;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+}
+.steward-lede {
+  margin: 0 0 14px;
+  color: #e7e5e4;
+  line-height: 1.55;
+}
+.steward-stats {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.steward-stat {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm, 4px);
+  padding: 8px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.steward-stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--panel-muted);
+}
+.steward-stat-value {
+  font-size: 19px;
+  font-weight: bold;
+  color: #f1f5f9;
+}
+.steward-stat-value em {
+  font-style: normal;
+  font-size: 14px;
+}
+.steward-stat-value em.up { color: #a3e635; }
+.steward-stat-value em.down { color: #fb7185; }
+.steward-headlines {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.steward-headlines li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 2px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0;
+  line-height: 1.45;
+}
+.steward-headlines li.kind-milestone { border-left-color: #c8a84b; }
+.steward-headlines li.kind-life      { border-left-color: #fb7185; }
+.steward-headlines li.kind-event     { border-left-color: #60a5fa; }
+.steward-headlines li.kind-weather   { border-left-color: #94a3b8; }
+.steward-day {
+  font-size: 11px;
+  color: var(--panel-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+.steward-text {
+  color: #e2e8f0;
+  font-size: 14px;
+}
+.steward-quiet {
+  color: var(--panel-muted);
+  font-style: italic;
+  margin: 0 0 14px;
+}
+.steward-pending {
+  color: #fcd34d;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+.steward-begin {
+  min-width: 180px;
+}
+
+/* Holiday anticipation chip — appears only when a holiday is today/tomorrow */
+.hud-left > .hud-holiday {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 15px;
+  color: #fcd34d;
+  background: rgba(251, 191, 36, 0.08) !important;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  animation: holiday-glow 2.4s ease-in-out infinite;
+}
+@keyframes holiday-glow {
+  0%, 100% { border-color: rgba(251, 191, 36, 0.4); }
+  50%      { border-color: rgba(251, 191, 36, 0.85); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-left > .hud-holiday { animation: none; }
+}
+
+/* Main-tab placeholder while the kingdom floats in the PiP ambient window */
+.ambient-placeholder {
+  position: fixed;
+  inset: 0;
+  z-index: 5; /* under the HUD so the toggle stays reachable */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: radial-gradient(ellipse at center, rgba(76, 95, 181, 0.10), transparent 60%);
+  color: var(--panel-muted);
+}
+.ambient-placeholder-icon { font-size: 40px; }
+.ambient-placeholder p { margin: 0 0 6px; font-size: 15px; }
+
+/* Floating consequence text — rises from the chosen decision button */
+.decision-float {
+  position: fixed;
+  z-index: 260;
+  transform: translateX(-50%);
+  pointer-events: none;
+  font-size: 14px;
+  font-weight: bold;
+  color: #fcd34d;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  animation: decision-float-up 1.4s ease-out forwards;
+}
+@keyframes decision-float-up {
+  0%   { opacity: 0; translate: 0 6px; }
+  12%  { opacity: 1; translate: 0 0; }
+  70%  { opacity: 1; translate: 0 -34px; }
+  100% { opacity: 0; translate: 0 -48px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .decision-float { animation-duration: 0.6s; }
+}
+
+/* Decision-card portrait — the petitioner gets a face */
+.decision-body-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.decision-portrait {
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(253, 230, 138, 0.3);
+  border-radius: var(--radius-sm, 4px);
+}
+.npc-portrait { image-rendering: pixelated; display: block; }
+
+/* Milestone share nudge — bottom-right toast card */
+.share-moment {
+  position: fixed;
+  right: 16px;
+  bottom: 64px;
+  z-index: 240;
+  width: min(320px, calc(100vw - 32px));
+  background: linear-gradient(180deg, rgba(16, 20, 40, 0.97), rgba(10, 13, 28, 0.97));
+  border: 1px solid rgba(253, 230, 138, 0.4);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  padding: 12px 14px;
+  animation: share-moment-in 280ms ease-out;
+}
+@keyframes share-moment-in {
+  from { opacity: 0; translate: 0 10px; }
+  to   { opacity: 1; translate: 0 0; }
+}
+.share-moment-icon { font-size: 20px; }
+.share-moment p { margin: 6px 0 10px; color: #e7e5e4; line-height: 1.5; font-size: 14px; }
+.share-moment-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* PWA install nudge — bottom-left toast card */
+.install-prompt {
+  position: fixed;
+  left: 16px;
+  bottom: 64px;
+  z-index: 240;
+  width: min(300px, calc(100vw - 32px));
+  background: linear-gradient(180deg, rgba(16, 20, 40, 0.97), rgba(10, 13, 28, 0.97));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  padding: 12px 14px;
+  animation: share-moment-in 280ms ease-out;
+}
+.install-prompt-icon { font-size: 20px; }
+.install-prompt p { margin: 6px 0 10px; color: #e7e5e4; line-height: 1.5; font-size: 14px; }
+.install-prompt-actions { display: flex; gap: 8px; justify-content: flex-end; }

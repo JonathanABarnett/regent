@@ -36,6 +36,10 @@ export class EntityLayer {
   /** Floating activity/emotion indicators drawn above NPC heads. */
   private indicatorNodes = new Map<string, { g: Graphics; kind: IndicatorKind }>();
   private hoverRing = new Graphics();
+  /** Grounding shadows under every NPC/pet/courier — redrawn each frame
+   *  below all character sprites. Without these the little people read
+   *  as floating stickers on the terrain. */
+  private shadowG = new Graphics();
   /** Optionally set by PixiApp; lets us relocate NPCs to stations when the
    *  cutaway dollhouse mode is active. */
   cutawayLayer?: CutawayLayer;
@@ -45,6 +49,9 @@ export class EntityLayer {
     this.container.sortableChildren = true;
     this.hoverRing.zIndex = 999_999;
     this.container.addChild(this.hoverRing);
+    this.shadowG.zIndex = -1; // beneath every sprite (their zIndex = y > 0)
+    this.shadowG.eventMode = "none";
+    this.container.addChild(this.shadowG);
   }
 
   update(_dt: number, alpha: number, simTime: number) {
@@ -55,6 +62,7 @@ export class EntityLayer {
     // get distributed across distinct stations.
     const cutawayOn = !!this.cutawayLayer?.enabled;
     const takenStations = new Map<string, Set<number>>();
+    this.shadowG.clear();
 
     // ── NPCs ──────────────────────────────────────────────────────────────
     const seenNpc = new Set<string>();
@@ -109,6 +117,14 @@ export class EntityLayer {
         sprite.x = (ix + ox) * T + T / 2;
         sprite.y = (iy + oy + 1) * T;
         sprite.zIndex = sprite.y;
+      }
+      // Grounding shadow at the feet — drawn BEFORE the idle bob so the
+      // shadow stays put while the body breathes above it.
+      this.shadowG.ellipse(sprite.x, sprite.y - 1, 7, 2.5).fill({ color: 0x000000, alpha: 0.22 });
+      // Idle bob — a 1px breathing offset, phase-shifted per NPC so a
+      // standing crowd shimmers gently instead of pulsing in lockstep.
+      if (npc.activity !== "walking") {
+        sprite.y -= Math.round(Math.sin(simTime * 2.2 + hash01(npc.seed) * Math.PI * 2) * 0.5 + 0.5);
       }
       // Frame selection: single-direction procedural vs. multi-direction sheet.
       // Row convention for 4-dir sheets: 0=S  1=N  2=W  3=E
@@ -231,6 +247,7 @@ export class EntityLayer {
       sprite.x = ix * T + T / 2;
       sprite.y = (iy + 1) * T;
       sprite.zIndex = sprite.y - 0.5;
+      this.shadowG.ellipse(sprite.x, sprite.y - 1, 5, 2).fill({ color: 0x000000, alpha: 0.2 });
       const frames = this.factory.characters.get(spriteKey) ?? [];
       if (frames.length) {
         const i = Math.floor(simTime * 5) % frames.length;
@@ -264,6 +281,7 @@ export class EntityLayer {
       sprite.x = ix * T + T / 2;
       sprite.y = (iy + 1) * T;
       sprite.zIndex = sprite.y + 0.5;
+      this.shadowG.ellipse(sprite.x, sprite.y - 1, 8, 2.5).fill({ color: 0x000000, alpha: 0.22 });
       const frames = this.factory.characters.get("courier") ?? [];
       if (frames.length) {
         const i = Math.floor(simTime * 6) % frames.length;

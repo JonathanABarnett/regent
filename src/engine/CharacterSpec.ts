@@ -97,6 +97,45 @@ export const DEFAULT_SPEC: CharacterSpec = {
   beard: false,
 };
 
+/**
+ * Deterministic commoner spec from an NPC seed — same seed, same face,
+ * across sessions and saves. Used for decision-card and profile portraits
+ * so the villager asking for shelter has a face, not just a name.
+ * Leans peasant: no crowns, mostly bare heads, rarely armed.
+ */
+export function specFromSeed(seed: number): CharacterSpec {
+  let s = (seed >>> 0) || 1;
+  const rand = () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+  const pick = <T>(arr: readonly T[]): T => arr[Math.floor(rand() * arr.length)];
+  const skinTones: SkinTone[] = ["fair", "tan", "olive", "brown", "dark"];
+  const bodyTypes: BodyType[] = ["slim", "average", "stout"];
+  const hairStyles: HairStyle[] = ["short", "long", "ponytail", "bald", "braid", "topknot"];
+  const outfits: OutfitStyle[] = ["tunic", "peasant", "peasant", "robe", "tunic"];
+  const hats: HatStyle[] = ["none", "none", "none", "cap", "hood"];
+  return {
+    v: 1,
+    skinTone: pick(skinTones),
+    bodyType: pick(bodyTypes),
+    hairStyle: pick(hairStyles),
+    hairColor: pick(HAIR_COLORS),
+    eyeColor: pick(EYE_COLORS),
+    eyeAccessory: rand() < 0.08 ? "glasses" : "none",
+    outfit: pick(outfits),
+    outfitColor: pick(FABRIC_COLORS),
+    accentColor: pick(FABRIC_COLORS),
+    hat: pick(hats),
+    hatColor: pick(FABRIC_COLORS),
+    cape: "none",
+    capeColor: pick(FABRIC_COLORS),
+    handItem: "none",
+    handItemColor: pick(FABRIC_COLORS),
+    beard: rand() < 0.25,
+  };
+}
+
 /** Convenience for random presets in the editor. */
 export function randomSpec(): CharacterSpec {
   const pick = <T>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];

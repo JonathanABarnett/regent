@@ -59,7 +59,12 @@ import {
   serialize,
   readPendingNewGame,
   clearPendingNewGame,
+  runAwayProgression,
 } from "./sim/Persistence";
+import { StewardReport } from "./ui/StewardReport";
+import { TabTitle } from "./ui/TabTitle";
+import { ShareMoments } from "./ui/ShareMoments";
+import { InstallPrompt } from "./ui/InstallPrompt";
 
 declare global {
   interface Window {
@@ -136,6 +141,11 @@ export function App() {
   const [kingdomCardOpen, setKingdomCardOpen] = useState(false);
   const [chronicleOpen, setChronicleOpen] = useState(false);
   const [vaultOpen, setVaultOpen] = useState(false);
+  // Ambient mode: the kingdom canvas floats in an always-on-top Document
+  // Picture-in-Picture window (Chrome 116+, Firefox 151+) while the player
+  // works. The Rusty's-Retirement loop, in a browser.
+  const [ambientActive, setAmbientActive] = useState(false);
+  const ambientCleanupRef = useRef<(() => void) | null>(null);
   // Show the title screen on first paint. Dismissed by Continue / New / etc.
   // Exception: if the "How to Play" walkthrough wiped + reloaded to start a
   // fresh kingdom, skip straight past the title into the creation flow.
@@ -277,6 +287,20 @@ export function App() {
       }
     };
 
+    // ── Away progression: make the missed days actually happen ─────────────
+    // The wall-clock calendar already aged the kingdom while the app was
+    // closed; this replays the missed days (births, caravans, consequences,
+    // gold) and queues the Steward's Report modal with the outcome. Runs
+    // AFTER onJournal is wired so the replayed entries land in the store.
+    if (existing?.kingdomName) {
+      try {
+        const report = runAwayProgression(world, existing);
+        if (report) useGameStore.getState().setStewardReport(report);
+      } catch (err) {
+        console.warn("[App] away progression failed (non-fatal)", err);
+      }
+    }
+
     // Death bell + lightning flash: listen on the world bus for special signals.
     world.bus.subscribe((ev) => {
       const el = containerRef.current;
@@ -410,6 +434,9 @@ export function App() {
         // Freeze the world while the guided tour is up so a new player
         // can read + click through without things moving or vanishing.
         if (store.tourActive) return 0;
+        // Hold still while the Steward's Report is on screen — the player
+        // is reading what happened; the world shouldn't move on without them.
+        if (store.stewardReport) return 0;
         return store.settings.simSpeed;
       },
     });
@@ -1122,6 +1149,76 @@ export function App() {
   // player could see the previous kingdom's quote-of-day + mood meter.
   const preKingdomFlow = titleOpen || !identity || creatorOpen;
 
+  // ── Ambient mode (Document Picture-in-Picture) ────────────────────────────
+  // Pops the kingdom canvas into a small always-on-top window so the world
+  // lives beside the player's work. The PiP window drives the render loop
+  // with its own rAF — the main tab's rAF throttles to zero once hidden,
+  // which would otherwise freeze the floating kingdom. Watch-only: HUD and
+  // decisions stay in the main window.
+  const ambientSupported =
+    typeof window !== "undefined" && "documentPictureInPicture" in window;
+
+  async function toggleAmbientMode() {
+    if (ambientActive) {
+      ambientCleanupRef.current?.();
+      return;
+    }
+    const host = containerRef.current;
+    const pixi = pixiRef.current;
+    const dpp = (window as unknown as {
+      documentPictureInPicture?: {
+        requestWindow(opts?: { width?: number; height?: number }): Promise<Window>;
+      };
+    }).documentPictureInPicture;
+    if (!host || !pixi || !dpp) return;
+    try {
+      const pipWin = await dpp.requestWindow({ width: 480, height: 300 });
+      const parent = host.parentElement;
+      const next = host.nextSibling;
+      pipWin.document.title = "KingdomOS — ambient";
+      pipWin.document.body.style.margin = "0";
+      pipWin.document.body.style.background = "#0d0d2b";
+      pipWin.document.body.style.overflow = "hidden";
+      // The .pixi-host class doesn't exist in the PiP document — size inline.
+      host.style.width = "100vw";
+      host.style.height = "100vh";
+      pipWin.document.body.append(host);
+      // Hand the render loop to the PiP window's rAF.
+      pixi.app.ticker.stop();
+      let rafId = 0;
+      const loop = (t: number) => {
+        pixi.app.ticker.update(t);
+        rafId = pipWin.requestAnimationFrame(loop);
+      };
+      rafId = pipWin.requestAnimationFrame(loop);
+      let done = false;
+      const cleanup = () => {
+        if (done) return;
+        done = true;
+        pipWin.cancelAnimationFrame(rafId);
+        pixi.app.ticker.start();
+        host.style.width = "";
+        host.style.height = "";
+        if (parent) {
+          if (next) parent.insertBefore(host, next);
+          else parent.appendChild(host);
+        }
+        setAmbientActive(false);
+        ambientCleanupRef.current = null;
+        try {
+          pipWin.close();
+        } catch {
+          /* already closing */
+        }
+      };
+      pipWin.addEventListener("pagehide", cleanup, { once: true });
+      ambientCleanupRef.current = cleanup;
+      setAmbientActive(true);
+    } catch (err) {
+      console.warn("[Ambient] picture-in-picture failed", err);
+    }
+  }
+
   return (
     <div className="app-root">
       {!streamerMode && !preKingdomFlow && (
@@ -1152,6 +1249,8 @@ export function App() {
             store.setCutawayMode(!store.settings.cutawayMode);
           }}
           onTakePhoto={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "p" }))}
+          onToggleAmbient={ambientSupported ? toggleAmbientMode : undefined}
+          ambientActive={ambientActive}
           onToggleChronicle={() => setChronicleOpen((b) => !b)}
           onSelectAdvisor={(npcId) => setProfileNpcId(npcId)}
           onOpenRule={() => setRoyalOpen((b) => !b)}
@@ -1159,6 +1258,17 @@ export function App() {
         />
       )}
       <div ref={containerRef} className="pixi-host" />
+      {/* While the canvas floats in the PiP window, the main tab shows a
+          calm placeholder with the way home. */}
+      {ambientActive && (
+        <div className="ambient-placeholder">
+          <div className="ambient-placeholder-icon" aria-hidden="true">🪟</div>
+          <p>The kingdom floats above your work.</p>
+          <button type="button" className="primary" onClick={() => ambientCleanupRef.current?.()}>
+            Bring it home
+          </button>
+        </div>
+      )}
       {/* In streamer mode every panel is force-closed so the OBS source stays clean */}
       <EventLog
         open={logOpen && !streamerMode}
@@ -1219,6 +1329,10 @@ export function App() {
           year-1 rollover. Hidden in streamer mode and pre-kingdom. */}
       {!preKingdomFlow && !streamerMode && (
         <FeedbackMoments getOpenFeedback={() => setFeedbackOpen(true)} />
+      )}
+      {/* Milestone share nudges — Kingdom Card prompts at proud moments. */}
+      {!preKingdomFlow && !streamerMode && (
+        <ShareMoments onOpenKingdomCard={() => setKingdomCardOpen(true)} />
       )}
       <KingdomCard
         world={worldRef.current}
@@ -1289,6 +1403,10 @@ export function App() {
         />
       )}
       {!streamerMode && !preKingdomFlow && <DecisionPrompt getWorld={() => worldRef.current} />}
+      {/* Steward's Report — "while you were away" outcome card. Hidden during
+          pre-kingdom flow (the title screen sits above it anyway at z-300,
+          but no point mounting it under there). */}
+      {!streamerMode && !preKingdomFlow && <StewardReport />}
       {!streamerMode && !preKingdomFlow && <SpeedControl />}
       <PerformanceHUD getWorld={() => worldRef.current} />
       {!streamerMode && <TutorialHints />}
@@ -1545,6 +1663,8 @@ export function App() {
       {/* Tauri-only; no-ops on the web demo. Hides itself if no
           updater endpoint is configured. */}
       <UpdateToast />
+      <TabTitle />
+      {!streamerMode && !preKingdomFlow && <InstallPrompt />}
       {/* FF6-style menu blip/confirm on button hover + click. Reads
           live volume from the store, so muting in Settings disables
           UI sound too. */}

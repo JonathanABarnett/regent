@@ -483,86 +483,7 @@ export class World {
     this.state.season = cal.season;
     this.state.dayOfWeek = cal.dayOfWeek;
     if (dayChanged) {
-      this.bus.publish(makeEvent("custom", {
-        source: "internal",
-        payload: { label: `Day ${cal.day} dawns over the kingdom` },
-      }));
-      // Day-rollover sweep: if a court appointee died yesterday, vacate the
-      // seat now so their bonus doesn't linger into the new day.
-      this.revalidateCourt();
-      // Court members get a chance to say something today.
-      this.courtSpeech.tick();
-      // Snapshot today's stats for the sparklines panel.
-      this.history.capture(this);
-      // Rare threat roll — captain seated cuts the chance dramatically.
-      this.threats.tick();
-      // Even rarer "a landmark has been discovered" roll. Adds a structure
-      // to the map; the BorderLayer picks it up automatically.
-      this.discoveries.tick();
-      // Royal Edicts: auto-expire active edicts when their window elapses.
-      this.edicts.tick();
-      // Political intrigue: usurper challenges and peasant uprisings.
-      this.usurper.tick();
-      this.uprising.tick();
-      // Generational progression: coming-of-age, retirement, bonds.
-      this.lifeCycle.tick();
-      // Faction loyalty auto-adjustment and passive effects.
-      this.factions.tick();
-      // Treasury pressure: bankruptcy warnings and prosperity celebrations.
-      this.treasuryPressure.tick();
-      // Exploration: advance the fog-of-war frontier by 1 tile per week.
-      this.exploration.tick();
-      // Immigration: check for wanderer arrivals and newly revealed camps.
-      this.immigration.tick();
-      // War: may declare a war, advance an active battle, or resolve it.
-      this.war.tick();
-      // Disasters: plague / famine / flood with named NPC consequences.
-      this.disasters.tick();
-      // Visitors: a bard, scholar, knight, pilgrim, or storyteller drops by.
-      this.visitors.tick();
-      // Trade caravans from off-map kingdoms — open / tax / refuse decision.
-      this.tradeCaravans.tick();
-      // Comet — rare decade-scale celestial event.
-      this.comet.tick();
-      // Old Days — myth-toned prose once the kingdom is 20+ years old.
-      this.oldDays.tick();
-      // Great Anniversaries — year 25/50/100/150/200 milestones.
-      this.greatAnniversaries.tick();
-      // Refugees — fleeing parties from off-map kingdoms.
-      this.refugees.tick();
-      // Cursed artifacts — apply slow drain effects from items in the vault.
-      this.treasury.tickCurses();
-      // Custom decrees — player-authored laws applying small ongoing effects.
-      this.customDecrees.tick();
-      // Expeditions to discovered ruins/standing stones/obelisks.
-      this.expeditions.tick();
-      // The Wanderer — a recurring named NPC across the kingdom's decades.
-      this.wanderer.tick();
-      // Returning bloodline — long-lost claimant after a usurper/uprising broke the line.
-      this.returningBloodline.tick();
-      // Sagas — multi-generation quest arcs that span years.
-      this.sagas.tick();
-      // Scheduled consequences — fire deferred effects from past
-      // decisions. Runs BEFORE cult/quest ticks so a consequence that
-      // proposes a follow-on decision blocks competitors from also
-      // claiming the (single-slot) decision queue this tick.
-      this.consequences.tickDay();
-      // Cult subplot — quiet religious schism with rumours and a decision.
-      this.cult.tick();
-      // Death anniversaries — fire quiet remembrance entries for past losses.
-      this.remembrance.tick();
-      // In-world calendar holidays — Founding Day, Midsummer, Harvest, Midwinter.
-      this.inWorldHolidays.tick();
-      // Mood drift toward 0 + famine drag.
-      this.mood.tickDay();
-      // Aspirations: check progress, fire journal on completion.
-      const completed = this.aspirations.evaluate(this);
-      for (const id of completed) {
-        const def = Aspirations.definitions().find((a) => a.id === id);
-        if (def) {
-          this.journal.write(`Aspiration fulfilled — ${def.title}: ${def.description}`, "milestone");
-        }
-      }
+      this.runDailySystems();
     }
     if (seasonChanged && this.state.day > 1) {
       // Anchor the season turn with a journal entry. Skipped on day 1 to
@@ -609,6 +530,157 @@ export class World {
     this.tickEffects(dt);
     this.wildlife.tick(dt);
     this._tickSpeechBubbles(dt);
+  }
+
+  /**
+   * Everything that happens once per in-world day. Extracted from tick()
+   * so fastForwardDays() can replay missed days at day granularity.
+   */
+  private runDailySystems(): void {
+    this.bus.publish(makeEvent("custom", {
+      source: "internal",
+      payload: { label: `Day ${this.state.day} dawns over the kingdom` },
+    }));
+    // Day-rollover sweep: if a court appointee died yesterday, vacate the
+    // seat now so their bonus doesn't linger into the new day.
+    this.revalidateCourt();
+    // Court members get a chance to say something today.
+    this.courtSpeech.tick();
+    // Snapshot today's stats for the sparklines panel.
+    this.history.capture(this);
+    // Rare threat roll — captain seated cuts the chance dramatically.
+    this.threats.tick();
+    // Even rarer "a landmark has been discovered" roll. Adds a structure
+    // to the map; the BorderLayer picks it up automatically.
+    this.discoveries.tick();
+    // Royal Edicts: auto-expire active edicts when their window elapses.
+    this.edicts.tick();
+    // Political intrigue: usurper challenges and peasant uprisings.
+    this.usurper.tick();
+    this.uprising.tick();
+    // Generational progression: coming-of-age, retirement, bonds.
+    this.lifeCycle.tick();
+    // Faction loyalty auto-adjustment and passive effects.
+    this.factions.tick();
+    // Treasury pressure: bankruptcy warnings and prosperity celebrations.
+    this.treasuryPressure.tick();
+    // Exploration: advance the fog-of-war frontier by 1 tile per week.
+    this.exploration.tick();
+    // Immigration: check for wanderer arrivals and newly revealed camps.
+    this.immigration.tick();
+    // War: may declare a war, advance an active battle, or resolve it.
+    this.war.tick();
+    // Disasters: plague / famine / flood with named NPC consequences.
+    this.disasters.tick();
+    // Visitors: a bard, scholar, knight, pilgrim, or storyteller drops by.
+    this.visitors.tick();
+    // Trade caravans from off-map kingdoms — open / tax / refuse decision.
+    this.tradeCaravans.tick();
+    // Comet — rare decade-scale celestial event.
+    this.comet.tick();
+    // Old Days — myth-toned prose once the kingdom is 20+ years old.
+    this.oldDays.tick();
+    // Great Anniversaries — year 25/50/100/150/200 milestones.
+    this.greatAnniversaries.tick();
+    // Refugees — fleeing parties from off-map kingdoms.
+    this.refugees.tick();
+    // Cursed artifacts — apply slow drain effects from items in the vault.
+    this.treasury.tickCurses();
+    // Custom decrees — player-authored laws applying small ongoing effects.
+    this.customDecrees.tick();
+    // Expeditions to discovered ruins/standing stones/obelisks.
+    this.expeditions.tick();
+    // The Wanderer — a recurring named NPC across the kingdom's decades.
+    this.wanderer.tick();
+    // Returning bloodline — long-lost claimant after a usurper/uprising broke the line.
+    this.returningBloodline.tick();
+    // Sagas — multi-generation quest arcs that span years.
+    this.sagas.tick();
+    // Scheduled consequences — fire deferred effects from past
+    // decisions. Runs BEFORE cult/quest ticks so a consequence that
+    // proposes a follow-on decision blocks competitors from also
+    // claiming the (single-slot) decision queue this tick.
+    this.consequences.tickDay();
+    // Cult subplot — quiet religious schism with rumours and a decision.
+    this.cult.tick();
+    // Death anniversaries — fire quiet remembrance entries for past losses.
+    this.remembrance.tick();
+    // In-world calendar holidays — Founding Day, Midsummer, Harvest, Midwinter.
+    this.inWorldHolidays.tick();
+    // Mood drift toward 0 + famine drag.
+    this.mood.tickDay();
+    // Aspirations: check progress, fire journal on completion.
+    const completed = this.aspirations.evaluate(this);
+    for (const id of completed) {
+      const def = Aspirations.definitions().find((a) => a.id === id);
+      if (def) {
+        this.journal.write(`Aspiration fulfilled — ${def.title}: ${def.description}`, "milestone");
+      }
+    }
+  }
+
+  /**
+   * Replay in-world days that elapsed while the app was closed.
+   *
+   * The wall-clock Calendar already AGES the kingdom during an absence
+   * (close on Day 5, return on Day 12) — but the daily systems only fire
+   * on live day-rollovers, so historically nothing actually HAPPENED in
+   * the missed days: no births, no caravans, no consequences. This walks
+   * each missed day in order, stamping state.day/season/year to that
+   * historical day (so journal entries date correctly) and running the
+   * full daily block plus a day's worth of economy.
+   *
+   * Decisions proposed on any day except the last are resolved by their
+   * stated default — exactly what the timeout would have done had the
+   * player been present. The final day's decisions stay pending so the
+   * returning player has something to act on.
+   *
+   * Day granularity only — no NPC movement, weather, or per-frame systems
+   * run, so even the 7-day cap completes in milliseconds.
+   */
+  fastForwardDays(days: number): void {
+    if (days <= 0) return;
+    const minutesPerDay = this.calendar.cfg.minutesPerDay ?? 48;
+    const realMsPerDay = minutesPerDay * 60 * 1000;
+    const dayLenSec = minutesPerDay * 60;
+    const now = Date.now();
+    // Let LifeEvents process each replayed day (applySave pins its pointer
+    // to "today", which would otherwise swallow the gap).
+    this.lifeEvents.seedLastProcessedDay(this.calendar.snapshot(now - days * realMsPerDay).day);
+    for (let k = days - 1; k >= 0; k--) {
+      const snap = this.calendar.snapshot(now - k * realMsPerDay);
+      const seasonChanged = snap.season !== this.state.season;
+      const yearChanged = snap.year !== this.state.year;
+      this.state.day = snap.day;
+      this.state.year = snap.year;
+      this.state.season = snap.season;
+      this.state.dayOfWeek = snap.dayOfWeek;
+      // Advance sim-time by a whole day so timed effects expire naturally
+      // and the in-world hour lands where it started.
+      this.state.time += dayLenSec;
+      this.state.hour = this.dayNight.hourAt(this.state.time);
+      this.runDailySystems();
+      this.lifeEvents.tick();
+      if (seasonChanged && this.state.day > 1) {
+        const pool = SEASON_ANCHORS[snap.season];
+        this.journal.write(pool[Math.floor(this.rand() * pool.length)], "weather");
+      }
+      if (yearChanged && snap.year > 1) {
+        this.fireAnniversary(snap.year);
+      }
+      // A day's worth of production at the same rates as staying open at 1×.
+      this.economy.tick(
+        dayLenSec,
+        this.npcs.filter((n) => n.role === "miner").length,
+        this.npcs.filter((n) => n.role === "blacksmith").length,
+        this.npcs.filter((n) => n.role === "scholar").length,
+      );
+      if (k > 0) {
+        // The player wasn't there: petitions resolve by their stated
+        // default, exactly as the on-screen timeout would have done.
+        this.decisions.tick(Number.MAX_SAFE_INTEGER);
+      }
+    }
   }
 
   /**

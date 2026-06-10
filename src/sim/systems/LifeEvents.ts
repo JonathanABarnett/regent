@@ -31,6 +31,15 @@ export class LifeEvents {
     private rand: () => number,
   ) {}
 
+  /**
+   * Pin the catch-up pointer. Used by save-load (pin to "today" so a
+   * reload doesn't replay history) and by World.fastForwardDays (pin to
+   * the day the absence began so each replayed day processes once).
+   */
+  seedLastProcessedDay(day: number): void {
+    this.lastProcessedDay = day;
+  }
+
   tick() {
     const day = this.world.state.day;
     // First tick after construction: lastProcessedDay is the sentinel -1.

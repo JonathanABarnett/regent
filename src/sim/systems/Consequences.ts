@@ -1,5 +1,6 @@
 import type { World } from "../World";
 import type { Journal } from "./Journal";
+import { portraitSeedFromName } from "./Decisions";
 
 /**
  * Scheduled-effects queue. The missing piece that turns this from
@@ -215,7 +216,9 @@ export class Consequences {
       "A child asked at supper what the locked door at the old shrine was for. Their parents changed the subject. The child did not believe them.",
     ];
     const line = lines[Math.floor(this.rand() * lines.length)];
-    this.journal.write(line, "event");
+    // fromDecision: deferred echoes ARE the player's choice playing out —
+    // badge them so the causality thread is visible in the journal.
+    this.journal.write(line, "event", { fromDecision: true });
   }
 
   // ── Cult: TOLERATE aftermath ────────────────────────────────────────
@@ -234,7 +237,7 @@ export class Consequences {
           "Two more elders have stopped attending the kingdom's official rites. They have not been confronted. The chancellor noticed. The chronicler noticed. Neither said anything.",
         ];
     const line = lines[Math.floor(this.rand() * lines.length)];
-    this.journal.write(line, "event");
+    this.journal.write(line, "event", { fromDecision: true });
   }
 
   private _fireCultTolerateDecision(c: ScheduledConsequence): void {
@@ -319,7 +322,7 @@ export class Consequences {
       "The full investigation file was placed on the chancellor's desk this evening. Nine names, an address, and a list of dates. The chancellor locked it in the lower drawer. The crown has not asked to see it again.",
     ];
     const line = lines[Math.floor(this.rand() * lines.length)];
-    this.journal.write(line, "event");
+    this.journal.write(line, "event", { fromDecision: true });
   }
 
   // ── Founding: Welcome Petition ──────────────────────────────────────
@@ -367,6 +370,7 @@ export class Consequences {
       title: "A petition at the gate",
       body:
         `A young family — the ${surname}s — have come to the keep. Their newborn arrived the same week as the founding, and they have named the child after ${monarchName}. They ask, shyly, whether the crown might mark the occasion.`,
+      portraitSeed: portraitSeedFromName(surname),
       options: [
         {
           id: "attend",
@@ -440,6 +444,6 @@ export class Consequences {
     } else {
       line = `The ${surname}s' child is healthy. The family sent word of thanks for the kind note. They have not asked for anything else.`;
     }
-    this.journal.write(line, "life");
+    this.journal.write(line, "life", { fromDecision: true });
   }
 }

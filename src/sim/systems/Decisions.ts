@@ -35,6 +35,24 @@ export interface PendingDecision {
   expiresAt: number;
   /** if true the first option triggers on expiry; otherwise nothing */
   defaultOnExpire?: boolean;
+  /**
+   * Seed for a deterministic pixel portrait of the person behind this
+   * decision (rendered by the UI via specFromSeed). Faces are what
+   * players attach to — a petitioner with a face is a person, not a
+   * paragraph. Omit for impersonal decisions (taxes, portents).
+   */
+  portraitSeed?: number;
+}
+
+/** Stable portrait seed from a display name, for decisions that have a
+ *  name but no spawned NPC yet (petitioners, newborn families). */
+export function portraitSeedFromName(name: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < name.length; i++) {
+    h ^= name.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
 }
 
 export class Decisions {

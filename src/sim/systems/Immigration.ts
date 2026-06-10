@@ -1,5 +1,6 @@
 import type { World } from "../World";
 import type { Journal } from "./Journal";
+import { portraitSeedFromName } from "./Decisions";
 import type { NPC, NPCRole, Structure } from "../types";
 import { generateName } from "./Names";
 import { traitFor } from "./Traits";
@@ -167,6 +168,7 @@ export class Immigration {
       id: `imm_wanderer_${this.world.state.day}`,
       title: "A traveller at the gates",
       body,
+      portraitSeed: seed,
       options: [
         {
           id: "welcome",
@@ -230,6 +232,7 @@ export class Immigration {
         `Scouts have confirmed an occupied camp at ${camp.name}. ` +
         `${plural ? `${count} capable residents — ` : "One capable resident — "}` +
         `${nameList} — currently answer to no crown.`,
+      portraitSeed: candidates[0]?.seed ?? portraitSeedFromName(nameList),
       options: [
         {
           id: "diplomacy",

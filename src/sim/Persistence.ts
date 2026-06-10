@@ -1429,10 +1429,9 @@ export function applySave(world: World, save: SaveData): void {
   }
   // Seed the life-events system with the current day so we don't replay
   // marriages/births/deaths from day 1 just because the session restarted.
-  // The cast survives because LifeEvents.lastProcessedDay is private —
-  // we touch it intentionally as a save-load concession.
-  (world.lifeEvents as unknown as { lastProcessedDay: number }).lastProcessedDay =
-    world.state.day;
+  // (runAwayProgression re-pins this to the absence start when it replays
+  // the missed days.)
+  world.lifeEvents.seedLastProcessedDay(world.state.day);
   // Restore exploration frontier (silently — no journal entries on load).
   if (save.exploredRadius !== undefined) {
     world.exploration.restore(save.exploredRadius);
@@ -1734,6 +1733,87 @@ function writeWelcomeBack(world: World, save: SaveData) {
       }
     }
   }, 250);
+}
+
+// ── Away progression: the Steward's Report ────────────────────────────────────
+
+export interface StewardReportData {
+  /** real ms the player was away */
+  awayMs: number;
+  /** in-world days that elapsed while away */
+  daysMissed: number;
+  /** in-world days actually replayed (capped at AWAY_SIM_CAP_DAYS) */
+  daysSimulated: number;
+  population: { before: number; after: number };
+  gold: { before: number; after: number };
+  /** up to 5 headline journal entries written during the replay */
+  headlines: SavedJournalEntry[];
+  /** title of a decision awaiting the player, if any */
+  pendingDecision: string | null;
+}
+
+/** Cap on replayed days — a month away shouldn't bury the player in text. */
+export const AWAY_SIM_CAP_DAYS = 7;
+
+/**
+ * Make the missed days actually happen, and report on them.
+ *
+ * The wall-clock calendar ages the kingdom during an absence, but the
+ * daily systems only run live — historically a returning player saw
+ * "Day 47" with nothing to show for the gap. This replays up to
+ * AWAY_SIM_CAP_DAYS missed days via World.fastForwardDays and returns a
+ * structured report for the Steward's Report modal: the idle-genre
+ * "while you were away" reward moment, front and center.
+ *
+ * Call AFTER applySave and AFTER App wires world.onJournal, so replayed
+ * entries land in the store. Returns null when less than one full
+ * in-world day passed (no modal for quick reopens).
+ */
+export function runAwayProgression(world: World, save: SaveData): StewardReportData | null {
+  const lastSavedAt = save.savedAt ? new Date(save.savedAt).getTime() : 0;
+  if (!lastSavedAt || Number.isNaN(lastSavedAt)) return null;
+  const awayMs = Date.now() - lastSavedAt;
+  const minutesPerDay = save.minutesPerDay ?? 48;
+  const realMsPerDay = minutesPerDay * 60 * 1000;
+  const daysMissed = Math.floor(awayMs / realMsPerDay);
+  if (daysMissed < 1) return null;
+  const daysSimulated = Math.min(daysMissed, AWAY_SIM_CAP_DAYS);
+
+  const popBefore = world.npcs.length;
+  const goldBefore = Math.floor(world.economy.state.gold);
+
+  // Collect every journal entry written during the replay. They also flow
+  // through the normal hook so the Journal panel stays the full record.
+  const collected: SavedJournalEntry[] = [];
+  const prevHook = world.onJournal;
+  world.onJournal = (e) => {
+    collected.push(e);
+    prevHook?.(e);
+  };
+  try {
+    world.fastForwardDays(daysSimulated);
+  } finally {
+    world.onJournal = prevHook;
+  }
+
+  // Headlines: milestones first, then life events, then the rest; capped
+  // at 5 and re-sorted chronologically for display.
+  const rank: Record<string, number> = { milestone: 0, life: 1, event: 2, weather: 3 };
+  const headlines = collected
+    .filter((e) => e.kind !== "system")
+    .sort((a, b) => (rank[a.kind] ?? 9) - (rank[b.kind] ?? 9))
+    .slice(0, 5)
+    .sort((a, b) => a.day - b.day);
+
+  return {
+    awayMs,
+    daysMissed,
+    daysSimulated,
+    population: { before: popBefore, after: world.npcs.length },
+    gold: { before: goldBefore, after: Math.floor(world.economy.state.gold) },
+    headlines,
+    pendingDecision: world.decisions.current()?.title ?? null,
+  };
 }
 
 export function writeSave(save: SaveData): void {

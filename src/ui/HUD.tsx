@@ -1,4 +1,5 @@
 import { useGameStore } from "../store/useGameStore";
+import { upcomingHoliday } from "../sim/systems/InWorldHolidays";
 
 const weatherIcon: Record<string, string> = {
   clear: "☀",
@@ -24,6 +25,8 @@ export function HUD({
   onToggleDiplomacy,
   onToggleCutaway,
   onTakePhoto,
+  onToggleAmbient,
+  ambientActive,
   onToggleChronicle,
   onSelectAdvisor,
   onOpenRule,
@@ -37,6 +40,9 @@ export function HUD({
   onToggleDiplomacy?: () => void;
   onToggleCutaway?: () => void;
   onTakePhoto?: () => void;
+  /** Float the kingdom in an always-on-top PiP window. Absent = unsupported browser. */
+  onToggleAmbient?: () => void;
+  ambientActive?: boolean;
   onToggleChronicle?: () => void;
   /** Click handler for the advisor chip — typically opens the NPC profile
    *  modal (App.tsx wires this to setProfileNpcId). */
@@ -55,6 +61,8 @@ export function HUD({
   const unseenJournal = Math.max(0, journalCount - seen.journal);
   const unseenEvents = Math.max(0, eventCount - seen.events);
   const greeting = greetingFor(stats.hour, identity?.monarchName ?? "monarch");
+  // Daily check-in hook: surface a holiday when it's today or tomorrow.
+  const holiday = upcomingHoliday(stats.day);
   return (
     <header className="hud">
       <div className="hud-left">
@@ -87,6 +95,18 @@ export function HUD({
           </span>
         )}
         <span className="day">{stats.dayOfWeek ? `${stats.dayOfWeek} ·` : ""} Day {stats.day} · Y{stats.year}</span>
+        {holiday && (
+          <span
+            className="hud-holiday"
+            title={
+              holiday.today
+                ? `${holiday.label} — the kingdom celebrates today!`
+                : `${holiday.label} is tomorrow — the kingdom is preparing.`
+            }
+          >
+            🎉 {holiday.today ? "Today" : "Tomorrow"}: {holiday.label}
+          </span>
+        )}
         <span className="season">{seasonIcon[stats.season] ?? "·"} {stats.season}</span>
         <span className="clock" title={`${tod.label} · in-world time ${hourLabel}`}>
           <span aria-hidden="true">{tod.glyph}</span> {hourLabel} <span className="clock-tod">{tod.label}</span>
@@ -134,6 +154,18 @@ export function HUD({
             title={cutawayActive ? "Hide roofs — see NPCs inside (X)" : "See inside the buildings (X)"}
             aria-label="Toggle cutaway view"
           >🏠</button>
+        )}
+        {onToggleAmbient && (
+          <button
+            onClick={onToggleAmbient}
+            className={`hud-icon-btn${ambientActive ? " active" : ""}`}
+            title={
+              ambientActive
+                ? "Bring the kingdom back into this tab"
+                : "Ambient mode — float the kingdom in a small always-on-top window while you work"
+            }
+            aria-label="Toggle ambient mode"
+          >🪟</button>
         )}
         {onToggleChronicle && (
           <button onClick={onToggleChronicle} title="Read the kingdom's chronicle">Chronicle</button>
