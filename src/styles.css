@@ -4873,6 +4873,13 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
   margin-bottom: 2px;
   filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.6));
 }
+.reign-chapter-tag {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: #fde68a;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
 .reign-title {
   font-family: var(--font-pixel);
   color: var(--accent);
@@ -4974,6 +4981,7 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
   color: var(--accent);
   letter-spacing: 0.04em;
 }
+.reign-chapter-title { color: #fde68a; }
 .reign-chapter-years {
   font-size: 11px;
   color: var(--panel-muted);

@@ -1,12 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { World } from "../World";
-import { Chronicle } from "./Chronicle";
+import { Chronicle, reignTitle } from "./Chronicle";
 import type { ReignSummary } from "./MonarchLegacy";
 
 function summary(generation: number, name = "Aldric"): ReignSummary {
   return {
     name,
     epithet: "the Steady",
+    title: "",
     context: "natural",
     generation,
     reignDays: 100,
@@ -57,6 +58,53 @@ describe("Chronicle", () => {
     expect(c2.count()).toBe(0);
     c2.hydrate(null);
     expect(c2.count()).toBe(0);
+  });
+});
+
+describe("reignTitle (era naming)", () => {
+  const base = {
+    context: "natural" as const, reignDays: 100, reputation: "steady",
+    moodTier: "content", festivals: 0, wars: 0,
+  };
+
+  it("names the era by defining events first", () => {
+    expect(reignTitle({ ...base, context: "usurper" })).toBe("The Broken Crown");
+    expect(reignTitle({ ...base, context: "uprising" })).toBe("The People's Turn");
+    expect(reignTitle({ ...base, wars: 2 })).toBe("The War Years");
+    expect(reignTitle({ ...base, festivals: 3 })).toBe("The Glad Years");
+    // events beat character: a beloved monarch through war still gets War Years
+    expect(reignTitle({ ...base, wars: 3, reputation: "beloved" })).toBe("The War Years");
+  });
+
+  it("falls back to shape, then standing, then quiet", () => {
+    expect(reignTitle({ ...base, reignDays: 300 })).toBe("The Long Peace");
+    expect(reignTitle({ ...base, reignDays: 5 })).toBe("A Brief Candle");
+    expect(reignTitle({ ...base, reputation: "feared" })).toBe("The Hard Years");
+    expect(reignTitle({ ...base, reputation: "beloved" })).toBe("The Golden Years");
+    expect(reignTitle({ ...base, moodTier: "anxious" })).toBe("The Anxious Years");
+    expect(reignTitle(base)).toBe("The Quiet Years");
+  });
+});
+
+describe("Chronicle event tally", () => {
+  it("counts events toward the reign, titles the chapter, and resets on record", () => {
+    const c = new Chronicle();
+    c.noteEvent("monster");
+    c.noteEvent("monster");
+    c.noteEvent("festival");
+    expect(c.currentTheme()).toEqual({ festivals: 1, wars: 2 });
+    const ch = c.record(summary(2), 1, 14);
+    expect(ch.title).toBe("The War Years");
+    expect(c.currentTheme()).toEqual({ festivals: 0, wars: 0 });
+  });
+
+  it("persists the in-progress tally across snapshot/hydrate", () => {
+    const c = new Chronicle();
+    c.noteEvent("festival");
+    c.noteEvent("celebration");
+    const c2 = new Chronicle();
+    c2.hydrate(c.snapshot());
+    expect(c2.currentTheme()).toEqual({ festivals: 2, wars: 0 });
   });
 });
 

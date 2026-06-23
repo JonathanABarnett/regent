@@ -432,6 +432,8 @@ export class World {
     this.bus.subscribe((ev) => this.handleEvent(ev));
     // Mood reacts to broad event categories. Listen on the same bus.
     this.bus.subscribe((ev) => {
+      // Tally notable events toward the current reign's era title.
+      this.chronicle.noteEvent(ev.kind);
       if (ev.kind === "festival" || ev.kind === "celebration") this.mood.adjust(1);
       else if (ev.kind === "monster") this.mood.adjust(-2); // war casualty / raid
       else if (ev.kind === "storm") this.mood.adjust(-0.5);

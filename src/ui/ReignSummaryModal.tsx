@@ -55,10 +55,11 @@ export function ReignSummaryModal() {
   return (
     <div className="reign-overlay">
       <div className="reign-card" role="dialog" aria-labelledby="reign-title" aria-modal="true">
-        <div className="reign-eyebrow">
-          {EYEBROW[summary.context]} · Chapter {roman(Math.max(1, summary.generation - 1))} closes
-        </div>
+        <div className="reign-eyebrow">{EYEBROW[summary.context]}</div>
         <div className="reign-crest" aria-hidden="true">👑</div>
+        <div className="reign-chapter-tag">
+          Chapter {roman(Math.max(1, summary.generation - 1))} · {summary.title}
+        </div>
         <h3 id="reign-title" className="reign-title">
           {summary.name},<br />
           <span className="reign-epithet">{summary.epithet}</span>

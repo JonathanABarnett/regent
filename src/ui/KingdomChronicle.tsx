@@ -113,7 +113,7 @@ export function KingdomChronicle({
       ? "## The Reigns\n\n" +
         reigns.past
           .map((c) =>
-            `**Chapter ${roman(c.chapter)} — ${c.name}, ${c.epithet}** (Years ${c.startYear}–${c.endYear})  \n` +
+            `**Chapter ${roman(c.chapter)}: ${c.title}** — ${c.name}, ${c.epithet} (Years ${c.startYear}–${c.endYear})  \n` +
             `${c.headline} _${ENDING[c.context]}; ${c.reputation}; ${c.population} souls._`,
           )
           .join("\n\n") +
@@ -168,7 +168,9 @@ export function KingdomChronicle({
                 {reigns.past.map((c) => (
                   <li key={`ch-${c.chapter}-${c.endYear}`} className="reign-chapter-card">
                     <div className="reign-chapter-head">
-                      <span className="reign-chapter-no">Chapter {roman(c.chapter)}</span>
+                      <span className="reign-chapter-no">
+                        Chapter {roman(c.chapter)} · <span className="reign-chapter-title">{c.title}</span>
+                      </span>
                       <span className="reign-chapter-years">Years {c.startYear}–{c.endYear}</span>
                     </div>
                     <div className="reign-chapter-name">
@@ -185,7 +187,9 @@ export function KingdomChronicle({
                 {reigns.current && (
                   <li className="reign-chapter-card current">
                     <div className="reign-chapter-head">
-                      <span className="reign-chapter-no">Chapter {roman(reigns.current.chapter)}</span>
+                      <span className="reign-chapter-no">
+                        Chapter {roman(reigns.current.chapter)} · <span className="reign-chapter-title">the present age</span>
+                      </span>
                       <span className="reign-chapter-years">Year {reigns.current.startYear} – present</span>
                     </div>
                     <div className="reign-chapter-name">{reigns.current.name}</div>

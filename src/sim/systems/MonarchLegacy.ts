@@ -20,6 +20,8 @@ export type LegacyContext = "natural" | "usurper" | "uprising";
 export interface ReignSummary {
   name: string;
   epithet: string;
+  /** The era title for this reign's chapter, e.g. "The War Years". */
+  title: string;
   context: LegacyContext;
   generation: number;
   reignDays: number;
@@ -199,6 +201,7 @@ export function writeMonarchLegacy(
   const summary: ReignSummary = {
     name: oldName,
     epithet: reignEpithet({ context, reignDays, reputation: repDesc, moodTier }),
+    title: "",
     context,
     generation,
     reignDays,
@@ -211,8 +214,11 @@ export function writeMonarchLegacy(
     headline: opening,
   };
 
-  // Record the reign as the next chapter of the kingdom's book.
-  world.chronicle.record(summary, reignStartYear, world.state.year);
+  // Record the reign as the next chapter of the kingdom's book. The chapter's
+  // era title is derived from the reign's events; mirror it onto the summary
+  // so the capstone modal can show it too.
+  const chapter = world.chronicle.record(summary, reignStartYear, world.state.year);
+  summary.title = chapter.title;
 
   return summary;
 }
