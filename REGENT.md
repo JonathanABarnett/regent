@@ -83,3 +83,39 @@ If the cadence slice (build step 1) or gate (1)/(2) fails, the correct answer re
 - **Steam one-liner:** *"A medieval kingdom that ages on your real calendar while you work, brings you only its hardest questions, and writes a shareable chronicle of everything you missed."*
 - **Capsule:** a warm 16-bit throne room, a faced petitioner mid-decision, a torn calendar-page edge; overlay: *"The first companion game with the soul of Dwarf Fortress."*
 - **6-second trailer beat (uncopyable by a sit-down sim):** kingdom idling in the screen corner → days blur past while the user "works" → notification: *"While you were away: the queen died, an heir took the throne, the harvest failed"* → cut to the chronicle card exporting with its seed stamped on it.
+
+## Gate 1 — progress log (intervention-cadence slice)
+
+The make-or-break bet (build step 1). Goal: a check-in must feel like
+*stewarding*, not spectating. Working the two halves of that — **stakes**
+(do my choices matter?) and **causality** (does the world push back?):
+
+- **Every court decision is a steward's choice.** All ~13 random court
+  archetypes (10 early + 3 late) now carry a plain-English consequence
+  `hint` on every option (rendered under the label + as the click-float),
+  and the formerly effect-free ones move the world (kingdom mood / monarch
+  reputation). Abstaining (auto-resolve to the default) has a legible cost
+  too — silence is a real move. *(commit cd64ee0)*
+- **Mood has teeth (negative loop).** Mood was a display number feeding no
+  system. Now it drives the Peasant Uprising: the trigger is empty coffers
+  **or** an unhappy populace (mood ≤ −4), and per-day odds scale with mood
+  (×0.3 content … ×2.0 furious; ×1.0 at neutral, so old saves are
+  unaffected). Resolutions feed mood back (address +2, suppress −2, popular
+  regime +1.5). Misrule → low mood → unrest, fully traceable. *(commit 3a31e9d)*
+- **Mood pulls too (positive loop).** A content realm draws more wanderers;
+  a sour one fewer. Two self-reinforcing arcs now exist: good rule → growth
+  + calm, misrule → unrest + stagnation. *(commit 5491c43)*
+- **Also:** welcoming a wanderer at the gates raises a real cottage that
+  stays on the map + save (a recurring decision that leaves a permanent
+  mark). *(commit 0346a87)*
+
+**Still open on gate 1** (the parts code alone can't settle):
+- Playtest the actual *rhythm* — are decisions arriving at a satisfying
+  pace (not screensaver-rare, not spammy)? This is the real go/no-go and
+  needs hands on it, not more systems.
+- Surface the causality in the UI so players *see* the thread (e.g. a mood
+  trend line, or "the people remember the levy" notes when unrest fires).
+- Make the Steward's Report (the away→return hero moment, gate (1)'s
+  literal wishlist-converter) land emotionally.
+
+512 tests green; `npm run check` clean.
