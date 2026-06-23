@@ -23,7 +23,7 @@ describe("FoundingDay", () => {
     w.spawnMonarch("Aldric");
     expect(w.decisions.current()).toBeNull();
     w.foundingDay.fire();
-    expect(w.decisions.current()?.title).toBe("A petition at the gate");
+    expect(w.decisions.current()?.title).toBe("A family at the gate");
   });
 
   it("falls back to scheduling for +1 day if a decision is already up", () => {
@@ -41,9 +41,12 @@ describe("FoundingDay", () => {
     w.foundingDay.fire();
     // Original blocker still on top.
     expect(w.decisions.current()?.id).toBe("test_blocker");
-    // Welcome petition queued for +1 day.
-    expect(w.consequences.pendingCount()).toBe(1);
-    expect(w.consequences.state.pending[0].kind).toBe("welcome_petition");
+    // Founding schedules two consequences: the rescheduled welcome petition
+    // (blocked, so +1 day) and the first-reign fever (+4 days).
+    expect(w.consequences.pendingCount()).toBe(2);
+    const kinds = w.consequences.state.pending.map((c) => c.kind);
+    expect(kinds).toContain("welcome_petition");
+    expect(kinds).toContain("first_fever");
   });
 
   it("resolving the welcome petition schedules a +14-day echo", () => {
@@ -52,10 +55,14 @@ describe("FoundingDay", () => {
     w.foundingDay.fire();
     const id = w.decisions.current()?.id;
     expect(id).toBeTruthy();
-    w.decisions.resolve(id!, "attend");
-    // Queue now holds the +14 echo.
-    expect(w.consequences.pendingCount()).toBe(1);
-    expect(w.consequences.state.pending[0].kind).toBe("welcome_petition_echo");
+    // The "home" option raises a cottage AND schedules the +14 echo.
+    w.decisions.resolve(id!, "home");
+    // Queue now holds the founding fever (scheduled at fire) + the echo.
+    const kinds = w.consequences.state.pending.map((c) => c.kind);
+    expect(kinds).toContain("welcome_petition_echo");
+    expect(kinds).toContain("first_fever");
+    // The cottage is on the map.
+    expect(w.map.structures.some((s) => s.kind === "homestead")).toBe(true);
   });
 
   it("snapshot/restore preserves the fired flag", () => {

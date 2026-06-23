@@ -1,6 +1,8 @@
 import type { World } from "../World";
 import type { Journal } from "./Journal";
 import { portraitSeedFromName } from "./Decisions";
+import { raiseHomestead } from "./Homestead";
+import { takeNpcLife } from "./Mortality";
 
 /**
  * Scheduled-effects queue. The missing piece that turns this from
@@ -52,7 +54,11 @@ export type ConsequenceKind =
    *  loop within 2 in-world days of starting a new kingdom. */
   | "welcome_petition"
   /** Echo of the welcome-petition's outcome at +14 days. */
-  | "welcome_petition_echo";
+  | "welcome_petition_echo"
+  /** First-reign mortality dilemma (~day +4): a named villager has taken
+   *  a fever. The player can spend to save them, or conserve and lose
+   *  them — the choice that can leave a permanent grave by the keep. */
+  | "first_fever";
 
 export interface ScheduledConsequence {
   /** Unique id (e.g. "csq_cult_echo_42" — keyed by source + counter). */
@@ -201,6 +207,9 @@ export class Consequences {
         break;
       case "welcome_petition_echo":
         this._fireWelcomePetitionEcho(c);
+        break;
+      case "first_fever":
+        this._fireFirstFever(c);
         break;
     }
   }
@@ -367,37 +376,48 @@ export class Consequences {
 
     this.world.decisions.propose({
       id: `welcome_petition_${this.world.state.day}`,
-      title: "A petition at the gate",
+      title: "A family at the gate",
       body:
-        `A young family — the ${surname}s — have come to the keep. Their newborn arrived the same week as the founding, and they have named the child after ${monarchName}. They ask, shyly, whether the crown might mark the occasion.`,
+        `A young family — the ${surname}s — have walked a long road to reach the new keep. Their newborn arrived the same week as the founding. They ask, shyly, whether there might be a place for them here.`,
       portraitSeed: portraitSeedFromName(surname),
       options: [
         {
-          id: "attend",
-          label: "Attend the naming ceremony",
-          hint: "rep +2 · the kingdom will remember",
+          id: "home",
+          label: "Grant them a home by the keep",
+          hint: "a cottage rises · rep +2",
           onChoose: (w) => {
+            const cottage = raiseHomestead(w, surname);
             w.reputation.adjust(2);
-            this.journal.write(
-              `${monarchName} stood in the ${surname}s' small courtyard this afternoon and held the child for a moment. The neighbours were quietly proud. The chronicler wrote down what the baby was wearing.`,
-              "milestone",
-              { fromDecision: true },
-            );
+            if (cottage) {
+              this.journal.write(
+                `By week's end a cottage stood within sight of the keep, its first chimney-smoke rising. The ${surname}s moved in before the thatch had settled. ${monarchName} could see its window lit from the tower.`,
+                "milestone",
+                { targetStructureId: cottage.id, fromDecision: true },
+              );
+            } else {
+              // No room found — fall back to a warm welcome without a build.
+              this.journal.write(
+                `The ${surname}s were given lodging by the keep and a promise of land come spring. The child slept that night under a real roof for the first time in weeks.`,
+                "milestone",
+                { fromDecision: true },
+              );
+            }
             w.consequences.schedule({
               kind: "welcome_petition_echo",
               fireInDays: 14,
-              data: { surname, choice: "attend" },
+              data: { surname, choice: "home" },
             });
           },
         },
         {
           id: "gift",
-          label: "Send a silver cup as a gift",
-          hint: "-5g · a token, kindly meant",
+          label: "Send them on with a purse and a blessing",
+          hint: "-5g · they settle elsewhere",
           onChoose: (w) => {
             if (w.economy.state.gold >= 5) w.economy.state.gold -= 5;
+            w.reputation.adjust(1);
             this.journal.write(
-              `A silver cup, hammered the night before, was sent to the ${surname} household with a brief note in ${monarchName}'s hand. The family wept a little when it arrived. Then they put it on the mantle.`,
+              `A small purse and a note in ${monarchName}'s hand were pressed into the ${surname}s' hands at the gate. They settled a half-day's walk to the south. They speak well of the crown to anyone who passes.`,
               "milestone",
               { fromDecision: true },
             );
@@ -410,11 +430,11 @@ export class Consequences {
         },
         {
           id: "decline",
-          label: "Decline modestly — too soon for ceremony",
-          hint: "no change · a quiet beginning",
+          label: "Turn them away — the keep is not ready",
+          hint: "no change · a colder beginning",
           onChoose: (_w) => {
             this.journal.write(
-              `The crown sent back a kind note thanking the ${surname}s and asking after the child's health, but declining the ceremony — the kingdom was, after all, only days old. The family understood. They named the child anyway.`,
+              `The crown sent the ${surname}s on. The keep was only days old, the stores thin. They understood, or said they did. The gate closed behind them. The chronicler noted the date.`,
               "event",
               { fromDecision: true },
             );
@@ -435,15 +455,92 @@ export class Consequences {
 
   private _fireWelcomePetitionEcho(c: ScheduledConsequence): void {
     const surname = String(c.data?.surname ?? "the family");
-    const choice = String(c.data?.choice ?? "attend");
+    const choice = String(c.data?.choice ?? "home");
     let line: string;
-    if (choice === "attend") {
-      line = `The ${surname} child walks now, almost. They were seen in the courtyard this morning, holding on to their mother's skirt. The naming-day painting still hangs by the door.`;
+    if (choice === "home") {
+      line = `Smoke rises from the ${surname} cottage each morning now. The child was seen at the door this week, holding to the frame, watching the guards pass. It is, already, a fixed part of the kingdom's small skyline.`;
     } else if (choice === "gift") {
-      line = `The silver cup at the ${surname}s' is on the mantle still. It's already a little tarnished from being handled. The child has begun to grab at it whenever they're carried past.`;
+      line = `Word came north that the ${surname}s have planted their first field. They sent a wheel of cheese to the keep with a passing carter, "for the crown's kindness." It was good cheese.`;
     } else {
-      line = `The ${surname}s' child is healthy. The family sent word of thanks for the kind note. They have not asked for anything else.`;
+      line = `No word has come of the ${surname}s since they were turned from the gate. The chronicler left a blank line in the record where their story would have gone.`;
     }
     this.journal.write(line, "life", { fromDecision: true });
+  }
+
+  // ── Founding: the first hard call (a fever in the first reign) ──────────
+  // Scheduled by FoundingDay a few days in. The other half of "choices
+  // change the world": welcoming a family raised a cottage that stays;
+  // here a thin-stores dilemma can cost a named villager their life, with a
+  // gravestone that stays by the keep. The SAFE option is the default —
+  // inaction never kills anyone; only an active trade-off does. This keeps
+  // the cozy/ambient player unpunished while giving the engaged player real
+  // stakes within their first session.
+
+  private _fireFirstFever(c: ScheduledConsequence): void {
+    if (this.world.decisions.current()) {
+      // Don't stack — try again tomorrow.
+      this.schedule({ kind: "first_fever", fireInDays: 1, sourceId: c.sourceId });
+      return;
+    }
+    // Pick a non-monarch named villager to be the one who falls ill.
+    const candidates = this.world.npcs.filter((n) => n.role !== "monarch" && !!n.name);
+    if (candidates.length === 0) return; // nobody to lose — skip quietly
+    const ill = candidates[Math.floor(this.rand() * candidates.length)];
+    const name = ill.name!;
+    const roleWord =
+      ill.role === "blacksmith" ? "smith"
+      : ill.role === "scholar" ? "scholar"
+      : ill.role === "miner" ? "miner"
+      : ill.role === "guard" ? "guard"
+      : "villager";
+
+    this.world.decisions.propose({
+      id: `first_fever_${this.world.state.day}`,
+      title: "A fever in the night",
+      body:
+        `${name}, a ${roleWord} of the new kingdom, has taken a hard fever. The kingdom keeps one healer, and the stores are thin this first season. Sending the healer — with what medicine remains — would cost dearly. Holding back would conserve what little the crown has.`,
+      portraitSeed: portraitSeedFromName(name),
+      options: [
+        {
+          id: "send_healer",
+          label: "Send the healer and the last of the medicine",
+          hint: "-12g · they may yet live",
+          onChoose: (w) => {
+            if (w.economy.state.gold >= 12) w.economy.state.gold -= 12;
+            else w.economy.state.gold = 0;
+            w.reputation.adjust(1);
+            this.journal.write(
+              `The healer went to ${name}'s bedside before dawn and did not leave for three days. The medicine is gone now — but the fever broke. ${name} is weak, and alive. The household will not forget who sent help.`,
+              "milestone",
+              { fromDecision: true },
+            );
+          },
+        },
+        {
+          id: "hold_back",
+          label: "Hold back — the kingdom cannot spare it",
+          hint: "keep the stores · a hard, final cost",
+          onChoose: (w) => {
+            const taken = takeNpcLife(
+              w,
+              ill.id,
+              `The crown held back, and the stores stayed full. ${name} died on the third night of the fever, in the cold of the kingdom's first season.`,
+            );
+            if (!taken) {
+              // Villager already gone (edge case) — note the relief quietly.
+              this.journal.write(
+                `The fever passed of its own accord before the crown's decision could matter. ${name} survived. The stores held.`,
+                "event",
+                { fromDecision: true },
+              );
+            }
+          },
+        },
+      ],
+      // Generous window; defaults to SAVING them (option 0) on timeout —
+      // a player who never answers never loses anyone to silence.
+      expiresAt: Date.now() + 300_000,
+      defaultOnExpire: true,
+    });
   }
 }

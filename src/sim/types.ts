@@ -52,7 +52,11 @@ export type StructureKind =
   | "obelisk"
   // Memorial grave — placed automatically when a notable named NPC dies.
   // 1×1 tile, doesn't block paths, accumulates near the castle.
-  | "grave";
+  | "grave"
+  // A villager's home, raised by a player decision (the Welcome Petition).
+  // The visible, permanent proof that a choice changed the world — a
+  // cottage rises by the keep and stays. 2×2 footprint.
+  | "homestead";
 
 export interface Structure {
   id: string;

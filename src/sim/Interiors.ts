@@ -320,6 +320,7 @@ const INTERIORS: Record<StructureKind, Interior> = {
   obelisk: OBELISK,
   astronomers_tower: ASTRONOMERS_TOWER,
   grave: GRAVE,
+  homestead: COTTAGE,
 };
 
 /** Public lookup. Returns the cottage layout for unknown kinds as a safety net. */

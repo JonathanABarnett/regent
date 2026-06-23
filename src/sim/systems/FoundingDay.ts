@@ -94,5 +94,18 @@ export class FoundingDay {
     //    10 minutes of session (the original promise) — just without
     //    the dead-air opening.
     this.world.consequences.proposeWelcomePetitionNow("founding_day");
+
+    // 5. Schedule the first hard call — a fever in the first reign (~day +4).
+    //    Welcoming the family raises a cottage that STAYS; this is the other
+    //    pole: a thin-stores dilemma that can cost a named villager their
+    //    life, leaving a grave by the keep. The safe option is the default,
+    //    so a passive player never loses anyone to silence — only an active
+    //    trade-off does. Together they make the first session's choices
+    //    visibly, permanently mark the world.
+    this.world.consequences.schedule({
+      kind: "first_fever",
+      fireInDays: 4,
+      sourceId: "founding_day",
+    });
   }
 }

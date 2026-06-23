@@ -1,0 +1,116 @@
+import { describe, expect, it } from "vitest";
+import { World } from "./World";
+import { raiseHomestead } from "./systems/Homestead";
+import { takeNpcLife } from "./systems/Mortality";
+
+/**
+ * "Choices visibly + permanently change the world" — the root fix for
+ * "nothing I do matters." Welcoming a family raises a cottage that stays on
+ * the map; a hard first-reign call can cost a named villager their life,
+ * leaving a grave by the keep.
+ */
+
+describe("raiseHomestead", () => {
+  it("places a homestead structure near the castle", () => {
+    const w = new World({ seed: 7 });
+    const before = w.map.structures.filter((s) => s.kind === "homestead").length;
+    const cottage = raiseHomestead(w, "Marlow");
+    expect(cottage).not.toBeNull();
+    expect(cottage!.kind).toBe("homestead");
+    expect(cottage!.name).toContain("Marlow");
+    const after = w.map.structures.filter((s) => s.kind === "homestead").length;
+    expect(after).toBe(before + 1);
+    // It registers a landmark (so the journal entry can navigate to it).
+    expect(w.map.landmarks.has(cottage!.id)).toBe(true);
+    // Footprint is walkable.
+    const t = w.map.tiles[cottage!.pos.y * w.map.width + cottage!.pos.x];
+    expect(t?.walkable).toBe(true);
+  });
+});
+
+describe("takeNpcLife", () => {
+  it("removes a named villager and plants a grave", () => {
+    const w = new World({ seed: 7 });
+    const victim = w.npcs.find((n) => n.role !== "monarch" && !!n.name)!;
+    const popBefore = w.npcs.length;
+    const gravesBefore = w.map.structures.filter((s) => s.kind === "grave").length;
+    const name = takeNpcLife(w, victim.id, "A test loss.");
+    expect(name).toBe(victim.name);
+    expect(w.npcs.find((n) => n.id === victim.id)).toBeUndefined();
+    expect(w.npcs.length).toBe(popBefore - 1);
+    expect(w.map.structures.filter((s) => s.kind === "grave").length).toBe(gravesBefore + 1);
+  });
+
+  it("refuses to take the monarch", () => {
+    const w = new World({ seed: 7 });
+    const monarchId = w.spawnMonarch("Rex");
+    const popBefore = w.npcs.length;
+    expect(takeNpcLife(w, monarchId, "should not happen")).toBeNull();
+    expect(w.npcs.length).toBe(popBefore);
+  });
+
+  it("returns null for an unknown id", () => {
+    const w = new World({ seed: 7 });
+    expect(takeNpcLife(w, "ghost", "x")).toBeNull();
+  });
+});
+
+describe("Welcome Petition raises a real home", () => {
+  it("the 'home' option puts a cottage on the map", () => {
+    const w = new World({ seed: 11 });
+    w.consequences.proposeWelcomePetitionNow();
+    const dec = w.decisions.current();
+    expect(dec).toBeTruthy();
+    expect(dec!.options.some((o) => o.id === "home")).toBe(true);
+    const before = w.map.structures.filter((s) => s.kind === "homestead").length;
+    w.decisions.resolve(dec!.id, "home");
+    const after = w.map.structures.filter((s) => s.kind === "homestead").length;
+    expect(after).toBe(before + 1);
+  });
+
+  it("declining changes no structures", () => {
+    const w = new World({ seed: 11 });
+    w.consequences.proposeWelcomePetitionNow();
+    const dec = w.decisions.current()!;
+    const before = w.map.structures.length;
+    w.decisions.resolve(dec.id, "decline");
+    expect(w.map.structures.length).toBe(before);
+  });
+});
+
+describe("First-reign fever dilemma", () => {
+  function fireFever(seed: number): World {
+    const w = new World({ seed });
+    w.consequences.schedule({ kind: "first_fever", fireInDays: 1 });
+    w.state.day += 1;
+    w.consequences.tickDay();
+    return w;
+  }
+
+  it("schedules and proposes the fever decision", () => {
+    const w = fireFever(3);
+    const dec = w.decisions.current();
+    expect(dec?.id.startsWith("first_fever")).toBe(true);
+    expect(dec!.options.map((o) => o.id).sort()).toEqual(["hold_back", "send_healer"]);
+  });
+
+  it("'hold back' permanently kills the named villager and plants a grave", () => {
+    const w = fireFever(3);
+    const dec = w.decisions.current()!;
+    const popBefore = w.npcs.length;
+    const gravesBefore = w.map.structures.filter((s) => s.kind === "grave").length;
+    w.decisions.resolve(dec.id, "hold_back");
+    expect(w.npcs.length).toBe(popBefore - 1);
+    expect(w.map.structures.filter((s) => s.kind === "grave").length).toBe(gravesBefore + 1);
+  });
+
+  it("'send healer' keeps everyone alive (default-on-expire path is the safe one)", () => {
+    const w = fireFever(3);
+    const dec = w.decisions.current()!;
+    // The safe option must be options[0] so a timeout/default never kills.
+    expect(dec.options[0].id).toBe("send_healer");
+    const popBefore = w.npcs.length;
+    w.decisions.resolve(dec.id, "send_healer");
+    expect(w.npcs.length).toBe(popBefore);
+  });
+});

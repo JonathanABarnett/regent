@@ -110,6 +110,7 @@ export class SpriteFactory {
     this.structures.set("obelisk", (await this.loadStructure("obelisk")) ?? this.buildObelisk());
     this.structures.set("astronomers_tower", (await this.loadStructure("astronomers_tower")) ?? this.buildAstronomersTower());
     this.structures.set("grave", (await this.loadStructure("grave")) ?? this.buildGrave());
+    this.structures.set("homestead", (await this.loadStructure("homestead")) ?? this.buildHomestead());
 
     const roles = ["villager", "courier", "scholar", "blacksmith", "miner", "guard"];
     for (const r of roles) {
@@ -1909,6 +1910,70 @@ export class SpriteFactory {
     // Faint cross-mark on the face.
     g.rect(W / 2 - 1, H - 19, 2, 5).fill(stoneDark);
     g.rect(W / 2 - 2, H - 17, 4, 1).fill(stoneDark);
+    return this.rt(g, W, H);
+  }
+
+  /**
+   * A small cozy cottage — the home a player grants in the Welcome Petition.
+   * 2×2 footprint, ~2 tiles tall, with a warm-lit window, a plank door, a
+   * thatch roof and a chimney (so the SmokeLayer can give it a wisp later).
+   * Reads as "a family lives here" at a glance.
+   */
+  private buildHomestead(): Texture {
+    const W = 64, H = 56;
+    const g = new Graphics();
+    g.rect(0, 0, W, H).fill({ alpha: 0 });
+
+    const wall = "#c8a87a";
+    const wallLight = "#dec39a";
+    const wallShadow = "#9c7f55";
+    const roof = "#8a5a3c";
+    const roofLight = "#a86f49";
+    const roofDark = "#5e3a24";
+    const door = "#5a3a22";
+    const doorDark = "#33210f";
+    const win = "#1a2a3a";
+    const winGlow = "#fde68a";
+    const chimney = "#6b5443";
+
+    // Ground shadow.
+    g.ellipse(W / 2, H - 4, 24, 5).fill({ color: "#000000", alpha: 0.28 });
+
+    // ── Walls ──
+    const wallTop = 26, wallH = H - 6 - wallTop;
+    g.rect(10, wallTop, W - 20, wallH).fill(wall);
+    g.rect(10, wallTop, 2, wallH).fill(wallLight);       // lit left edge
+    g.rect(W - 12, wallTop, 2, wallH).fill(wallShadow);  // shadowed right
+    g.rect(10, H - 8, W - 20, 2).fill(wallShadow);       // base shadow
+    // A couple of plank seams.
+    g.rect(10, wallTop + 8, W - 20, 1).fill(wallShadow);
+
+    // ── Door ──
+    g.rect(W / 2 - 5, H - 6 - 14, 10, 14).fill(door);
+    g.rect(W / 2 - 5, H - 6 - 14, 1, 14).fill(doorDark);
+    g.rect(W / 2 + 4, H - 6 - 14, 1, 14).fill(doorDark);
+    g.rect(W / 2 + 2, H - 6 - 8, 1, 2).fill("#d9c08a");  // handle
+
+    // ── Warm window ──
+    g.rect(16, wallTop + 12, 9, 9).fill(win);
+    g.rect(17, wallTop + 13, 7, 7).fill(winGlow);
+    g.rect(20, wallTop + 12, 1, 9).fill(doorDark);       // mullion
+    g.rect(16, wallTop + 16, 9, 1).fill(doorDark);
+
+    // ── Thatch roof (overhangs the walls) ──
+    for (let r = 0; r < 16; r++) {
+      const inset = Math.floor(r * 1.7);
+      const y = wallTop - r;
+      g.rect(6 + inset, y, W - 12 - inset * 2, 1).fill(r < 2 ? roofLight : r > 12 ? roofDark : roof);
+    }
+    // Roof ridge highlight + eave shadow line.
+    g.rect(6, wallTop, W - 12, 1).fill(roofDark);
+
+    // ── Chimney ──
+    g.rect(W - 22, 6, 7, 14).fill(chimney);
+    g.rect(W - 22, 6, 7, 2).fill("#836955");  // cap
+    g.rect(W - 22, 6, 1, 14).fill("#9c8169");  // lit edge
+
     return this.rt(g, W, H);
   }
 
