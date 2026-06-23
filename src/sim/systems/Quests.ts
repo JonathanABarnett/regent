@@ -2044,6 +2044,7 @@ export class Quests {
           {
             id: "decline",
             label: "Send them away",
+            hint: "costs nothing · the realm stays as it is",
             onChoose: (w) =>
               w.journal.write(
                 `${capitalize(flavor)} was turned away from the gates. The kingdom moves on.`,
@@ -2117,6 +2118,7 @@ export class Quests {
           {
             id: "decline",
             label: "Refuse politely",
+            hint: "keep the 50 gold · no new wares",
             onChoose: (w) =>
               w.journal.write(
                 `The crown declined ${flavor}'s offer. They left disappointed.`,
@@ -2126,9 +2128,12 @@ export class Quests {
           {
             id: "accept",
             label: "Buy the cart",
+            hint: "−50 gold · +8 ironwork · a chance at a gem",
             onChoose: (w) => {
               w.economy.state.gold = Math.max(0, w.economy.state.gold - 50);
               w.economy.state.ironwork = Math.min(999, w.economy.state.ironwork + 8);
+              // A full market stall lifts the town's spirits a little.
+              w.mood.adjust(0.4);
               w.journal.write(
                 `The crown bought ${flavor}'s cart — 50 gold spent, 8 fine ironwork stored.`,
                 "event",
@@ -2152,15 +2157,20 @@ export class Quests {
           {
             id: "decline",
             label: "Another time",
-            onChoose: (w) =>
+            hint: "spirits dip — the town was looking forward to it",
+            onChoose: (w) => {
+              // Refusing a feast is a real, if small, cost: disappointment.
+              w.mood.adjust(-0.4);
               w.journal.write(
                 `The proposed feast was postponed by royal decree.`,
                 "event",
-              ),
+              );
+            },
           },
           {
             id: "approve",
             label: "Let it be a feast",
+            hint: "the town celebrates · spirits rise · maybe a keepsake",
             onChoose: (w) => {
               const town = w.map.structures.find((s) => s.kind === "town");
               if (town) {
@@ -2195,6 +2205,7 @@ export class Quests {
           {
             id: "decline",
             label: "Send them away",
+            hint: "safe · you'll never learn what they wanted",
             onChoose: (w) =>
               w.journal.write(
                 `The stranger was turned away at the gate. They left without a word.`,
@@ -2204,6 +2215,7 @@ export class Quests {
           {
             id: "audience",
             label: "Grant audience",
+            hint: "a gamble — a gift of knowledge, or 30 gold lost",
             onChoose: (w) => {
               // 50/50: friendly information vs. costly distraction
               if (rand() < 0.5) {
@@ -2235,17 +2247,24 @@ export class Quests {
           {
             id: "decline",
             label: "Skip this season",
-            onChoose: (w) =>
+            hint: "no coin — but goodwill rises",
+            onChoose: (w) => {
+              // Waiving the levy buys goodwill — a real, if invisible, return.
+              w.mood.adjust(0.4);
               w.journal.write(
                 `The crown waived the season's levy. The towns breathed easier.`,
                 "event",
-              ),
+              );
+            },
           },
           {
             id: "tax",
             label: "Collect the levy",
+            hint: "+40 gold · the towns grumble (spirits dip)",
             onChoose: (w) => {
               w.economy.state.gold = Math.min(99999, w.economy.state.gold + 40);
+              // Coin in the vault, but the people feel it.
+              w.mood.adjust(-0.6);
               w.journal.write(
                 `The crown's accountants gathered 40 gold from the towns. Grumbling, but compliant.`,
                 "event",
@@ -2266,6 +2285,7 @@ export class Quests {
           {
             id: "decline",
             label: "Wish them well, no escort",
+            hint: "costs nothing · they walk on alone",
             onChoose: (w) =>
               w.journal.write(
                 `${capitalize(flavor)} bowed and continued north alone.`,
@@ -2275,7 +2295,10 @@ export class Quests {
           {
             id: "escort",
             label: "Send a guard with them",
+            hint: "a kindness · a chance at a pilgrim's relic",
             onChoose: (w) => {
+              // Generosity lifts the court's sense of itself.
+              w.mood.adjust(0.3);
               w.journal.write(
                 `A guard rode with ${flavor} as far as the foothills. The pilgrim left a token of thanks.`,
                 "event",
@@ -2309,29 +2332,38 @@ export class Quests {
           {
             id: "favor_a",
             label: `Side with ${capitalize(flavor)}`,
-            onChoose: (w) =>
+            hint: "a clear ruling · the other goes home resentful",
+            onChoose: (w) => {
+              w.mood.adjust(-0.3);
               w.journal.write(
                 `The crown ruled in ${flavor}'s favor. ${capitalize(other)} accepted the decision in silence.`,
                 "event",
-              ),
+              );
+            },
           },
           {
             id: "favor_b",
             label: `Side with ${capitalize(other)}`,
-            onChoose: (w) =>
+            hint: "a clear ruling · the other goes home resentful",
+            onChoose: (w) => {
+              w.mood.adjust(-0.3);
               w.journal.write(
                 `The crown ruled in ${other}'s favor. ${capitalize(flavor)} muttered all the way home.`,
                 "event",
-              ),
+              );
+            },
           },
           {
             id: "split",
             label: "Split the difference",
-            onChoose: (w) =>
+            hint: "both keep land · no one wins, but no lasting grudge",
+            onChoose: (w) => {
+              w.mood.adjust(-0.1);
               w.journal.write(
                 `The crown drew a new line midway. Both villagers grumbled, but both kept land.`,
                 "event",
-              ),
+              );
+            },
           },
         ],
       });
@@ -2347,24 +2379,31 @@ export class Quests {
           {
             id: "good_omen",
             label: "Call it a good omen",
-            onChoose: (w) =>
+            hint: "the people take heart · spirits rise",
+            onChoose: (w) => {
+              w.mood.adjust(0.5);
               w.journal.write(
                 `The court recorded the light as a blessing. Mothers wove ribbons for their newborns.`,
                 "milestone",
-              ),
+              );
+            },
           },
           {
             id: "ill_omen",
             label: "Call it an ill omen",
-            onChoose: (w) =>
+            hint: "unease spreads · but the watch sharpens",
+            onChoose: (w) => {
+              w.mood.adjust(-0.4);
               w.journal.write(
                 `The court recorded the light as a warning. The guards doubled their watch and the priest fasted three days.`,
                 "weather",
-              ),
+              );
+            },
           },
           {
             id: "no_comment",
             label: "Record nothing",
+            hint: "no effect · keep your own counsel",
             onChoose: (w) =>
               w.journal.write(
                 `The crown told ${flavor} to keep their notes private until the lights were better understood.`,
@@ -2386,16 +2425,22 @@ export class Quests {
           {
             id: "shoo",
             label: "Shoo it away",
-            onChoose: (w) =>
+            hint: "the kitchens stay tidy · the cooks are quietly sad",
+            onChoose: (w) => {
+              w.mood.adjust(-0.2);
               w.journal.write(
                 `The cooks chased the stray off with a broom. It limped back the next morning. They shooed it again, more gently.`,
                 "event",
-              ),
+              );
+            },
           },
           {
             id: "adopt",
             label: "Let it stay",
+            hint: "a kitchen dog · the whole keep softens",
             onChoose: (w) => {
+              // Everyone loves the dog. A small, free lift to spirits.
+              w.mood.adjust(0.6);
               w.journal.write(
                 `The cooks declared the stray was now "kitchen staff." Its name was decided by committee within an hour.`,
                 "life",
@@ -2419,6 +2464,7 @@ export class Quests {
           {
             id: "open",
             label: "Open it",
+            hint: "likely 25 gold · maybe a strange curio",
             onChoose: (w) => {
               // 60/40: a useful gift vs. a strange one
               if (rand() < 0.6) {
@@ -2439,6 +2485,7 @@ export class Quests {
           {
             id: "burn",
             label: "Burn it unopened",
+            hint: "safe · you'll never know what it was",
             onChoose: (w) =>
               w.journal.write(
                 `The parcel was burned in the courtyard. The smoke smelled briefly of cedar, then of nothing.`,
@@ -2470,7 +2517,9 @@ export class Quests {
           {
             id: "pardon",
             label: "Grant the pardon",
+            hint: "mercy · spirits lift · the family may repay it",
             onChoose: (w) => {
+              w.mood.adjust(0.4);
               w.journal.write(
                 `${capitalize(flavorName)} was released under the royal seal. The family received them at the gate with a quiet that spoke more than celebration would have.`,
                 "milestone",
@@ -2484,15 +2533,19 @@ export class Quests {
           {
             id: "deny",
             label: "Deny the petition",
-            onChoose: (w) =>
+            hint: "justice holds · the family does not forget",
+            onChoose: (w) => {
+              w.mood.adjust(-0.3);
               w.journal.write(
                 `The petition was denied. ${capitalize(flavorName)} remains. The family did not return.`,
                 "event",
-              ),
+              );
+            },
           },
           {
             id: "commute",
             label: "Commute to exile",
+            hint: "−15 gold · exile, not freedom",
             onChoose: (w) => {
               const cost = 15;
               w.economy.state.gold = Math.max(0, w.economy.state.gold - cost);
@@ -2519,6 +2572,7 @@ export class Quests {
           {
             id: "act",
             label: "Act on the intelligence",
+            hint: "−25 gold · a threat quietly defused",
             onChoose: (w) => {
               const cost = 25;
               w.economy.state.gold = Math.max(0, w.economy.state.gold - cost);
@@ -2534,6 +2588,7 @@ export class Quests {
           {
             id: "file",
             label: "File it away",
+            hint: "costs nothing now · the knowledge waits",
             onChoose: (w) =>
               w.journal.write(
                 `The report was sealed and filed. Perhaps the knowledge will matter someday. Perhaps it already doesn't.`,
@@ -2543,6 +2598,7 @@ export class Quests {
           {
             id: "share",
             label: "Send a copy to an ally",
+            hint: "+15 gold · a favor banked with a friendly lord",
             onChoose: (w) => {
               const castle = w.map.structures.find((s) => s.kind === "castle");
               w.bus.publish(
@@ -2580,6 +2636,7 @@ export class Quests {
           {
             id: "decline",
             label: "Decline politely",
+            hint: "no ties · no obligations either",
             onChoose: (w) =>
               w.journal.write(
                 `The crown declined ${family}'s proposal with diplomatic warmth. The messenger left satisfied that they had been heard, which is the best kind of refusal.`,
@@ -2589,8 +2646,11 @@ export class Quests {
           {
             id: "accept",
             label: "Form the alliance",
+            hint: "+30 gold · a sealed compact · the crown's standing grows",
             onChoose: (w) => {
               w.economy.state.gold = Math.min(99999, w.economy.state.gold + 30);
+              // A formal alliance burnishes the monarch's standing.
+              w.reputation.adjust(1);
               w.journal.write(
                 `The crown accepted ${family}'s proposal. A treaty was drawn, witnessed, and sealed. 30 gold arrived within the week as the first transfer of shared resources.`,
                 "milestone",

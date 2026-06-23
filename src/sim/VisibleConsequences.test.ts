@@ -101,6 +101,55 @@ describe("Recurring court decisions steward the world too", () => {
   });
 });
 
+describe("Every court decision is a steward's choice (hints + stakes)", () => {
+  // Drive a single early-game court decision deterministically by seed.
+  function earlyDecision(seed: number) {
+    const w = new World({ seed });
+    w.quests.proposeCheckInMatter();
+    return { w, dec: w.decisions.current() };
+  }
+  // Force a late-game court decision (normally gated to year >= 2).
+  function lateDecision(seed: number) {
+    const w = new World({ seed });
+    (w.quests as unknown as { proposeLateGameDecision(): void }).proposeLateGameDecision();
+    return { w, dec: w.decisions.current() };
+  }
+
+  it("every option of every court decision carries a plain-English hint", () => {
+    const titles = new Set<string>();
+    for (let seed = 1; seed <= 200; seed++) {
+      for (const { dec } of [earlyDecision(seed), lateDecision(seed)]) {
+        if (!dec) continue;
+        titles.add(dec.title);
+        for (const opt of dec.options) {
+          // No blind picks — the charter's core-loop requirement: every
+          // option states its consequence in plain English before you choose.
+          expect((opt.hint ?? "").trim().length, `${dec.title} / ${opt.label}`).toBeGreaterThan(0);
+        }
+      }
+    }
+    // The sweep must actually exercise archetype variety, or a regression
+    // that stops proposing decisions could pass this test silently.
+    expect(titles.size).toBeGreaterThanOrEqual(8);
+  });
+
+  it("collecting the levy dips mood; waiving it lifts mood", () => {
+    for (let seed = 1; seed <= 400; seed++) {
+      if (earlyDecision(seed).dec?.title !== "The treasury proposes a levy") continue;
+
+      const taxed = earlyDecision(seed);
+      taxed.w.decisions.resolve(taxed.dec!.id, "tax");
+      expect(taxed.w.mood.state.score).toBeLessThan(0); // the people feel it
+
+      const waived = earlyDecision(seed);
+      waived.w.decisions.resolve(waived.dec!.id, "decline");
+      expect(waived.w.mood.state.score).toBeGreaterThan(0); // goodwill rises
+      return;
+    }
+    throw new Error("no tax-levy decision surfaced across 400 seeds");
+  });
+});
+
 describe("First-reign fever dilemma", () => {
   function fireFever(seed: number): World {
     const w = new World({ seed });
