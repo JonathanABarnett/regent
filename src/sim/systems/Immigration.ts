@@ -138,13 +138,24 @@ export class Immigration {
     if (day - this.lastWandererDay < WANDERER_INTERVAL) return;
     // Require meaningful frontier expansion beyond the starting bubble.
     if (this.world.exploration.radius < 32) return;
-    // Prosperity bonus: flush treasury attracts more people. The reign-style
-    // dial scales arrival frequency too — wanderers are interactive asks.
-    const bonus = this.world.economy.state.gold > 80 ? 0.2 : 0;
-    if (this.rand() > (WANDERER_CHANCE + bonus) * this.world.decisionAppetite) return;
+    if (this.rand() > this.wandererArrivalChance()) return;
 
     this.lastWandererDay = day;
     this._proposeWandererDecision();
+  }
+
+  /**
+   * Per-window probability a wanderer arrives. Two pulls, mirroring the
+   * unrest loop's two pushes: a flush treasury AND a happy realm both attract
+   * people — word spreads of good rule — while a sour realm draws fewer (or
+   * drives them off). The reign-style dial scales arrival frequency too.
+   * Exposed (not truly private) for tuning + deterministic tests.
+   */
+  wandererArrivalChance(): number {
+    const goldBonus = this.world.economy.state.gold > 80 ? 0.2 : 0;
+    // mood -10..+10 → -0.2..+0.2; neutral (0) leaves the base rate unchanged.
+    const moodBonus = Math.max(-0.2, Math.min(0.2, this.world.mood.state.score * 0.02));
+    return (WANDERER_CHANCE + goldBonus + moodBonus) * this.world.decisionAppetite;
   }
 
   private _proposeWandererDecision(): void {

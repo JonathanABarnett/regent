@@ -145,3 +145,36 @@ describe("Immigration", () => {
     expect(w.reputation.score).toBeGreaterThan(startRep);
   });
 });
+
+/**
+ * The positive half of the mood loop: good stewardship grows the realm.
+ * A content kingdom draws more wanderers than a sour one — the mirror of
+ * the unrest push (misrule -> low mood -> revolt + people leaving).
+ */
+describe("Immigration — mood pulls wanderers", () => {
+  function chanceAt(score: number): number {
+    const w = new World({ seed: 9, width: 32, height: 24 });
+    w.mood.state.score = score;
+    return (w.immigration as unknown as { wandererArrivalChance(): number }).wandererArrivalChance();
+  }
+
+  it("a content realm draws more wanderers than a miserable one", () => {
+    expect(chanceAt(8)).toBeGreaterThan(chanceAt(-8));
+  });
+
+  it("arrival chance rises monotonically with mood", () => {
+    const low = chanceAt(-6);
+    const mid = chanceAt(0);
+    const high = chanceAt(6);
+    expect(mid).toBeGreaterThan(low);
+    expect(high).toBeGreaterThan(mid);
+  });
+
+  it("a neutral realm is unchanged from the base rate (no silent regression)", () => {
+    // gold is low in a fresh world, so only WANDERER_CHANCE * appetite remains.
+    const w = new World({ seed: 9, width: 32, height: 24 });
+    w.mood.state.score = 0;
+    const chance = (w.immigration as unknown as { wandererArrivalChance(): number }).wandererArrivalChance();
+    expect(chance).toBeCloseTo(0.45 * w.decisionAppetite, 5);
+  });
+});
