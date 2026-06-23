@@ -1995,6 +1995,16 @@ export class Quests {
     }
   }
 
+  /**
+   * Public force-propose, used to guarantee a check-in is never empty.
+   * If the player returns from an absence and the away-replay happened to
+   * raise no decisions, we surface one routine matter so the visit has a
+   * choice to make — the check-in loop's whole promise.
+   */
+  proposeCheckInMatter(): void {
+    this.proposeRandomDecision();
+  }
+
   private proposeRandomDecision() {
     // Capture `rand` into a local so the onChoose closures below can call
     // through the seeded RNG instead of falling back to Math.random — keeps

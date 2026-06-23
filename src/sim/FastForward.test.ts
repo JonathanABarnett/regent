@@ -62,22 +62,53 @@ describe("World.fastForwardDays", () => {
     expect(w.economy.state.gold).toBeGreaterThanOrEqual(goldBefore);
   });
 
-  it("auto-defaults decisions from non-final days, keeps the final day's pending", () => {
+  it("accumulates matters for the check-in instead of auto-resolving them all, capped at MAX_CHECKIN_DECISIONS", () => {
+    // The whole point of a check-in: decisions raised while away WAIT for
+    // the player. The replay should never leave the queue larger than the
+    // batch cap, and across a long absence it should usually have at least
+    // one matter waiting (the court rolls each replayed day).
+    let everPending = false;
+    for (let seed = 1; seed <= 12; seed++) {
+      const w = new World({
+        seed,
+        minutesPerDay: MIN_PER_DAY,
+        foundedAtMs: Date.now() - 6 * REAL_MS_PER_DAY - 1000,
+      });
+      w.fastForwardDays(6);
+      expect(w.decisions.count()).toBeLessThanOrEqual(World.MAX_CHECKIN_DECISIONS);
+      if (w.decisions.count() > 0) everPending = true;
+    }
+    expect(everPending).toBe(true);
+  });
+
+  it("overflow beyond the cap is auto-defaulted (court handled the routine business)", () => {
     const w = worldFoundedDaysAgo(5);
-    let defaulted = false;
-    // Pre-existing decision (e.g. restored from save) — the player wasn't
-    // there to answer it, so the replay must resolve it by default.
-    w.decisions.propose({
-      id: "stale",
-      title: "Stale petition",
-      body: "",
-      expiresAt: Date.now() + 60_000,
-      defaultOnExpire: true,
-      options: [{ id: "d", label: "Default", onChoose: () => (defaulted = true) }],
-    });
-    w.fastForwardDays(3);
-    expect(defaulted).toBe(true);
-    expect(w.decisions.current()?.id).not.toBe("stale");
+    let defaulted = 0;
+    // Pre-load more matters than the cap; the replay's capAwayQueue must
+    // resolve the oldest overflow to default and keep the newest batch.
+    const N = World.MAX_CHECKIN_DECISIONS + 3;
+    for (let i = 0; i < N; i++) {
+      w.decisions.propose({
+        id: `stale_${i}`,
+        title: `Matter ${i}`,
+        body: "",
+        expiresAt: Date.now() + 60_000,
+        defaultOnExpire: true,
+        options: [{ id: "d", label: "Default", onChoose: () => (defaulted++) }],
+      });
+    }
+    w.fastForwardDays(2);
+    expect(w.decisions.count()).toBeLessThanOrEqual(World.MAX_CHECKIN_DECISIONS);
+    expect(defaulted).toBeGreaterThanOrEqual(N - World.MAX_CHECKIN_DECISIONS);
+    // The oldest ("Matter 0") must have been culled; a newest one survives.
+    expect(w.decisions.pendingTitles()).not.toContain("Matter 0");
+  });
+
+  it("proposeCheckInMatter raises a decision so a check-in is never empty", () => {
+    const w = worldFoundedDaysAgo(2);
+    expect(w.decisions.count()).toBe(0);
+    w.quests.proposeCheckInMatter();
+    expect(w.decisions.count()).toBeGreaterThanOrEqual(1);
   });
 
   it("ages NPCs through LifeEvents catch-up during the replay", () => {

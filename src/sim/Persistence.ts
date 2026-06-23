@@ -1748,8 +1748,9 @@ export interface StewardReportData {
   gold: { before: number; after: number };
   /** up to 5 headline journal entries written during the replay */
   headlines: SavedJournalEntry[];
-  /** title of a decision awaiting the player, if any */
-  pendingDecision: string | null;
+  /** titles of every matter now awaiting the player's judgment (the
+   *  check-in batch) — usually 1-4, capped by MAX_CHECKIN_DECISIONS */
+  pendingMatters: string[];
 }
 
 /** Cap on replayed days — a month away shouldn't bury the player in text. */
@@ -1769,8 +1770,21 @@ export const AWAY_SIM_CAP_DAYS = 7;
  * entries land in the store. Returns null when less than one full
  * in-world day passed (no modal for quick reopens).
  */
-export function runAwayProgression(world: World, save: SaveData): StewardReportData | null {
-  const lastSavedAt = save.savedAt ? new Date(save.savedAt).getTime() : 0;
+export function runAwayProgression(
+  world: World,
+  save: SaveData,
+  /**
+   * Override for the "away-from" timestamp. The caller captures the save's
+   * savedAt ONCE at page-load (before any autosave can refresh it) and
+   * passes it here. Without this, a refresh between read and replay — e.g.
+   * React StrictMode's double-mount, where the first mount's autosave bumps
+   * savedAt to "now" before the second (live) mount reads it — would zero
+   * out the elapsed time and skip the replay entirely. Defaults to the
+   * save's own savedAt.
+   */
+  lastSeenAtMs?: number,
+): StewardReportData | null {
+  const lastSavedAt = lastSeenAtMs ?? (save.savedAt ? new Date(save.savedAt).getTime() : 0);
   if (!lastSavedAt || Number.isNaN(lastSavedAt)) return null;
   const awayMs = Date.now() - lastSavedAt;
   const minutesPerDay = save.minutesPerDay ?? 48;
@@ -1792,6 +1806,12 @@ export function runAwayProgression(world: World, save: SaveData): StewardReportD
   };
   try {
     world.fastForwardDays(daysSimulated);
+    // A check-in must never be empty — that's the loop's promise. If the
+    // replay happened to raise no petitions, surface one routine matter so
+    // the visit has a choice to make.
+    if (world.decisions.count() === 0) {
+      world.quests.proposeCheckInMatter();
+    }
   } finally {
     world.onJournal = prevHook;
   }
@@ -1812,7 +1832,7 @@ export function runAwayProgression(world: World, save: SaveData): StewardReportD
     population: { before: popBefore, after: world.npcs.length },
     gold: { before: goldBefore, after: Math.floor(world.economy.state.gold) },
     headlines,
-    pendingDecision: world.decisions.current()?.title ?? null,
+    pendingMatters: world.decisions.pendingTitles(),
   };
 }
 

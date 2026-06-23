@@ -198,6 +198,60 @@ describe("Decisions", () => {
     expect(w.decisions.current()!.expiresAt).toBe(exp);
   });
 
+  it("count and pendingTitles reflect the queue", () => {
+    const w = new World({ seed: 42 });
+    expect(w.decisions.count()).toBe(0);
+    for (const id of ["a", "b", "c"]) {
+      w.decisions.propose({
+        id,
+        title: `Title ${id}`,
+        body: "",
+        expiresAt: Date.now() + 60_000,
+        options: [{ id: "x", label: "X", onChoose: () => {} }],
+      });
+    }
+    expect(w.decisions.count()).toBe(3);
+    expect(w.decisions.pendingTitles()).toEqual(["Title a", "Title b", "Title c"]);
+  });
+
+  it("capAwayQueue keeps the newest N, defaults the older overflow, refreshes windows", () => {
+    const w = new World({ seed: 42 });
+    let defaulted = 0;
+    for (let i = 0; i < 6; i++) {
+      w.decisions.propose({
+        id: `m${i}`,
+        title: `Matter ${i}`,
+        body: "",
+        // Short window so we can prove it gets refreshed forward.
+        expiresAt: Date.now() + 1000,
+        defaultOnExpire: true,
+        options: [{ id: "d", label: "Default", onChoose: () => (defaulted++) }],
+      });
+    }
+    const left = w.decisions.capAwayQueue(4, 5 * 60_000);
+    expect(left).toBe(4);
+    expect(w.decisions.count()).toBe(4);
+    expect(defaulted).toBe(2); // the two oldest were resolved to default
+    // Kept the NEWEST four (m2..m5); oldest two are gone.
+    expect(w.decisions.pendingTitles()).toEqual(["Matter 2", "Matter 3", "Matter 4", "Matter 5"]);
+    // Survivors' windows were pushed out so they don't expire while reading.
+    expect(w.decisions.current()!.expiresAt).toBeGreaterThan(Date.now() + 4 * 60_000);
+  });
+
+  it("capAwayQueue is a no-op when already under the cap", () => {
+    const w = new World({ seed: 42 });
+    w.decisions.propose({
+      id: "only",
+      title: "Only",
+      body: "",
+      expiresAt: Date.now() + 60_000,
+      defaultOnExpire: true,
+      options: [{ id: "d", label: "D", onChoose: () => {} }],
+    });
+    expect(w.decisions.capAwayQueue(4)).toBe(1);
+    expect(w.decisions.current()?.id).toBe("only");
+  });
+
   it("throwing onChoose doesn't break the queue", () => {
     const w = new World({ seed: 42 });
     w.decisions.propose({

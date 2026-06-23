@@ -30,6 +30,7 @@ import { SpeedControl } from "./ui/SpeedControl";
 import { PerformanceHUD } from "./ui/PerformanceHUD";
 import { TutorialHints } from "./ui/TutorialHints";
 import { DripHints } from "./ui/DripHints";
+import { CaughtUp } from "./ui/CaughtUp";
 import {
   mapTwitchFollow,
   mapTwitchSub,
@@ -99,6 +100,23 @@ function categorizeAchievement(
   if (id === "vault_3" || id === "vault_10") return "vault";
   return "default";
 }
+
+/**
+ * "Away-from" timestamp, captured ONCE at module load — before React mounts
+ * and before any autosave can refresh the save's savedAt. runAwayProgression
+ * measures the absence against this stable value, so the offline replay is
+ * immune to StrictMode's double-mount (where mount #1's autosave would
+ * otherwise bump savedAt to "now" before mount #2 reads it) and to any other
+ * mid-boot save. Re-evaluated naturally on a real page reload.
+ */
+const BOOT_LAST_SEEN_AT = (() => {
+  try {
+    const s = readSave();
+    return s?.savedAt ? new Date(s.savedAt).getTime() : 0;
+  } catch {
+    return 0;
+  }
+})();
 
 export function App() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -313,12 +331,18 @@ export function App() {
     // AFTER onJournal is wired so the replayed entries land in the store.
     if (existing?.kingdomName) {
       try {
-        const report = runAwayProgression(world, existing);
+        const report = runAwayProgression(world, existing, BOOT_LAST_SEEN_AT);
         if (report) useGameStore.getState().setStewardReport(report);
       } catch (err) {
         console.warn("[App] away progression failed (non-fatal)", err);
       }
     }
+
+    // Mirror the decision-queue size into the store so the HUD council
+    // chip, tab-title badge, and "all caught up" closure can react. Fires
+    // immediately with the current count, then on every queue change.
+    const setPending = useGameStore.getState().setPendingDecisions;
+    world.decisions.subscribe(() => setPending(world.decisions.count()));
 
     // Death bell + lightning flash: listen on the world bus for special signals.
     world.bus.subscribe((ev) => {
@@ -1441,6 +1465,7 @@ export function App() {
           pre-kingdom flow (the title screen sits above it anyway at z-300,
           but no point mounting it under there). */}
       {!streamerMode && !preKingdomFlow && <StewardReport />}
+      {!streamerMode && !preKingdomFlow && <CaughtUp />}
       {!streamerMode && !preKingdomFlow && <SpeedControl />}
       <PerformanceHUD getWorld={() => worldRef.current} />
       {!streamerMode && <TutorialHints />}

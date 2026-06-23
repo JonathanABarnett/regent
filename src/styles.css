@@ -4853,6 +4853,32 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
   color: #fcd34d;
   margin: 0 0 16px;
   line-height: 1.5;
+  text-align: left;
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(253, 230, 138, 0.3);
+  border-radius: var(--radius-sm, 4px);
+  padding: 10px 14px;
+}
+.steward-pending-head { font-weight: bold; margin-bottom: 6px; }
+.steward-pending-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.steward-pending-list li {
+  color: #fde68a;
+  font-size: 14px;
+  padding-left: 14px;
+  position: relative;
+}
+.steward-pending-list li::before {
+  content: "•";
+  position: absolute;
+  left: 2px;
+  color: rgba(253, 230, 138, 0.6);
 }
 .steward-begin {
   min-width: 180px;
@@ -5060,3 +5086,92 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
   cursor: pointer;
 }
 .drip-hint-ok:hover { background: rgba(251, 191, 36, 0.22); }
+
+/* ── Check-in loop: council chip, queue badge, caught-up closure ──────────── */
+
+/* Council chip — the "you're needed" badge in the HUD. Amber + a gentle
+   attention pulse so a returning player's eye lands on it. */
+.hud-court {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 0.02em;
+  color: #fde68a;
+  background: rgba(251, 191, 36, 0.14);
+  border: 1px solid rgba(253, 230, 138, 0.55);
+  cursor: pointer;
+  animation: courtPulse 2.4s ease-in-out infinite;
+}
+.hud-court:hover {
+  background: rgba(251, 191, 36, 0.24);
+  border-color: rgba(253, 230, 138, 0.9);
+}
+@keyframes courtPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+  50%      { box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.18); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-court { animation: none; }
+}
+
+/* Queue depth badge inside the decision card header — "inbox" feel. */
+.decision-queue-badge {
+  font-size: 11px;
+  font-weight: bold;
+  color: #fde68a;
+  background: rgba(251, 191, 36, 0.16);
+  border: 1px solid rgba(253, 230, 138, 0.4);
+  border-radius: 999px;
+  padding: 1px 8px;
+  margin-left: auto;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+/* Flash the decision card when the council chip is clicked. */
+.decision-prompt.court-flash {
+  animation: courtFlash 1.2s ease;
+}
+@keyframes courtFlash {
+  0%, 100% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); }
+  20%, 60% { box-shadow: 0 0 0 3px rgba(253, 230, 138, 0.85), 0 8px 32px rgba(0, 0, 0, 0.5); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .decision-prompt.court-flash { animation: none; }
+}
+
+/* "All caught up" closure toast — the satisfying exit. */
+.caught-up {
+  position: fixed;
+  bottom: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 10px 18px;
+  background: rgba(12, 24, 16, 0.95);
+  border: 1px solid rgba(163, 230, 53, 0.5);
+  border-radius: 999px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  animation: caughtUpIn 360ms ease;
+}
+@keyframes caughtUpIn {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+.caught-up-check {
+  font-size: 16px;
+  font-weight: bold;
+  color: #a3e635;
+  flex-shrink: 0;
+}
+.caught-up-text { color: #ecfccb; font-size: 14px; line-height: 1.4; }

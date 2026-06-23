@@ -639,14 +639,18 @@ export class World {
    * historical day (so journal entries date correctly) and running the
    * full daily block plus a day's worth of economy.
    *
-   * Decisions proposed on any day except the last are resolved by their
-   * stated default — exactly what the timeout would have done had the
-   * player been present. The final day's decisions stay pending so the
-   * returning player has something to act on.
+   * Decisions are the point of a check-in, so they ACCUMULATE rather than
+   * auto-resolve: every replayed day rolls the court (quests.tick) and any
+   * petitions raised stay queued. After the replay, capAwayQueue trims the
+   * pile to MAX_CHECKIN_DECISIONS (newest kept, older overflow defaulted —
+   * "the court handled the routine business"), so a returning player faces
+   * a readable batch of matters waiting for their judgment.
    *
    * Day granularity only — no NPC movement, weather, or per-frame systems
    * run, so even the 7-day cap completes in milliseconds.
    */
+  static readonly MAX_CHECKIN_DECISIONS = 4;
+
   fastForwardDays(days: number): void {
     if (days <= 0) return;
     const minutesPerDay = this.calendar.cfg.minutesPerDay ?? 48;
@@ -670,6 +674,10 @@ export class World {
       this.state.hour = this.dayNight.hourAt(this.state.time);
       this.runDailySystems();
       this.lifeEvents.tick();
+      // Roll the court each replayed day too — the random petitions are
+      // exactly the "matters waiting for you" a check-in is built around.
+      // (quests.tick has a once-per-day guard keyed on state.day.)
+      this.quests.tick();
       if (seasonChanged && this.state.day > 1) {
         const pool = SEASON_ANCHORS[snap.season];
         this.journal.write(pool[Math.floor(this.rand() * pool.length)], "weather");
@@ -684,12 +692,11 @@ export class World {
         this.npcs.filter((n) => n.role === "blacksmith").length,
         this.npcs.filter((n) => n.role === "scholar").length,
       );
-      if (k > 0) {
-        // The player wasn't there: petitions resolve by their stated
-        // default, exactly as the on-screen timeout would have done.
-        this.decisions.tick(Number.MAX_SAFE_INTEGER);
-      }
     }
+    // Trim the accumulated matters to a readable batch and give the
+    // survivors a comfortable window so they don't tick away while the
+    // returning player reads the Steward's Report.
+    this.decisions.capAwayQueue(World.MAX_CHECKIN_DECISIONS);
   }
 
   /**

@@ -15,15 +15,19 @@ export function TabTitle() {
   const day = useGameStore((s) => s.worldStats.day);
   const year = useGameStore((s) => s.worldStats.year);
   const npcCount = useGameStore((s) => s.worldStats.npcCount);
+  const pending = useGameStore((s) => s.pendingDecisions);
 
   useEffect(() => {
-    document.title = identity
-      ? `${identity.kingdomName} · Y${year} D${day} · ${npcCount} souls — KingdomOS`
-      : DEFAULT_TITLE;
-    return () => {
+    if (!identity) {
       document.title = DEFAULT_TITLE;
-    };
-  }, [identity, day, year, npcCount]);
+      return () => { document.title = DEFAULT_TITLE; };
+    }
+    // A "(2) " prefix turns the background tab into a notification: a glance
+    // at the browser chrome tells the working player the court needs them.
+    const badge = pending > 0 ? `(${pending}) ` : "";
+    document.title = `${badge}${identity.kingdomName} · Y${year} D${day} · ${npcCount} souls — KingdomOS`;
+    return () => { document.title = DEFAULT_TITLE; };
+  }, [identity, day, year, npcCount, pending]);
 
   return null;
 }

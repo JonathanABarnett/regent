@@ -153,6 +153,54 @@ export class Decisions {
     return this.queue[0] ?? null;
   }
 
+  /** How many decisions are waiting — the check-in "inbox count". */
+  count(): number {
+    return this.queue.length;
+  }
+
+  /** Titles of every queued decision, oldest first. For the Steward's Report. */
+  pendingTitles(): string[] {
+    return this.queue.map((d) => d.title);
+  }
+
+  /**
+   * Trim the queue after an away-replay so a returning player faces a
+   * readable BATCH, not a wall.
+   *
+   * This is the heart of the check-in loop: decisions raised while the
+   * player was gone should WAIT for them (that's the whole point of
+   * checking in), but a week's worth could pile up a dozen. So we keep the
+   * newest `cap` — the freshest, most relevant matters — and resolve the
+   * older overflow to their default ("the court handled the routine
+   * business in your absence"). Survivors get their window refreshed to a
+   * comfortable length so they don't expire while the player reads the
+   * Steward's Report and works through the batch.
+   *
+   * Returns the number left pending for the player.
+   */
+  capAwayQueue(cap: number, windowMs = 6 * 60_000): number {
+    // Snapshot the overflow count first so any follow-on decision an
+    // onChoose proposes (it appends to the end) isn't itself culled.
+    const overflow = Math.max(0, this.queue.length - cap);
+    for (let i = 0; i < overflow; i++) {
+      const d = this.queue.shift();
+      if (!d) break;
+      if (d.defaultOnExpire && d.options.length) {
+        try {
+          d.options[0].onChoose(this.world);
+        } catch (err) {
+          console.warn("[Decisions] away-overflow onChoose threw", err);
+        }
+      }
+    }
+    const until = Date.now() + windowMs;
+    for (const d of this.queue) {
+      if (d.expiresAt < until) d.expiresAt = until;
+    }
+    this.notify();
+    return this.queue.length;
+  }
+
   subscribe(fn: (current: PendingDecision | null) => void): () => void {
     this.listeners.add(fn);
     fn(this.current());

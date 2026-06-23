@@ -108,6 +108,14 @@ export function DecisionPrompt({ getWorld }: { getWorld: () => World | null }) {
     >
       <div className="decision-header">
         <span className="decision-title" id="decision-title">{current.title}</span>
+        {w.decisions.count() > 1 && (
+          <span
+            className="decision-queue-badge"
+            title={`${w.decisions.count()} matters in the court — resolve this to see the next`}
+          >
+            +{w.decisions.count() - 1} more
+          </span>
+        )}
         <span className="decision-timer" title={footerText} aria-label={footerText}>
           {urgent && <span className="decision-timer-warn" aria-hidden="true">⏳</span>}
           {timeStr}

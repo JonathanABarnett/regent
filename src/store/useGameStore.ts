@@ -113,6 +113,10 @@ export interface GameState {
    *  sim is held paused so the player reads it over a still kingdom).
    *  Dismissing the modal clears it. */
   stewardReport: StewardReportData | null;
+  /** Count of decisions waiting in the court — the check-in "inbox" badge.
+   *  Mirrored from the sim's Decisions queue by App; drives the HUD council
+   *  chip, the tab-title prefix, and the "all caught up" closure. */
+  pendingDecisions: number;
   identity: KingdomIdentity | null;
   monarchSpec: CharacterSpec;
   petSpec: PetSpec;
@@ -180,6 +184,7 @@ export interface GameState {
   setShowTutorial: (b: boolean) => void;
   setTourActive: (b: boolean) => void;
   setStewardReport: (r: StewardReportData | null) => void;
+  setPendingDecisions: (n: number) => void;
   setMusicEnabled: (b: boolean) => void;
   setCutawayMode: (b: boolean) => void;
   setRetro16bit: (b: boolean) => void;
@@ -269,6 +274,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   achievementToast: null,
   tourActive: false,
   stewardReport: null,
+  pendingDecisions: 0,
   identity: null,
   monarchSpec: DEFAULT_SPEC,
   petSpec: defaultPetSpec("dog"),
@@ -411,6 +417,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }),
   setTourActive: (b) => set({ tourActive: b }),
   setStewardReport: (r) => set({ stewardReport: r }),
+  setPendingDecisions: (n) => set({ pendingDecisions: n }),
   setMusicEnabled: (b) =>
     set((s) => {
       const next = { ...s.settings, musicEnabled: b };

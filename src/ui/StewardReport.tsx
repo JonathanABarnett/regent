@@ -82,10 +82,19 @@ export function StewardReport() {
           </p>
         )}
 
-        {report.pendingDecision && (
-          <p className="steward-pending">
-            ⚜ A matter awaits your judgment: <strong>{report.pendingDecision}</strong>
-          </p>
+        {report.pendingMatters.length > 0 && (
+          <div className="steward-pending">
+            <div className="steward-pending-head">
+              ⚜ {report.pendingMatters.length === 1
+                ? "A matter awaits your judgment"
+                : `${report.pendingMatters.length} matters await your judgment`}
+            </div>
+            <ul className="steward-pending-list">
+              {report.pendingMatters.map((m, i) => (
+                <li key={i}>{m}</li>
+              ))}
+            </ul>
+          </div>
         )}
 
         <button
@@ -93,7 +102,7 @@ export function StewardReport() {
           className="primary steward-begin"
           onClick={() => setStewardReport(null)}
         >
-          Begin the day
+          {report.pendingMatters.length > 0 ? "Hold court" : "Begin the day"}
         </button>
       </div>
     </div>

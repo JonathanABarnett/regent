@@ -53,6 +53,7 @@ export function HUD({
 }) {
   const stats = useGameStore((s) => s.worldStats);
   const identity = useGameStore((s) => s.identity);
+  const pendingDecisions = useGameStore((s) => s.pendingDecisions);
   const eventCount = useGameStore((s) => s.events.length);
   const journalCount = useGameStore((s) => s.journal.length);
   const seen = useGameStore((s) => s.seen);
@@ -67,6 +68,17 @@ export function HUD({
     <header className="hud">
       <div className="hud-left">
         <span className="badge" title={greeting}>{identity?.kingdomName ?? "KingdomOS"}</span>
+        {pendingDecisions > 0 && (
+          <button
+            type="button"
+            className="hud-court"
+            title={`${pendingDecisions} matter${pendingDecisions === 1 ? "" : "s"} await your judgment — click to attend the court`}
+            aria-label={`${pendingDecisions} decisions awaiting`}
+            onClick={flashCourt}
+          >
+            ⚖ {pendingDecisions} awaiting
+          </button>
+        )}
         {stats.advisor && (
           <button
             type="button"
@@ -197,6 +209,19 @@ export function HUD({
       </div>
     </header>
   );
+}
+
+/** Pulse the decision card to pull the eye when the council chip is clicked.
+ *  The card is always bottom-center when a decision is up; this just draws
+ *  attention to it rather than navigating anywhere. */
+function flashCourt() {
+  const el = document.querySelector(".decision-prompt");
+  if (!el) return;
+  el.classList.remove("court-flash");
+  // Force reflow so the animation restarts on repeat clicks.
+  void (el as HTMLElement).offsetWidth;
+  el.classList.add("court-flash");
+  window.setTimeout(() => el.classList.remove("court-flash"), 1200);
 }
 
 function formatHour(h: number) {
