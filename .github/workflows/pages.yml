@@ -55,10 +55,12 @@ jobs:
           ls -la *.png
 
       - name: Build
-        # GITHUB_PAGES_BASE makes Vite prefix all asset URLs with /kingdomos/
-        # so the bundle works under the GitHub Pages subpath.
+        # GITHUB_PAGES_BASE makes Vite prefix all asset URLs with /regent/
+        # so the bundle works under the GitHub Pages subpath
+        # (https://<user>.github.io/regent/). This is the fork's repo name —
+        # the inherited /kingdomos/ value 404'd every asset on the live demo.
         env:
-          GITHUB_PAGES_BASE: /kingdomos/
+          GITHUB_PAGES_BASE: /regent/
         run: npm run build
 
       - name: Configure GitHub Pages
