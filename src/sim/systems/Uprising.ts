@@ -309,7 +309,7 @@ export class Uprising {
     // Uprising takeover breaks the dynasty streak.
     w.succession.state.dynastyStreak = 0;
 
-    writeMonarchLegacy(
+    const summary = writeMonarchLegacy(
       w, oldName, reignDuration,
       w.state.year - Math.max(1, Math.floor(reignDuration / 56)),
       "uprising",
@@ -326,6 +326,8 @@ export class Uprising {
       newName: agitatorName,
       generation: w.succession.state.generation,
       reignDurationDays: reignDuration,
+      context: "uprising",
+      summary,
     });
 
     // A popular new regime: the people got their way, and the mood lifts.

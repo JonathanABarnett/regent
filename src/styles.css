@@ -4835,6 +4835,110 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
 }
 .steward-stat-value em.up { color: #a3e635; }
 .steward-stat-value em.down { color: #fb7185; }
+
+/* ── Reign Summary capstone ───────────────────────────────────────────────
+   The moment a monarch leaves the throne. Same visual family as the
+   Steward's Report, dialed a touch more solemn (darker, gold epithet). */
+.reign-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 291; /* just above the Steward's Report (290), below title (300) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 6, 14, 0.78);
+  backdrop-filter: blur(3px);
+}
+.reign-card {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: linear-gradient(180deg, rgba(18, 16, 34, 0.98), rgba(9, 8, 20, 0.98));
+  border: 2px solid rgba(253, 224, 71, 0.5);
+  outline: 1px solid rgba(0, 0, 0, 0.85);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 14px 56px rgba(0, 0, 0, 0.75);
+  padding: 20px 28px 22px;
+  text-align: center;
+}
+.reign-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--panel-muted);
+  margin-bottom: 6px;
+}
+.reign-crest {
+  font-size: 34px;
+  margin-bottom: 2px;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.6));
+}
+.reign-title {
+  font-family: var(--font-pixel);
+  color: var(--accent);
+  font-size: 17px;
+  line-height: 1.5;
+  margin: 0 0 4px;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+}
+.reign-epithet {
+  display: inline-block;
+  margin-top: 4px;
+  color: #fde68a;
+  font-size: 15px;
+}
+.reign-sub {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--panel-muted);
+  font-style: italic;
+}
+.reign-headline {
+  margin: 0 0 16px;
+  color: #e7e5e4;
+  line-height: 1.6;
+  font-style: italic;
+}
+.reign-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.reign-stat {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm, 4px);
+  padding: 8px 14px;
+  min-width: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.reign-stat-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: #f1f5f9;
+}
+.reign-stat-value.reign-stat-rep {
+  font-size: 14px;
+  text-transform: capitalize;
+  color: #fde68a;
+}
+.reign-stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--panel-muted);
+}
+.reign-footer {
+  margin: 0 0 16px;
+  color: #cbd5e1;
+  line-height: 1.5;
+  font-size: 13px;
+}
+.reign-begin { width: 100%; }
 .steward-headlines {
   list-style: none;
   margin: 0 0 14px;

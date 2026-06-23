@@ -299,7 +299,7 @@ export class Usurper {
     w.succession.state.dynastyStreak = 0;
 
     // Write the legacy scroll for the outgoing monarch.
-    writeMonarchLegacy(
+    const summary = writeMonarchLegacy(
       w, oldName, reignDuration,
       w.state.year - Math.max(1, Math.floor(reignDuration / 56)),
       "usurper",
@@ -315,6 +315,8 @@ export class Usurper {
       newName: claimantName,
       generation: w.succession.state.generation,
       reignDurationDays: reignDuration,
+      context: "usurper",
+      summary,
     });
 
     this.state.active = false;

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { ExternalEvent } from "../sim/events/EventSchema";
 import type { SavedJournalEntry, StewardReportData } from "../sim/Persistence";
 import { clearSave } from "../sim/Persistence";
+import type { ReignSummary } from "../sim/systems/MonarchLegacy";
 import { summarize, appendToArchive } from "../sim/KingdomArchive";
 import type { CharacterSpec } from "../engine/CharacterSpec";
 import { DEFAULT_SPEC } from "../engine/CharacterSpec";
@@ -113,6 +114,9 @@ export interface GameState {
    *  sim is held paused so the player reads it over a still kingdom).
    *  Dismissing the modal clears it. */
   stewardReport: StewardReportData | null;
+  /** The just-ended reign — set on succession, drives the capstone modal.
+   *  Dismissing the modal clears it. */
+  reignSummary: ReignSummary | null;
   /** Count of decisions waiting in the court — the check-in "inbox" badge.
    *  Mirrored from the sim's Decisions queue by App; drives the HUD council
    *  chip, the tab-title prefix, and the "all caught up" closure. */
@@ -190,6 +194,7 @@ export interface GameState {
   setShowTutorial: (b: boolean) => void;
   setTourActive: (b: boolean) => void;
   setStewardReport: (r: StewardReportData | null) => void;
+  setReignSummary: (s: ReignSummary | null) => void;
   setPendingDecisions: (n: number) => void;
   setMusicEnabled: (b: boolean) => void;
   setCutawayMode: (b: boolean) => void;
@@ -280,6 +285,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   achievementToast: null,
   tourActive: false,
   stewardReport: null,
+  reignSummary: null,
   pendingDecisions: 0,
   identity: null,
   monarchSpec: DEFAULT_SPEC,
@@ -423,6 +429,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }),
   setTourActive: (b) => set({ tourActive: b }),
   setStewardReport: (r) => set({ stewardReport: r }),
+  setReignSummary: (r) => set({ reignSummary: r }),
   setPendingDecisions: (n) => set({ pendingDecisions: n }),
   setMusicEnabled: (b) =>
     set((s) => {

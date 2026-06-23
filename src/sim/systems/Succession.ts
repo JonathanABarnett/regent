@@ -19,7 +19,7 @@ import type { World } from "../World";
 import type { Journal } from "./Journal";
 import type { NPC } from "../types";
 import { generateName } from "./Names";
-import { writeMonarchLegacy } from "./MonarchLegacy";
+import { writeMonarchLegacy, type ReignSummary, type LegacyContext } from "./MonarchLegacy";
 
 const MONARCH_DEATH_AGE = 80;
 const SUCCESSION_CHECK_DAYS = 1; // check once per in-world day
@@ -46,6 +46,10 @@ export interface SuccessionEvent {
   newName: string;
   generation: number;
   reignDurationDays: number;
+  /** How the previous monarch left the throne. */
+  context?: LegacyContext;
+  /** Structured reign summary for the capstone modal (absent on legacy saves). */
+  summary?: ReignSummary;
 }
 
 export class Succession {
@@ -169,7 +173,7 @@ export class Succession {
     this.state.dynastyStreak += 1;
 
     // Legacy scroll — chronicles the full reign before announcing the successor.
-    writeMonarchLegacy(
+    const summary = writeMonarchLegacy(
       this.world,
       oldName,
       reignDuration,
@@ -182,12 +186,14 @@ export class Succession {
       "milestone",
     );
 
-    // Notify listeners (HUD, identity store).
+    // Notify listeners (HUD, identity store, the Reign Summary capstone modal).
     this.announceSuccession({
       oldName,
       newName: heirName,
       generation: this.state.generation,
       reignDurationDays: reignDuration,
+      context: "natural",
+      summary,
     });
   }
 

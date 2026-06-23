@@ -64,6 +64,7 @@ import {
   runAwayProgression,
 } from "./sim/Persistence";
 import { StewardReport } from "./ui/StewardReport";
+import { ReignSummaryModal } from "./ui/ReignSummaryModal";
 import { TabTitle } from "./ui/TabTitle";
 import { ShareMoments } from "./ui/ShareMoments";
 import { InstallPrompt } from "./ui/InstallPrompt";
@@ -438,6 +439,11 @@ export function App() {
       if (current) {
         setIdentity({ ...current, monarchName: ev.newName });
       }
+      // Surface the departed reign as a capstone moment (the payoff of the
+      // permadeath-memory loop). Older saves' events carry no summary.
+      if (ev.summary) {
+        useGameStore.getState().setReignSummary(ev.summary);
+      }
       // Rebuild the monarch sprite — same spec but the NPC has changed.
       try {
         pixiRef.current?.factory?.setSpecCharacter(
@@ -495,6 +501,8 @@ export function App() {
         // Hold still while the Steward's Report is on screen — the player
         // is reading what happened; the world shouldn't move on without them.
         if (store.stewardReport) return 0;
+        // Same for the Reign Summary capstone — the kingdom pauses to mourn.
+        if (store.reignSummary) return 0;
         return store.settings.simSpeed;
       },
     });
@@ -1468,6 +1476,7 @@ export function App() {
           pre-kingdom flow (the title screen sits above it anyway at z-300,
           but no point mounting it under there). */}
       {!streamerMode && !preKingdomFlow && <StewardReport />}
+      {!streamerMode && !preKingdomFlow && <ReignSummaryModal />}
       {!streamerMode && !preKingdomFlow && <CaughtUp />}
       {!streamerMode && !preKingdomFlow && <SpeedControl />}
       <PerformanceHUD getWorld={() => worldRef.current} />

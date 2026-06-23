@@ -11,6 +11,53 @@ import type { World } from "../World";
 
 export type LegacyContext = "natural" | "usurper" | "uprising";
 
+/**
+ * Structured, UI-facing summary of a completed reign — drives the Reign
+ * Summary capstone modal that fires the moment a monarch leaves the throne.
+ * Distinct from the journal/vault prose (which stays as the archive); this
+ * is the *moment*, so the permadeath-memory payoff isn't buried.
+ */
+export interface ReignSummary {
+  name: string;
+  epithet: string;
+  context: LegacyContext;
+  generation: number;
+  reignDays: number;
+  seasons: string;
+  population: number;
+  reputation: string;
+  vaultSize: number;
+  dynastyStreak: number;
+  moodTier: "celebrating" | "content" | "uneasy" | "anxious";
+  headline: string;
+}
+
+/**
+ * Derive an epithet ("the Beloved", "the Brief", "the Deposed") from how the
+ * reign went and how it ended. Deterministic — a given reign always earns the
+ * same title. Priority order: how they LOST the throne first, then length
+ * extremes, then standing, then the mood they left behind.
+ */
+export function reignEpithet(input: {
+  context: LegacyContext;
+  reignDays: number;
+  reputation: string;
+  moodTier: string;
+}): string {
+  const { context, reignDays, reputation, moodTier } = input;
+  if (context === "usurper") return "the Deposed";
+  if (context === "uprising") return "the Cast Down";
+  if (reignDays < 14) return "the Brief";
+  if (reignDays >= 280) return "the Enduring";
+  if (reputation === "beloved") return "the Beloved";
+  if (reputation === "feared") return "the Iron";
+  if (reputation === "austere") return "the Stern";
+  if (moodTier === "anxious") return "the Troubled";
+  if (moodTier === "celebrating") return "the Generous";
+  if (reignDays >= 168) return "the Steadfast";
+  return "the Steady";
+}
+
 // ── Template pools ────────────────────────────────────────────────────────────
 // Indexed deterministically by `(reignDays * 7 + reignStartYear * 13) % pool.length`
 // so the same reign always produces the same summary phrasing.
@@ -89,7 +136,7 @@ export function writeMonarchLegacy(
   reignDays: number,
   reignStartYear: number,
   context: LegacyContext,
-): void {
+): ReignSummary {
   const repDesc = world.reputation.descriptor();
   const pop = world.npcs.length;
   const vaultSize = world.treasury.count();
@@ -145,6 +192,24 @@ export function writeMonarchLegacy(
   if (context === "natural") {
     writeMonarchLetter(world, oldName, reignDays, repDesc);
   }
+
+  // Structured summary for the capstone modal — the *moment* a reign ends,
+  // not the archived scroll. Computed from the same end-of-reign state.
+  const moodTier = world.mood.tier();
+  return {
+    name: oldName,
+    epithet: reignEpithet({ context, reignDays, reputation: repDesc, moodTier }),
+    context,
+    generation,
+    reignDays,
+    seasons: seasonsLabel(reignDays),
+    population: pop,
+    reputation: repDesc,
+    vaultSize,
+    dynastyStreak,
+    moodTier,
+    headline: opening,
+  };
 }
 
 // ── Personal letter prose ─────────────────────────────────────────────────────
