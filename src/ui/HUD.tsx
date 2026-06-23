@@ -94,6 +94,9 @@ export function HUD({
 }) {
   const stats = useGameStore((s) => s.worldStats);
   const identity = useGameStore((s) => s.identity);
+  // During the guided tour, hide the floating quote + mood so they don't
+  // overlap the coachmarks (and each other) on the busy top strip.
+  const tourActive = useGameStore((s) => s.tourActive);
   const pendingDecisions = useGameStore((s) => s.pendingDecisions);
   const eventCount = useGameStore((s) => s.events.length);
   const journalCount = useGameStore((s) => s.journal.length);
@@ -172,12 +175,12 @@ export function HUD({
           <span className={`faction-dot faction-g ${factionClass(stats.factions.guard)}`} title={`Guard: ${factionLabel(stats.factions.guard)}`}>🛡</span>
         </span>
       </div>
-      {stats.quoteOfDay && (
+      {stats.quoteOfDay && !tourActive && (
         <div className="hud-quote" title="A trait-flavored quote from the kingdom today">
           {stats.quoteOfDay}
         </div>
       )}
-      {stats.moodLabel && (
+      {stats.moodLabel && !tourActive && (
         <div
           className={`hud-mood mood-${stats.moodTier ?? "content"}`}
           title={moodTitle(stats.moodScore)}

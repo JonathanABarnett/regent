@@ -432,7 +432,10 @@ html, body, #root, .app-root {
      Diplomacy / Stats / Journal / Events / Settings) which live in
      the same band. Drop it below the HUD strip so it sits in clear
      space, aligned right so it doesn't intrude on the centered quote. */
-  top: 50px;
+  /* Anchor to the bar's bottom edge (+gap) rather than a fixed 50px, which
+     didn't clear the bar on tall/pixel-font layouts and let the mood pill
+     collide with the right-side nav (Diplomacy/Journal). */
+  top: calc(100% + 6px);
   right: 12px;
   font-size: 15px;
   font-style: italic;
@@ -474,7 +477,8 @@ html, body, #root, .app-root {
 .hud-mood-arrow.trend-down { color: #fca5a5; }
 .hud-quote {
   position: absolute;
-  top: 50px;
+  /* Sit just below the bar regardless of its height (see .hud-mood). */
+  top: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
   /* Generous range — narrow windows get the full available width,
