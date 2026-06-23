@@ -1,9 +1,9 @@
 {
-  "name": "kingdomos",
+  "name": "regent",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.1.0",
   "type": "module",
-  "description": "An ambient SNES-style fantasy kingdom that visualizes background computer activity.",
+  "description": "Regent — a medieval kingdom that ages on your real calendar while you work, brings you only its hardest questions, and writes a shareable chronicle of everything you missed. Forked from KingdomOS.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

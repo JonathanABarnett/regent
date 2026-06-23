@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "KingdomOS",
-  "version": "0.2.0",
-  "identifier": "com.jonat.kingdomos",
+  "productName": "Regent",
+  "version": "0.1.0",
+  "identifier": "com.jonat.regent",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:5876",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "KingdomOS",
+        "title": "Regent",
         "width": 1280,
         "height": 720,
         "minWidth": 640,

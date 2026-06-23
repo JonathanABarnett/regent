@@ -1,3 +1,9 @@
+> **⚜ This is the Regent fork.** Regent evolves this KingdomOS engine into a
+> desktop-companion dynasty sim. **Read [`REGENT.md`](REGENT.md) first** — it is
+> the source of truth for direction, what to build, and what to cut. The rest of
+> this file documents the inherited KingdomOS engine. KingdomOS lives on the
+> `upstream` git remote.
+
 # KingdomOS — Claude / Developer Context
 
 A 16-bit ambient fantasy kingdom that lives on the desktop. Runs autonomously; reacts to real-world signals (git, system, Twitch) as flavor.

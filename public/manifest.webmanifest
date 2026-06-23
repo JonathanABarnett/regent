@@ -1,7 +1,7 @@
 {
-  "name": "KingdomOS",
-  "short_name": "KingdomOS",
-  "description": "A 16-bit fantasy kingdom that lives on your desktop. It runs on its own, reacts to what you're already doing, and tells you stories about a place that's now yours.",
+  "name": "Regent",
+  "short_name": "Regent",
+  "description": "A medieval kingdom that ages on your real calendar while you work, brings you only its hardest questions, and writes a shareable chronicle of everything you missed.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

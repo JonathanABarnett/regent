@@ -1,14 +1,14 @@
-# KingdomOS
+# Regent
 
-> A 16-bit fantasy kingdom that lives on your desktop. It runs on its own, reacts to what you're already doing, and tells you stories about a place that's now yours.
+> A medieval kingdom that ages on your real calendar while you work, brings you only its hardest questions, and writes a shareable chronicle of everything you missed. You are the conscience of the crown — not its hands.
 
-[![Tests](https://img.shields.io/badge/tests-392%20passing-brightgreen)](./src) [![TypeScript](https://img.shields.io/badge/typescript-strict-blue)]() [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange)]()
+[![TypeScript](https://img.shields.io/badge/typescript-strict-blue)]() [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange)]() [![Forked from KingdomOS](https://img.shields.io/badge/forked%20from-KingdomOS-8a5a3c)](https://github.com/JonathanABarnett/kingdomos)
 
-**Play it now:** https://jonathanabarnett.github.io/kingdomos/ — no install required.
+**Regent is a fork of [KingdomOS](https://github.com/JonathanABarnett/kingdomos)** — it inherits KingdomOS's ~40-system headless simulation (named NPCs, succession, dynasties, war, diplomacy, disasters, a consequence engine, an economy, a chronicle) and evolves it from an ambient toy into a **desktop-companion dynasty sim**: the world rules itself and ages on your wall clock; you check in between tasks to decide its hardest questions; it remembers — and can permanently lose — the people in it; and it exports the whole saga as a seed-stamped, shareable chronicle.
 
-KingdomOS is an ambient simulation, not a game. You found a kingdom, name your monarch, design their look, then watch a small SNES-flavored world live its own life — NPCs walk daily schedules, fall in love, raise children, grow old. The economy ticks. Weather rolls in. Seasons turn. A narrative director writes a chronicle of what's happening. When you do real things in the real world (commits to a watched repo, a Twitch sub on your channel, a CPU spike from a build) the kingdom flavors itself accordingly: couriers ride, blacksmiths forge, mines glow.
+**Read [`REGENT.md`](REGENT.md) for the charter** — the committed direction, what makes it defensible, the comparable games, the build path, and the go/no-go gates. The rest of this README documents the inherited engine that Regent builds on.
 
-There are no missions, no fail state, no progress bar. The world keeps running whether you watch or not.
+> **Note on history:** Regent retains KingdomOS's full git history so blame/context survive. KingdomOS lives on the `upstream` remote — `git fetch upstream` to pull engine improvements. The in-game "KingdomOS" strings are renamed to "Regent" incrementally as the fork diverges.
 
 ---
 
