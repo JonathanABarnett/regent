@@ -78,6 +78,29 @@ describe("Welcome Petition raises a real home", () => {
   });
 });
 
+describe("Recurring court decisions steward the world too", () => {
+  it("welcoming a wanderer raises a real cottage and adds a villager", () => {
+    // The gate-petition archetype is one of ~10 random court decisions;
+    // search seeds for one whose first proposed matter offers "welcome".
+    for (let seed = 1; seed <= 120; seed++) {
+      const w = new World({ seed });
+      w.quests.proposeCheckInMatter();
+      const dec = w.decisions.current();
+      const welcome = dec?.options.find((o) => o.id === "welcome");
+      if (!welcome) continue;
+      const homesteadsBefore = w.map.structures.filter((s) => s.kind === "homestead").length;
+      const popBefore = w.npcs.length;
+      w.decisions.resolve(dec!.id, "welcome");
+      // A cottage rose AND a soul arrived — a recurring decision left a
+      // permanent, visible mark, not just journal prose.
+      expect(w.map.structures.filter((s) => s.kind === "homestead").length).toBe(homesteadsBefore + 1);
+      expect(w.npcs.length).toBe(popBefore + 1);
+      return;
+    }
+    throw new Error("no gate-petition decision surfaced across 120 seeds");
+  });
+});
+
 describe("First-reign fever dilemma", () => {
   function fireFever(seed: number): World {
     const w = new World({ seed });

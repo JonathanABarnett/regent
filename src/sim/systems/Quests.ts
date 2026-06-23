@@ -5,6 +5,7 @@ import { makeEvent } from "../events/EventSchema";
 import { traitFor } from "./Traits";
 import { backstoryFor } from "./Backstories";
 import { readArchive } from "../KingdomArchive";
+import { raiseHomestead } from "./Homestead";
 
 /**
  * Multi-day quest arcs. Each arc has a beginning, a middle (1-3 days), and
@@ -2051,47 +2052,55 @@ export class Quests {
           },
           {
             id: "welcome",
-            label: "Welcome them in",
+            label: "Welcome them in — grant them a home",
+            hint: "a cottage rises · +1 soul",
             onChoose: (w) => {
-              const homes = w.map.structures.filter(
+              // Stewarding, made visible: welcoming a wanderer raises a real
+              // cottage by the keep that STAYS on the map (and the save), and
+              // the new villager lives there. A recurring decision that
+              // leaves a permanent mark — not just journal prose.
+              const cottage = raiseHomestead(w, capitalize(flavor));
+              const npcSeed = Math.floor(rand() * 2 ** 31);
+              // Home them at the new cottage if one was placed; otherwise fall
+              // back to an existing settlement so the soul still arrives.
+              const fallback = w.map.structures.find(
                 (s) => s.kind === "town" || s.kind === "castle",
               );
-              const home = homes[Math.floor(rand() * homes.length)];
-              if (home) {
-                const center = {
-                  x: home.pos.x + Math.floor(home.size.x / 2),
-                  y: home.pos.y + Math.floor(home.size.y / 2),
-                };
-                const npcSeed = Math.floor(rand() * 2 ** 31);
-                const added = w.pushNpc({
-                  id: `npc_${decId}`,
-                  role: "villager",
-                  name: flavor,
-                  age: 22,
-                  pos: { ...center },
-                  prevPos: { ...center },
-                  facing: "s",
-                  homeId: home.id,
-                  workId: home.id,
-                  activity: "idle",
-                  path: [],
-                  activityTimer: 2,
-                  seed: npcSeed,
-                  trait: traitFor(npcSeed),
-                });
-                if (added) {
-                  w.journal.write(
-                    `${capitalize(flavor)} was welcomed into ${home.name} and given a small house.`,
-                    "life",
-                    home.id,
-                  );
-                  // One-line backstory so the new villager reads as a person.
-                  w.journal.write(
-                    backstoryFor(capitalize(flavor), npcSeed),
-                    "event",
-                    home.id,
-                  );
-                }
+              const home = cottage ?? fallback;
+              if (!home) return;
+              const center = {
+                x: home.pos.x + Math.floor(home.size.x / 2),
+                y: home.pos.y + Math.floor(home.size.y / 2),
+              };
+              const added = w.pushNpc({
+                id: `npc_${decId}`,
+                role: "villager",
+                name: flavor,
+                age: 22,
+                pos: { ...center },
+                prevPos: { ...center },
+                facing: "s",
+                homeId: home.id,
+                workId: home.id,
+                activity: "idle",
+                path: [],
+                activityTimer: 2,
+                seed: npcSeed,
+                trait: traitFor(npcSeed),
+              });
+              if (added) {
+                w.journal.write(
+                  cottage
+                    ? `${capitalize(flavor)} was welcomed into the kingdom. By week's end a cottage stood by the keep, its chimney smoking, and ${capitalize(flavor)} had a door to call their own.`
+                    : `${capitalize(flavor)} was welcomed into ${home.name} and given a small house.`,
+                  "life",
+                  { targetStructureId: home.id, fromDecision: true },
+                );
+                w.journal.write(
+                  backstoryFor(capitalize(flavor), npcSeed),
+                  "event",
+                  home.id,
+                );
               }
             },
           },
