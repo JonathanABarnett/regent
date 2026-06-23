@@ -21,22 +21,22 @@
     "assets:check": "node scripts/check-assets.mjs"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.1.1",
+    "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-fs": "^2.0.3",
     "@tauri-apps/plugin-shell": "^2.0.1",
     "@tauri-apps/plugin-updater": "^2.0.1",
     "@tauri-apps/plugin-process": "^2.0.1",
     "howler": "^2.2.4",
-    "pixi.js": "^8.6.6",
+    "pixi.js": "^8.19.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "simplex-noise": "^4.0.3",
     "zod": "^3.23.8",
-    "zustand": "^5.0.2"
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.1.0",
-    "@types/howler": "^2.2.12",
+    "@tauri-apps/cli": "^2.11.3",
+    "@types/howler": "^2.2.13",
     "@types/node": "^25.8.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
