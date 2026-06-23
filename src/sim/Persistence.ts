@@ -273,8 +273,8 @@ export interface SaveData {
   sagas?: { planted: Record<string, number>; firedPayoffs: string[] };
   /** In-world holidays fired per year. */
   inWorldHolidays?: { firedKeys: string[] };
-  /** Kingdom mood score (-10..+10). */
-  mood?: { score: number };
+  /** Kingdom mood score (-10..+10) + the daily-sample history for the trend. */
+  mood?: { score: number; history?: number[] };
   /** Death anniversary tracking — records of notable losses. */
   remembrance?: {
     records: Array<{ name: string; day: number; year: number }>;
@@ -864,7 +864,16 @@ export function validateSave(rawInput: unknown): SaveData | null {
         }
       : undefined,
     mood: isPlainObject(raw.mood)
-      ? { score: Math.max(-10, Math.min(10, safeNumber((raw.mood as Record<string, unknown>).score, 0))) }
+      ? {
+          score: Math.max(-10, Math.min(10, safeNumber((raw.mood as Record<string, unknown>).score, 0))),
+          // Preserve the trend history across reloads — sanitize each sample
+          // to a finite [-10,10] number (Mood.restore re-caps the length).
+          history: Array.isArray((raw.mood as Record<string, unknown>).history)
+            ? ((raw.mood as Record<string, unknown>).history as unknown[])
+                .map((n) => Math.max(-10, Math.min(10, safeNumber(n, 0))))
+                .slice(-64)
+            : undefined,
+        }
       : undefined,
     inWorldHolidays: isPlainObject(raw.inWorldHolidays) && Array.isArray((raw.inWorldHolidays as Record<string, unknown>).firedKeys)
       ? {

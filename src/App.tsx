@@ -575,6 +575,9 @@ export function App() {
         quoteOfDay: quoteOfDay(world),
         moodLabel: world.mood.label(),
         moodTier: world.mood.tier(),
+        moodScore: world.mood.state.score,
+        moodHistory: world.mood.recentHistory(),
+        moodTrend: world.mood.trend(),
         generation: world.succession.state.generation,
         // Featured advisor — the oldest living named non-monarch NPC.
         // No schema change required: just a derived view of the roster

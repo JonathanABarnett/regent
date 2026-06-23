@@ -16,6 +16,47 @@ const seasonIcon: Record<string, string> = {
   winter: "❄",
 };
 
+/**
+ * A tiny SVG sparkline of recent kingdom mood (one point per in-world day,
+ * oldest→newest). Surfaces the causality the sim now models: your choices
+ * move mood, and sustained lows risk an uprising — so a souring realm should
+ * be *visible* before it boils over. Inherits the mood tier color.
+ */
+function MoodSparkline({ history }: { history: number[] }) {
+  const W = 56;
+  const H = 14;
+  const n = history.length;
+  const pts = history
+    .map((v, i) => {
+      const x = n === 1 ? W : (i / (n - 1)) * W;
+      // +10 maps to the top, -10 to the bottom of the strip.
+      const y = H - ((Math.max(-10, Math.min(10, v)) + 10) / 20) * H;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  // Baseline at score 0 — the content/uneasy boundary — for reference.
+  const zeroY = H / 2;
+  return (
+    <svg
+      className="hud-mood-spark"
+      width={W}
+      height={H}
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <line x1="0" y1={zeroY} x2={W} y2={zeroY} className="hud-mood-spark-zero" />
+      <polyline points={pts} className="hud-mood-spark-line" />
+    </svg>
+  );
+}
+
+function moodTitle(score?: number): string {
+  const base = "Kingdom mood over recent days — your choices move it; sustained lows risk an uprising.";
+  if (score === undefined) return base;
+  return `Kingdom mood: ${score >= 0 ? "+" : ""}${score.toFixed(1)} of 10. ${base}`;
+}
+
 export function HUD({
   onToggleLog,
   onToggleSettings,
@@ -137,8 +178,22 @@ export function HUD({
         </div>
       )}
       {stats.moodLabel && (
-        <div className={`hud-mood mood-${stats.moodTier ?? "content"}`} title="Kingdom mood">
-          {stats.moodLabel}
+        <div
+          className={`hud-mood mood-${stats.moodTier ?? "content"}`}
+          title={moodTitle(stats.moodScore)}
+        >
+          <span className="hud-mood-label">{stats.moodLabel}</span>
+          {stats.moodTrend !== undefined && stats.moodTrend !== 0 && (
+            <span
+              className={`hud-mood-arrow trend-${stats.moodTrend > 0 ? "up" : "down"}`}
+              aria-hidden="true"
+            >
+              {stats.moodTrend > 0 ? "▲" : "▼"}
+            </span>
+          )}
+          {stats.moodHistory && stats.moodHistory.length >= 2 && (
+            <MoodSparkline history={stats.moodHistory} />
+          )}
         </div>
       )}
       <div className="hud-right">

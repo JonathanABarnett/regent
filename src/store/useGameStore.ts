@@ -142,6 +142,12 @@ export interface GameState {
     moodLabel?: string;
     /** Kingdom mood tier for CSS styling. */
     moodTier?: "celebrating" | "content" | "uneasy" | "anxious";
+    /** Current mood score (-10..+10) — drives the sparkline's y-scale. */
+    moodScore?: number;
+    /** Daily mood samples (oldest→newest) for the HUD trend sparkline. */
+    moodHistory?: number[];
+    /** Trend direction over recent days: +1 rising, -1 falling, 0 steady. */
+    moodTrend?: -1 | 0 | 1;
     /** Monarch generation — increments on succession (= a monarch died
      *  and an heir ascended). Watched by FeedbackMoments to fire the
      *  monarch-death prompt at the peak emotional moment. */
