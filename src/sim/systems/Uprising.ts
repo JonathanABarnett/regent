@@ -3,12 +3,17 @@
  * population >= 25, gold < 50), a villager rises as an agitator and organises
  * the populace.
  *
- * Conditions:
+ * Conditions (the kingdom needs a REASON to rise):
  *   - year >= 3
  *   - npcs.length >= 25
- *   - economy.gold < 50
+ *   - empty coffers (gold < 50) OR a genuinely unhappy populace (mood <= -4)
  *   - no usurper challenge already active
  *   - cooldown of 20 days since last uprising
+ *
+ * Mood is the real driver: the per-day chance scales with kingdom mood —
+ * anxious realms boil over (~2x), content realms simmer down (~0.3x) — so
+ * misrule that sours the people (heavy taxes, harsh rulings) actually raises
+ * the risk, while a beloved-but-poor crown is given patience.
  *
  * Flow:
  *   1. Rolls ~1.5 % chance per day while conditions hold.
@@ -73,6 +78,7 @@ export class Uprising {
   private readonly minYear = 3;
   private readonly minPop = 25;
   private readonly goldThreshold = 50;
+  private readonly moodFloor = -4; // "uneasy" tips toward "anxious"
   private readonly minDaysBetween = 20;
   private readonly baseChance = 0.015;
 
@@ -100,13 +106,22 @@ export class Uprising {
     const { day, year } = this.world.state;
     if (year < this.minYear) return;
     if (this.world.npcs.length < this.minPop) return;
-    if (this.world.economy.state.gold >= this.goldThreshold) return;
+    // Pressure gate: an uprising needs a reason — empty coffers OR a
+    // genuinely unhappy populace. Either alone puts it in play.
+    const broke = this.world.economy.state.gold < this.goldThreshold;
+    const miserable = this.world.mood.state.score <= this.moodFloor;
+    if (!broke && !miserable) return;
     // Don't stack with an active usurper challenge.
     if (this.world.usurper.state.active) return;
     if (day - this.state.lastCheckedDay < this.minDaysBetween) return;
     this.state.lastCheckedDay = day;
 
     let chance = this.baseChance;
+    // Mood is the real driver: scale the odds by how the people feel.
+    // score +10 → 0.3x (content, patient); score -10 → 2.0x (ready to rise);
+    // score 0 → 1.0x, so a neutral realm behaves exactly as before.
+    const moodMult = Math.max(0.3, Math.min(2.0, 1 - this.world.mood.state.score * 0.12));
+    chance *= moodMult;
     // Captain reduces chance; open court edict reduces it too (people feel heard).
     if (this.world.courtEffects.captainSeated) chance *= 0.6;
     if (this.world.edictEffects.openCourt) chance *= 0.7;
@@ -179,6 +194,8 @@ export class Uprising {
           onChoose: (w) => {
             const cost = 40;
             w.economy.state.gold = Math.max(0, w.economy.state.gold - cost);
+            // The people were heard — the realm's mood recovers sharply.
+            w.mood.adjust(2);
             // Agitator is converted to a trusted voice in the court.
             const npc = w.npcs.find((n) => n.id === agitatorId);
             if (npc) npc.role = "scholar";
@@ -210,6 +227,8 @@ export class Uprising {
               const li = w.npcs.indexOf(l);
               if (li >= 0) w.npcs.splice(li, 1);
             }
+            // Force buys quiet, not contentment — the mood sinks further.
+            w.mood.adjust(-2);
             this.state.active = false;
             this.state.agitatorId = undefined;
             w.journal.write(
@@ -308,6 +327,9 @@ export class Uprising {
       generation: w.succession.state.generation,
       reignDurationDays: reignDuration,
     });
+
+    // A popular new regime: the people got their way, and the mood lifts.
+    w.mood.adjust(1.5);
 
     this.state.active = false;
     this.state.agitatorId = undefined;

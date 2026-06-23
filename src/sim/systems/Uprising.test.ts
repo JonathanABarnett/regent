@@ -66,6 +66,51 @@ describe("Uprising", () => {
     expect(world.uprising.state.active).toBe(false);
   });
 
+  it("mood gates unrest: a content-but-poor realm is spared, a furious-but-rich realm is exposed", () => {
+    // The pressure gate only advances lastCheckedDay when it opens, so we can
+    // prove the mood gate deterministically without relying on the RNG fire.
+
+    // Rich AND content → no reason to rise: the gate never opens.
+    const calm = makeWorld();
+    padPopulation(calm);
+    calm.economy.state.gold = 200;
+    calm.mood.state.score = 2; // content
+    advanceToYear(calm, 3, 30);
+    calm.uprising.state.lastCheckedDay = 0;
+    calm.uprising.tick();
+    expect(calm.uprising.state.lastCheckedDay).toBe(0);
+
+    // Full coffers but a FURIOUS populace → mood is the real driver; gate opens.
+    const angry = makeWorld();
+    padPopulation(angry);
+    angry.economy.state.gold = 200; // coffers full...
+    angry.mood.state.score = -8;    // ...but the people are done
+    advanceToYear(angry, 3, 30);
+    angry.uprising.state.lastCheckedDay = 0;
+    angry.uprising.tick();
+    expect(angry.uprising.state.lastCheckedDay).toBe(30);
+  });
+
+  it("address grievances lifts mood; suppression sinks it", () => {
+    const heard = makeWorld();
+    padPopulation(heard);
+    heard.economy.state.gold = 60;
+    advanceToYear(heard, 3, 40);
+    (heard.uprising as unknown as { _fireUprising: () => void })._fireUprising();
+    const heardBefore = heard.mood.state.score;
+    heard.decisions.resolve(heard.decisions.current()!.id, "address");
+    expect(heard.mood.state.score).toBeGreaterThan(heardBefore);
+
+    const crushed = makeWorld();
+    padPopulation(crushed);
+    crushed.economy.state.gold = 60;
+    advanceToYear(crushed, 3, 40);
+    (crushed.uprising as unknown as { _fireUprising: () => void })._fireUprising();
+    const crushedBefore = crushed.mood.state.score;
+    crushed.decisions.resolve(crushed.decisions.current()!.id, "suppress");
+    expect(crushed.mood.state.score).toBeLessThan(crushedBefore);
+  });
+
   it("does not fire when population is below threshold", () => {
     const world = makeWorld();
     // Don't pad population — keep it below 25.
