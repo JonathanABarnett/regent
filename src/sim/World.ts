@@ -372,7 +372,7 @@ export class World {
     this.lifeEvents = new LifeEvents(this, this.journal, this.rand);
     this.quests = new Quests(this, this.journal, this.rand);
     this.decisions = new Decisions(this);
-    this.succession = new Succession(this, this.journal);
+    this.succession = new Succession(this, this.journal, this.rand);
     this.treasury = new Treasury(this, this.journal);
     this.construction = new Construction(this, this.journal);
     this.holidays = new Holidays(this, this.journal);

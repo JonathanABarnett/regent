@@ -63,7 +63,12 @@ export class Succession {
   /** Listeners — App.tsx subscribes to update identity/HUD/save. */
   private listeners = new Set<(ev: SuccessionEvent) => void>();
 
-  constructor(private world: World, private journal: Journal) {}
+  constructor(
+    private world: World,
+    private journal: Journal,
+    /** Seeded RNG — so a given seed always kills + succeeds the same way. */
+    private rand: () => number = Math.random,
+  ) {}
 
   subscribe(fn: (ev: SuccessionEvent) => void): () => void {
     this.listeners.add(fn);
@@ -101,7 +106,7 @@ export class Succession {
     const age = monarch.age ?? 30;
     if (age < MONARCH_DEATH_AGE) return;
     const dieChance = Math.min(0.15, (age - MONARCH_DEATH_AGE) * 0.02 + 0.02);
-    if (Math.random() > dieChance) return;
+    if (this.rand() > dieChance) return;
 
     this.succeed(monarch);
   }
@@ -133,7 +138,7 @@ export class Succession {
       }
     } else {
       // Generate one from scratch
-      const seed = Math.floor(Math.random() * 2 ** 31);
+      const seed = Math.floor(this.rand() * 2 ** 31);
       heirName = generateName("monarch", seed);
       heirAge = 22;
       const castle = this.world.map.structures.find((s) => s.id === oldHome);
@@ -232,11 +237,11 @@ export class Succession {
       (n) => n.role === "villager" || n.role === "guard",
     );
     if (civicCandidates.length) {
-      return civicCandidates[Math.floor(Math.random() * civicCandidates.length)];
+      return civicCandidates[Math.floor(this.rand() * civicCandidates.length)];
     }
     // 4. Anyone.
     if (adults.length) {
-      return adults[Math.floor(Math.random() * adults.length)];
+      return adults[Math.floor(this.rand() * adults.length)];
     }
     return null;
   }

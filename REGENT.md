@@ -76,6 +76,27 @@ The defensible move is the opposite: **keep the calendar-aging companion loop as
 
 If the cadence slice (build step 1) or gate (1)/(2) fails, the correct answer reverts to **stay a companion** — a real, non-embarrassing outcome.
 
+### Gate 3 — determinism status (decided)
+
+**We take the "drop the bit-identical-replay claim" branch, and partially fix.**
+Stance: a shared seed is **provenance** ("this saga grew from seed N"), not a
+*reproduce-my-exact-game* promise. The seed-stamped Kingdom/Chronicle card is the
+share artifact, so we never advertise "paste my seed for an identical run."
+
+What IS now seeded (so a seed tells a consistent *dynasty* story): the whole
+narrative core already ran on the world's `mulberry32` RNG; the one real leak —
+**`Succession`** (monarch death roll + heir selection + generated-heir seed) — was
+using `Math.random` and is now seeded, plus two generated-NPC-seed bugs in
+`Usurper`/`Uprising` that leaked `Math.random` despite holding a seeded rand.
+Covered by `Succession.test.ts` ("same seed → same heir").
+
+What still uses `Math.random` (deliberately not chased — ambient/cosmetic, and
+fixing all of it doesn't change the dropped claim): `Treasury` vault rolls,
+`Construction`, `Weather`, `Regions`, plus journal entry **ids** (`Date.now()` —
+display only) and decision **expiry** (wall-clock, *intentionally* real-time). If
+we ever want true replay, that's the remaining surface — but the gate is
+satisfied by dropping the claim, not by clearing it.
+
 ## Sellability
 
 - **Platform:** Steam (Tauri desktop build), tagged **Desktop Companion + Simulation + Management** — *never* Colony Sim / Grand Strategy first. Keep a free web demo as the wishlist funnel.

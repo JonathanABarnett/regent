@@ -280,7 +280,7 @@ export class Uprising {
         x: castle.pos.x + Math.floor(castle.size.x / 2),
         y: castle.pos.y + Math.floor(castle.size.y / 2),
       };
-      const seed = Math.floor(Math.random() * 2 ** 31);
+      const seed = Math.floor(this.rand() * 2 ** 31);
       w.pushNpc({
         id: `npc_uprising_${w.state.day}`,
         role: "monarch",
