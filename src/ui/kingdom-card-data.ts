@@ -14,6 +14,7 @@
  */
 
 import type { SavedJournalEntry } from "../sim/Persistence";
+import type { ReignChapter } from "../sim/systems/Chronicle";
 
 /** Final dimensions of the rendered PNG. Tuned for X/Twitter/Mastodon previews. */
 export const CARD_WIDTH = 1200;
@@ -53,6 +54,12 @@ export interface KingdomCardInput {
    * and the subtitle on the card. Empty / undefined → motto line skipped.
    */
   motto?: string;
+  /** Optional big-title override (else "Kingdom of <name>"). Used by reign cards. */
+  heading?: string;
+  /** Optional subtitle override (else "under <monarch> · Generation N"). */
+  subheading?: string;
+  /** Optional footer-date override (else "Day X · Year Y"). */
+  footerLine?: string;
 }
 
 /**
@@ -198,4 +205,62 @@ export function composeCardInput(args: {
 export function cardFilename(kingdomName: string, day: number, year: number): string {
   const safe = kingdomName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "kingdom";
   return `${safe}-y${year}d${day}-card.png`;
+}
+
+const ROMAN: ReadonlyArray<[number, string]> = [
+  [1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"],
+  [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"],
+];
+function roman(n: number): string {
+  if (n < 1 || n > 3999) return String(n);
+  let out = "";
+  let v = n;
+  for (const [value, sym] of ROMAN) {
+    while (v >= value) { out += sym; v -= value; }
+  }
+  return out;
+}
+
+/**
+ * Compose a card input for a single REIGN (a chapter of the dynasty) instead
+ * of the whole kingdom. Reuses the same renderer via the heading/subheading/
+ * footer overrides, so a reign card foregrounds the monarch + their era. No
+ * portrait inset — the historical monarch's sprite isn't the live one.
+ */
+export function composeReignCardInput(args: {
+  chapter: ReignChapter;
+  kingdomName: string;
+  bannerColor: string;
+}): KingdomCardInput {
+  const c = args.chapter;
+  const endLine =
+    c.context === "usurper" ? "Deposed by a usurper." :
+    c.context === "uprising" ? "Cast down by the people." :
+    "Died in their bed.";
+  return {
+    kingdomName: args.kingdomName,
+    monarchName: c.name,
+    bannerColor: args.bannerColor,
+    day: c.reignDays,
+    year: c.endYear,
+    generation: c.chapter,
+    heading: `${c.name}, ${c.epithet}`,
+    subheading: `Chapter ${roman(c.chapter)} · ${c.title}`,
+    footerLine: `A reign in ${args.kingdomName} · Years ${c.startYear}–${c.endYear}`,
+    milestones: [
+      trimMilestoneLine(c.headline, 90),
+      trimMilestoneLine(`${endLine} Held ${c.reputation}; the kingdom counted ${c.population} souls.`, 90),
+    ],
+    stats: {
+      population: c.population,
+      vault: c.vaultSize,
+    },
+  };
+}
+
+/** Filename for a saved reign card, e.g. "aurelia-ch3-aldric-card.png". */
+export function reignCardFilename(kingdomName: string, chapter: number, monarch: string): string {
+  const k = kingdomName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "kingdom";
+  const m = monarch.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "reign";
+  return `${k}-ch${chapter}-${m}-card.png`;
 }

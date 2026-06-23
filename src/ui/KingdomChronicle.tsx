@@ -48,10 +48,13 @@ export function KingdomChronicle({
   open,
   onClose,
   getWorld,
+  onShareReign,
 }: {
   open: boolean;
   onClose: () => void;
   getWorld: () => World | null;
+  /** Open the share card for a single past reign (chapter). */
+  onShareReign?: (chapter: ReignChapter) => void;
 }) {
   const journal = useGameStore((s) => s.journal);
   const identity = useGameStore((s) => s.identity);
@@ -182,6 +185,15 @@ export function KingdomChronicle({
                       <span className="reign-chip">{c.reputation}</span>
                       <span className="reign-chip">{c.population} souls</span>
                     </div>
+                    {onShareReign && (
+                      <button
+                        type="button"
+                        className="reign-chapter-share"
+                        onClick={() => onShareReign(c)}
+                      >
+                        Share this reign →
+                      </button>
+                    )}
                   </li>
                 ))}
                 {reigns.current && (

@@ -368,17 +368,17 @@ function drawForeground(
   input: KingdomCardInput,
   theme: CardTheme,
 ): void {
-  // Kingdom name
+  // Title — "Kingdom of X" by default; a reign card overrides with the monarch.
   ctx.fillStyle = theme.title;
   ctx.font = "bold 88px 'Georgia', 'Times New Roman', serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(`Kingdom of ${input.kingdomName}`, CARD_WIDTH / 2, 150, CARD_WIDTH - 160);
+  ctx.fillText(input.heading ?? `Kingdom of ${input.kingdomName}`, CARD_WIDTH / 2, 150, CARD_WIDTH - 160);
 
   // Subtitle
   ctx.fillStyle = theme.subtitle;
   ctx.font = "italic 32px 'Georgia', 'Times New Roman', serif";
-  const subtitle = `under ${input.monarchName} · Generation ${input.generation}`;
+  const subtitle = input.subheading ?? `under ${input.monarchName} · Generation ${input.generation}`;
   ctx.fillText(subtitle, CARD_WIDTH / 2, 215, CARD_WIDTH - 160);
 
   // Optional motto — small italic line wedged between the subtitle and the
@@ -427,11 +427,11 @@ function drawForeground(
   ctx.fillStyle = theme.footerDate;
   ctx.textBaseline = "alphabetic";
   ctx.textAlign = "left";
-  ctx.fillText(`Day ${input.day} · Year ${input.year}`, 100, CARD_HEIGHT - 60);
+  ctx.fillText(input.footerLine ?? `Day ${input.day} · Year ${input.year}`, 100, CARD_HEIGHT - 60);
 
   ctx.font = "bold 16px 'Georgia', 'Times New Roman', serif";
   ctx.fillStyle = theme.footerWordmark;
-  ctx.fillText("KingdomOS · jonathanabarnett.github.io/kingdomos", 100, CARD_HEIGHT - 32);
+  ctx.fillText("Regent · jonathanabarnett.github.io/regent", 100, CARD_HEIGHT - 32);
 
   // Top-right ornament — three dots in the banner color (works on every bg).
   ctx.fillStyle = safeHex(input.bannerColor, "#b45309");

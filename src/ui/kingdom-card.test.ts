@@ -4,11 +4,14 @@ import {
   pickCardMilestones,
   trimMilestoneLine,
   composeCardInput,
+  composeReignCardInput,
   cardFilename,
+  reignCardFilename,
   pickSparklineSeries,
   compactNumber,
 } from "./kingdom-card-data";
 import { drawKingdomCard, CARD_TEMPLATES } from "./kingdom-card-renderer";
+import type { ReignChapter } from "../sim/systems/Chronicle";
 
 function entry(
   text: string,
@@ -261,6 +264,50 @@ describe("composeCardInput — motto", () => {
       journal: [],
     });
     expect(input.motto).toBeUndefined();
+  });
+});
+
+const REIGN_CHAPTER: ReignChapter = {
+  chapter: 3,
+  title: "The War Years",
+  name: "Aldric",
+  epithet: "the Iron",
+  context: "usurper",
+  startYear: 5,
+  endYear: 22,
+  reignDays: 952,
+  population: 18,
+  reputation: "feared",
+  vaultSize: 4,
+  dynastyStreak: 0,
+  headline: "The reign of Aldric ended by challenge.",
+};
+
+describe("composeReignCardInput", () => {
+  it("foregrounds the monarch + era via the heading/subheading/footer overrides", () => {
+    const input = composeReignCardInput({
+      chapter: REIGN_CHAPTER,
+      kingdomName: "Aurelia",
+      bannerColor: "#b45309",
+    });
+    expect(input.heading).toBe("Aldric, the Iron");
+    expect(input.subheading).toBe("Chapter III · The War Years");
+    expect(input.footerLine).toContain("Aurelia");
+    expect(input.footerLine).toContain("5–22");
+    expect(input.monarchName).toBe("Aldric");
+    expect(input.milestones[0]).toContain("ended by challenge");
+    expect(input.milestones[1]).toContain("Deposed by a usurper");
+    expect(input.stats?.population).toBe(18);
+    expect(input.stats?.vault).toBe(4);
+  });
+});
+
+describe("reignCardFilename", () => {
+  it("includes chapter + monarch and stays URL-safe", () => {
+    expect(reignCardFilename("Aurelia", 3, "Aldric")).toBe("aurelia-ch3-aldric-card.png");
+    expect(reignCardFilename("New Kingdom!!", 1, "Bob the Brief")).toBe(
+      "new-kingdom-ch1-bob-the-brief-card.png",
+    );
   });
 });
 
@@ -609,5 +656,39 @@ describe("drawKingdomCard (smoke)", () => {
       { monarchSprite: fakeSprite },
     );
     expect(ctx.calls.some((c) => c.method === "stroke")).toBe(false);
+  });
+
+  it("uses heading/subheading/footer overrides for a reign card", () => {
+    const ctx = makeMockCtx();
+    drawKingdomCard(ctx, {
+      kingdomName: "Aurelia",
+      monarchName: "Aldric",
+      bannerColor: "#b45309",
+      day: 0,
+      year: 22,
+      generation: 3,
+      milestones: ["The reign of Aldric ended by challenge."],
+      heading: "Aldric, the Iron",
+      subheading: "Chapter III · The War Years",
+      footerLine: "A reign in Aurelia · Years 5–22",
+    });
+    const filled = ctx.calls.filter((c) => c.method === "fillText").map((c) => String(c.args[0]));
+    expect(filled.some((t) => t === "Aldric, the Iron")).toBe(true);
+    expect(filled.some((t) => t === "Chapter III · The War Years")).toBe(true);
+    expect(filled.some((t) => t === "A reign in Aurelia · Years 5–22")).toBe(true);
+    // The default kingdom title + day-stamp must NOT appear when overridden.
+    expect(filled.some((t) => t.startsWith("Kingdom of"))).toBe(false);
+    expect(filled.some((t) => t.startsWith("Day "))).toBe(false);
+  });
+
+  it("renders the Regent wordmark (not the stale KingdomOS one)", () => {
+    const ctx = makeMockCtx();
+    drawKingdomCard(ctx, {
+      kingdomName: "K", monarchName: "M", bannerColor: "#b45309",
+      day: 1, year: 1, generation: 1, milestones: [],
+    });
+    const filled = ctx.calls.filter((c) => c.method === "fillText").map((c) => String(c.args[0]));
+    expect(filled.some((t) => t.includes("Regent · jonathanabarnett.github.io/regent"))).toBe(true);
+    expect(filled.some((t) => t.includes("KingdomOS"))).toBe(false);
   });
 });

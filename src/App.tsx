@@ -65,6 +65,7 @@ import {
 } from "./sim/Persistence";
 import { StewardReport } from "./ui/StewardReport";
 import { ReignSummaryModal } from "./ui/ReignSummaryModal";
+import type { ReignChapter } from "./sim/systems/Chronicle";
 import { TabTitle } from "./ui/TabTitle";
 import { ShareMoments } from "./ui/ShareMoments";
 import { InstallPrompt } from "./ui/InstallPrompt";
@@ -159,6 +160,8 @@ export function App() {
   const [inspected, setInspected] = useState<Structure | null>(null);
   const [profileNpcId, setProfileNpcId] = useState<string | null>(null);
   const [kingdomCardOpen, setKingdomCardOpen] = useState(false);
+  /** When set, the Kingdom Card renders this single reign (shared from the Chronicle). */
+  const [shareReign, setShareReign] = useState<ReignChapter | null>(null);
   const [chronicleOpen, setChronicleOpen] = useState(false);
   const [vaultOpen, setVaultOpen] = useState(false);
   // Ambient mode: the kingdom canvas floats in an always-on-top Document
@@ -1406,12 +1409,21 @@ export function App() {
       <KingdomCard
         world={worldRef.current}
         open={kingdomCardOpen && !streamerMode}
-        onClose={() => setKingdomCardOpen(false)}
+        reign={shareReign}
+        onClose={() => {
+          setKingdomCardOpen(false);
+          setShareReign(null);
+        }}
       />
       <KingdomChronicle
         open={chronicleOpen && !streamerMode}
         onClose={() => setChronicleOpen(false)}
         getWorld={() => worldRef.current}
+        onShareReign={(c) => {
+          setChronicleOpen(false);
+          setShareReign(c);
+          setKingdomCardOpen(true);
+        }}
       />
       <VaultPanel
         open={vaultOpen && !streamerMode}

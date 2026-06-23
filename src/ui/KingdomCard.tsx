@@ -3,10 +3,13 @@ import { useGameStore } from "../store/useGameStore";
 import type { World } from "../sim/World";
 import {
   composeCardInput,
+  composeReignCardInput,
   cardFilename,
+  reignCardFilename,
   CARD_WIDTH,
   CARD_HEIGHT,
 } from "./kingdom-card-data";
+import type { ReignChapter } from "../sim/systems/Chronicle";
 import { drawKingdomCard, CARD_TEMPLATES, type CardTemplate } from "./kingdom-card-renderer";
 import { CanvasSurface, drawCharacter } from "../engine/CharacterRenderer";
 import { drawPet } from "../engine/PetSpec";
@@ -57,10 +60,13 @@ export function KingdomCard({
   world,
   open,
   onClose,
+  reign,
 }: {
   world: World | null;
   open: boolean;
   onClose: () => void;
+  /** When set, render a card for this single reign (chapter) instead of the whole kingdom. */
+  reign?: ReignChapter | null;
 }) {
   const identity = useGameStore((s) => s.identity);
   const journal = useGameStore((s) => s.journal);
@@ -72,7 +78,7 @@ export function KingdomCard({
   const [template, setTemplate] = useState<CardTemplate>("parchment");
 
   useEffect(() => {
-    if (!open || !world || !identity) return;
+    if (!open || !identity) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     canvas.width = CARD_WIDTH;
@@ -80,6 +86,19 @@ export function KingdomCard({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     try {
+      if (reign) {
+        // Single-reign card: foreground the monarch + era. No portrait inset —
+        // the live monarch sprite isn't this historical ruler.
+        const input = composeReignCardInput({
+          chapter: reign,
+          kingdomName: identity.kingdomName ?? "Aurelia",
+          bannerColor: identity.bannerColor ?? "#b45309",
+        });
+        drawKingdomCard(ctx, input, { template });
+        setDataUrl(canvas.toDataURL("image/png"));
+        return;
+      }
+      if (!world) return;
       const input = composeCardInput({
         kingdomName: identity.kingdomName ?? "Aurelia",
         monarchName: identity.monarchName ?? "the Monarch",
@@ -113,7 +132,7 @@ export function KingdomCard({
     } catch (err) {
       console.warn("[KingdomCard] render failed", err);
     }
-  }, [open, world, identity, journal, monarchSpec, petSpec, achievements, template]);
+  }, [open, world, identity, journal, monarchSpec, petSpec, achievements, template, reign]);
 
   // Esc-to-close
   useEffect(() => {
@@ -126,14 +145,12 @@ export function KingdomCard({
   }, [open, onClose]);
 
   function download() {
-    if (!dataUrl || !identity || !world) return;
+    if (!dataUrl || !identity) return;
     const a = document.createElement("a");
     a.href = dataUrl;
-    a.download = cardFilename(
-      identity.kingdomName ?? "kingdom",
-      world.state.day,
-      world.state.year,
-    );
+    a.download = reign
+      ? reignCardFilename(identity.kingdomName ?? "kingdom", reign.chapter, reign.name)
+      : cardFilename(identity.kingdomName ?? "kingdom", world?.state.day ?? 0, world?.state.year ?? 0);
     a.click();
   }
 
@@ -153,7 +170,7 @@ export function KingdomCard({
       className="kingdom-card-modal"
       onClick={onClose}
       role="dialog"
-      aria-label="Share your kingdom"
+      aria-label={reign ? "Share this reign" : "Share your kingdom"}
     >
       <div className="kingdom-card-frame" onClick={(e) => e.stopPropagation()}>
         <div className="kingdom-card-canvas-wrap">
@@ -161,7 +178,9 @@ export function KingdomCard({
         </div>
         <div className="kingdom-card-actions">
           <div className="kingdom-card-hint">
-            A keepsake card you can share or save. Built from the chronicle.
+            {reign
+              ? `Chapter ${reign.chapter} — ${reign.name}, ${reign.epithet}. A card you can share or save.`
+              : "A keepsake card you can share or save. Built from the chronicle."}
           </div>
           <div className="kingdom-card-templates" role="radiogroup" aria-label="Card style">
             {CARD_TEMPLATES.map((t) => (
