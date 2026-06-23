@@ -37,6 +37,16 @@ const HINTS: DripHint[] = [
       "The crown has 3 blessings a day. Click any villager, then Bless — they remember.",
   },
   {
+    id: "moodtrend",
+    afterMin: 4,
+    icon: "📈",
+    // Only once there's a trend to point at — the mood sparkline needs a few days.
+    text: (w) =>
+      (w?.mood.recentHistory().length ?? 0) >= 3
+        ? "Top-right, the kingdom's mood now shows a trend line — it dips when you tax or rule harshly, rises when you're generous. A long slide invites an uprising."
+        : null,
+  },
+  {
     id: "pet",
     afterMin: 5,
     icon: "🐾",
@@ -44,6 +54,13 @@ const HINTS: DripHint[] = [
       const pet = w?.pets[0];
       return pet ? `${pet.name} follows the monarch around. Click them sometime.` : null;
     },
+  },
+  {
+    id: "chronicle",
+    afterMin: 7,
+    icon: "📖",
+    text: () =>
+      "Your dynasty is becoming a book. The Chronicle button up top keeps every reign as its own chapter — open it to read them, or share a single reign.",
   },
   {
     id: "reign",
