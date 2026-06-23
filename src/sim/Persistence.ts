@@ -3,6 +3,7 @@ import type { NPC, Structure, WorldState } from "./types";
 import { sanitizeName } from "../lib/sanitize";
 import type { ConsequencesSnapshot } from "./systems/Consequences";
 import type { FoundingDaySnapshot } from "./systems/FoundingDay";
+import type { ChronicleSnapshot } from "./systems/Chronicle";
 
 /**
  * Save/load schema. Versioned so we can migrate when the data model changes
@@ -275,6 +276,8 @@ export interface SaveData {
   inWorldHolidays?: { firedKeys: string[] };
   /** Kingdom mood score (-10..+10) + the daily-sample history for the trend. */
   mood?: { score: number; history?: number[] };
+  /** The Book of the Dynasty — completed reigns as numbered chapters. */
+  chronicle?: ChronicleSnapshot;
   /** Death anniversary tracking — records of notable losses. */
   remembrance?: {
     records: Array<{ name: string; day: number; year: number }>;
@@ -569,6 +572,7 @@ export function serialize(
     remembrance: world.remembrance.snapshot(),
     inWorldHolidays: world.inWorldHolidays.snapshot(),
     mood: world.mood.snapshot(),
+    chronicle: world.chronicle.snapshot(),
     usurper: world.usurper.snapshot(),
     uprising: world.uprising.snapshot(),
     reputation: world.reputation.snapshot(),
@@ -874,6 +878,11 @@ export function validateSave(rawInput: unknown): SaveData | null {
                 .slice(-64)
             : undefined,
         }
+      : undefined,
+    // Chronicle is re-validated chapter-by-chapter in Chronicle.hydrate, so a
+    // loose pass-through here is safe.
+    chronicle: isPlainObject(raw.chronicle)
+      ? (raw.chronicle as unknown as ChronicleSnapshot)
       : undefined,
     inWorldHolidays: isPlainObject(raw.inWorldHolidays) && Array.isArray((raw.inWorldHolidays as Record<string, unknown>).firedKeys)
       ? {
@@ -1519,6 +1528,9 @@ export function applySave(world: World, save: SaveData): void {
   }
   if (save.mood) {
     world.mood.restore(save.mood);
+  }
+  if (save.chronicle) {
+    world.chronicle.hydrate(save.chronicle);
   }
   if (save.consequences) {
     // Cast: validateSave's union of `kind: string` is a superset of

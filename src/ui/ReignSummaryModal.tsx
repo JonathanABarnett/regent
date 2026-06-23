@@ -24,6 +24,20 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
 }
 
+const ROMAN: ReadonlyArray<[number, string]> = [
+  [1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"],
+  [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"],
+];
+function roman(n: number): string {
+  if (n < 1 || n > 3999) return String(n);
+  let out = "";
+  let v = n;
+  for (const [value, sym] of ROMAN) {
+    while (v >= value) { out += sym; v -= value; }
+  }
+  return out;
+}
+
 export function ReignSummaryModal() {
   const summary = useGameStore((s) => s.reignSummary);
   const setReignSummary = useGameStore((s) => s.setReignSummary);
@@ -41,7 +55,9 @@ export function ReignSummaryModal() {
   return (
     <div className="reign-overlay">
       <div className="reign-card" role="dialog" aria-labelledby="reign-title" aria-modal="true">
-        <div className="reign-eyebrow">{EYEBROW[summary.context]}</div>
+        <div className="reign-eyebrow">
+          {EYEBROW[summary.context]} · Chapter {roman(Math.max(1, summary.generation - 1))} closes
+        </div>
         <div className="reign-crest" aria-hidden="true">👑</div>
         <h3 id="reign-title" className="reign-title">
           {summary.name},<br />

@@ -196,7 +196,7 @@ export function writeMonarchLegacy(
   // Structured summary for the capstone modal — the *moment* a reign ends,
   // not the archived scroll. Computed from the same end-of-reign state.
   const moodTier = world.mood.tier();
-  return {
+  const summary: ReignSummary = {
     name: oldName,
     epithet: reignEpithet({ context, reignDays, reputation: repDesc, moodTier }),
     context,
@@ -210,6 +210,11 @@ export function writeMonarchLegacy(
     moodTier,
     headline: opening,
   };
+
+  // Record the reign as the next chapter of the kingdom's book.
+  world.chronicle.record(summary, reignStartYear, world.state.year);
+
+  return summary;
 }
 
 // ── Personal letter prose ─────────────────────────────────────────────────────

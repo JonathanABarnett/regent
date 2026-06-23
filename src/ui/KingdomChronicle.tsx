@@ -15,6 +15,34 @@ import {
   chronicleToMarkdown,
   type ChronicleInput,
 } from "./chronicle-generator";
+import type { ReignChapter } from "../sim/systems/Chronicle";
+
+const ROMAN: ReadonlyArray<[number, string]> = [
+  [1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"],
+  [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"],
+];
+function roman(n: number): string {
+  if (n < 1 || n > 3999) return String(n);
+  let out = "";
+  let v = n;
+  for (const [value, sym] of ROMAN) {
+    while (v >= value) { out += sym; v -= value; }
+  }
+  return out;
+}
+
+/** How each reign ended, as a one-word chip. */
+const ENDING: Record<ReignChapter["context"], string> = {
+  natural: "passed",
+  usurper: "deposed",
+  uprising: "cast down",
+};
+
+interface CurrentReign {
+  chapter: number;
+  name: string;
+  startYear: number;
+}
 
 export function KingdomChronicle({
   open,
@@ -59,11 +87,39 @@ export function KingdomChronicle({
     return { sections: generateChronicle(inp), input: inp };
   }, [open, identity, journal, worldStats.day, getWorld]);
 
+  // The Book of Reigns — completed chapters + the in-progress one. Read live
+  // from the world's Chronicle (persisted), so it survives reloads.
+  const reigns = useMemo<{ past: ReignChapter[]; current: CurrentReign | null }>(() => {
+    if (!open) return { past: [], current: null };
+    const world = getWorld();
+    if (!world || !identity) return { past: [], current: null };
+    const reignDays = world.state.day - world.succession.state.reignStartDay;
+    const startYear = Math.max(1, world.state.year - Math.max(0, Math.floor(reignDays / 56)));
+    return {
+      past: world.chronicle.chapters(),
+      current: {
+        chapter: world.succession.state.generation,
+        name: identity.monarchName,
+        startYear,
+      },
+    };
+  }, [open, identity, worldStats.day, getWorld]);
+
   if (!open) return null;
 
   const handleDownload = () => {
     if (!input || sections.length === 0) return;
-    const md = chronicleToMarkdown(input, sections);
+    const reignsMd = reigns.past.length > 0
+      ? "## The Reigns\n\n" +
+        reigns.past
+          .map((c) =>
+            `**Chapter ${roman(c.chapter)} — ${c.name}, ${c.epithet}** (Years ${c.startYear}–${c.endYear})  \n` +
+            `${c.headline} _${ENDING[c.context]}; ${c.reputation}; ${c.population} souls._`,
+          )
+          .join("\n\n") +
+        "\n\n"
+      : "";
+    const md = reignsMd + chronicleToMarkdown(input, sections);
     const blob = new Blob([md], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -105,6 +161,40 @@ export function KingdomChronicle({
         </div>
 
         <div className="chronicle-body">
+          {(reigns.past.length > 0 || reigns.current) && (
+            <section className="chronicle-reigns">
+              <h3 className="chronicle-section-title">The Reigns</h3>
+              <ol className="reign-chapters">
+                {reigns.past.map((c) => (
+                  <li key={`ch-${c.chapter}-${c.endYear}`} className="reign-chapter-card">
+                    <div className="reign-chapter-head">
+                      <span className="reign-chapter-no">Chapter {roman(c.chapter)}</span>
+                      <span className="reign-chapter-years">Years {c.startYear}–{c.endYear}</span>
+                    </div>
+                    <div className="reign-chapter-name">
+                      {c.name}, <em>{c.epithet}</em>
+                    </div>
+                    {c.headline && <p className="reign-chapter-line">{c.headline}</p>}
+                    <div className="reign-chapter-chips">
+                      <span className="reign-chip">{ENDING[c.context]}</span>
+                      <span className="reign-chip">{c.reputation}</span>
+                      <span className="reign-chip">{c.population} souls</span>
+                    </div>
+                  </li>
+                ))}
+                {reigns.current && (
+                  <li className="reign-chapter-card current">
+                    <div className="reign-chapter-head">
+                      <span className="reign-chapter-no">Chapter {roman(reigns.current.chapter)}</span>
+                      <span className="reign-chapter-years">Year {reigns.current.startYear} – present</span>
+                    </div>
+                    <div className="reign-chapter-name">{reigns.current.name}</div>
+                    <p className="reign-chapter-line">Still reigning. This page is not yet written.</p>
+                  </li>
+                )}
+              </ol>
+            </section>
+          )}
           {sections.length === 0 ? (
             <p className="chronicle-empty">
               The kingdom is too young for a chronicle. Return after more time has passed.

@@ -78,6 +78,7 @@ import type { RemembranceSnapshot } from "./systems/Remembrance";
 import { InWorldHolidays } from "./systems/InWorldHolidays";
 import type { InWorldHolidaysSnapshot } from "./systems/InWorldHolidays";
 import { Mood } from "./systems/Mood";
+import { Chronicle } from "./systems/Chronicle";
 import type { MoodSnapshot } from "./systems/Mood";
 import { Consequences } from "./systems/Consequences";
 import type { ConsequencesSnapshot } from "./systems/Consequences";
@@ -278,6 +279,7 @@ export class World {
   readonly remembrance: Remembrance;
   readonly inWorldHolidays: InWorldHolidays;
   readonly mood: Mood;
+  readonly chronicle: Chronicle;
   readonly consequences: Consequences;
   readonly foundingDay: FoundingDay;
   /** Accumulator for NPC speech-bubble cadence. */
@@ -410,6 +412,7 @@ export class World {
     this.remembrance = new Remembrance(this, this.journal, this.rand);
     this.inWorldHolidays = new InWorldHolidays(this, this.journal, this.rand);
     this.mood = new Mood(this);
+    this.chronicle = new Chronicle();
     this.consequences = new Consequences(this, this.journal, this.rand);
     this.foundingDay = new FoundingDay(this, this.journal);
     const cal = this.calendar.snapshot();
