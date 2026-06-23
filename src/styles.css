@@ -5000,6 +5000,27 @@ html.colorblind .faction-g { filter: hue-rotate(300deg) saturate(1.2); }  /* mag
   color: #cbd5e1;
   font-style: italic;
 }
+.reign-chapter-beats {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.reign-chapter-beats li {
+  position: relative;
+  padding-left: 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+.reign-chapter-beats li::before {
+  content: "·";
+  position: absolute;
+  left: 2px;
+  color: var(--accent);
+}
 .reign-chapter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .reign-chip {
   font-size: 10px;

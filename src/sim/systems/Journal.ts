@@ -58,6 +58,8 @@ export class Journal {
       targetStructureId,
       fromDecision,
     });
+    // Remember milestone/life beats for the current reign's chapter highlights.
+    this.world.chronicle?.noteBeat(text, kind);
   }
 
   private handleEvent(ev: ExternalEvent) {

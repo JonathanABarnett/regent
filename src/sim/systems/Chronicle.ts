@@ -31,6 +31,8 @@ export interface ReignChapter {
   vaultSize: number;
   dynastyStreak: number;
   headline: string;
+  /** 0–3 of the reign's most notable journal beats (milestones, then life). */
+  highlights: string[];
 }
 
 /** Running tally of notable events for the reign in progress. */
@@ -39,10 +41,18 @@ export interface ReignTheme {
   wars: number;
 }
 
+/** A notable journal beat for the reign in progress. */
+interface ReignBeat {
+  text: string;
+  rank: number; // 0 = milestone, 1 = life
+}
+
 export interface ChronicleSnapshot {
   chapters: ReignChapter[];
   /** The in-progress reign's event tally (so a mid-reign reload keeps it). */
   theme?: ReignTheme;
+  /** The in-progress reign's notable beats (so a mid-reign reload keeps them). */
+  beats?: ReignBeat[];
 }
 
 /** Bound on save size. A 100-reign dynasty is astronomically long already. */
@@ -77,9 +87,13 @@ export function reignTitle(input: {
   return "The Quiet Years";
 }
 
+/** How many beats to keep buffered before trimming (we only need ~3). */
+const MAX_BEATS = 24;
+
 export class Chronicle {
   private list: ReignChapter[] = [];
   private theme: ReignTheme = { festivals: 0, wars: 0 };
+  private beats: ReignBeat[] = [];
 
   /** Tally a notable world-bus event toward the reign in progress. */
   noteEvent(kind: string): void {
@@ -87,8 +101,32 @@ export class Chronicle {
     else if (kind === "monster") this.theme.wars++; // war casualty / raid
   }
 
+  /**
+   * Remember a notable journal beat for the reign in progress. Only milestone
+   * and life entries are highlight-worthy; everything else is noise. Fed from
+   * Journal.write so it captures the actual prose the player saw.
+   */
+  noteBeat(text: string, kind: string): void {
+    const rank = kind === "milestone" ? 0 : kind === "life" ? 1 : -1;
+    if (rank < 0) return;
+    this.beats.push({ text, rank });
+    if (this.beats.length > MAX_BEATS) {
+      this.beats.splice(0, this.beats.length - MAX_BEATS);
+    }
+  }
+
   currentTheme(): ReignTheme {
     return { ...this.theme };
+  }
+
+  /** Pick the reign's 0–3 standout beats: milestones first, in reading order. */
+  private pickHighlights(): string[] {
+    return this.beats
+      .map((b, i) => ({ ...b, i }))
+      .sort((a, b) => a.rank - b.rank || a.i - b.i)
+      .slice(0, 3)
+      .sort((a, b) => a.i - b.i)
+      .map((b) => (b.text.length > 120 ? b.text.slice(0, 119) + "…" : b.text));
   }
 
   /**
@@ -119,12 +157,15 @@ export class Chronicle {
       vaultSize: summary.vaultSize,
       dynastyStreak: summary.dynastyStreak,
       headline: summary.headline,
+      highlights: this.pickHighlights(),
     };
     this.list.push(chapter);
     if (this.list.length > MAX_CHAPTERS) {
       this.list = this.list.slice(this.list.length - MAX_CHAPTERS);
     }
+    // Next reign starts with a fresh tally + empty beat buffer.
     this.theme = { festivals: 0, wars: 0 };
+    this.beats = [];
     return chapter;
   }
 
@@ -141,6 +182,7 @@ export class Chronicle {
     return {
       chapters: this.list.map((c) => ({ ...c })),
       theme: { ...this.theme },
+      beats: this.beats.map((b) => ({ ...b })),
     };
   }
 
@@ -159,6 +201,13 @@ export class Chronicle {
         festivals: Math.max(0, Math.floor(num((t as Record<string, unknown>).festivals, 0))),
         wars: Math.max(0, Math.floor(num((t as Record<string, unknown>).wars, 0))),
       };
+    }
+    const b = (raw as { beats?: unknown }).beats;
+    if (Array.isArray(b)) {
+      this.beats = b
+        .filter((x): x is Record<string, unknown> => !!x && typeof x === "object" && typeof (x as Record<string, unknown>).text === "string")
+        .map((x) => ({ text: str(x.text, ""), rank: x.rank === 1 ? 1 : 0 }))
+        .slice(-MAX_BEATS);
     }
   }
 }
@@ -193,5 +242,8 @@ function coerceChapter(raw: unknown): ReignChapter | null {
     vaultSize: Math.max(0, Math.floor(num(r.vaultSize, 0))),
     dynastyStreak: Math.max(0, Math.floor(num(r.dynastyStreak, 0))),
     headline: str(r.headline, ""),
+    highlights: Array.isArray(r.highlights)
+      ? (r.highlights as unknown[]).filter((h): h is string => typeof h === "string").slice(0, 3).map((h) => str(h, ""))
+      : [],
   };
 }

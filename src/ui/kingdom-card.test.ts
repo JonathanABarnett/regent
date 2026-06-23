@@ -281,6 +281,7 @@ const REIGN_CHAPTER: ReignChapter = {
   vaultSize: 4,
   dynastyStreak: 0,
   headline: "The reign of Aldric ended by challenge.",
+  highlights: ["A festival lit the keep.", "The harvest came in twofold."],
 };
 
 describe("composeReignCardInput", () => {
@@ -296,7 +297,9 @@ describe("composeReignCardInput", () => {
     expect(input.footerLine).toContain("5–22");
     expect(input.monarchName).toBe("Aldric");
     expect(input.milestones[0]).toContain("ended by challenge");
-    expect(input.milestones[1]).toContain("Deposed by a usurper");
+    // The reign's highlights sit between the headline and the verdict line.
+    expect(input.milestones).toContain("A festival lit the keep.");
+    expect(input.milestones[input.milestones.length - 1]).toContain("Deposed by a usurper");
     expect(input.stats?.population).toBe(18);
     expect(input.stats?.vault).toBe(4);
   });

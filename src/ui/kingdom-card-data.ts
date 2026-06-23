@@ -249,6 +249,7 @@ export function composeReignCardInput(args: {
     footerLine: `A reign in ${args.kingdomName} · Years ${c.startYear}–${c.endYear}`,
     milestones: [
       trimMilestoneLine(c.headline, 90),
+      ...c.highlights.slice(0, 2).map((h) => trimMilestoneLine(h, 90)),
       trimMilestoneLine(`${endLine} Held ${c.reputation}; the kingdom counted ${c.population} souls.`, 90),
     ],
     stats: {

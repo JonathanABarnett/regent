@@ -180,6 +180,13 @@ export function KingdomChronicle({
                       {c.name}, <em>{c.epithet}</em>
                     </div>
                     {c.headline && <p className="reign-chapter-line">{c.headline}</p>}
+                    {c.highlights.length > 0 && (
+                      <ul className="reign-chapter-beats">
+                        {c.highlights.map((h, i) => (
+                          <li key={i}>{h}</li>
+                        ))}
+                      </ul>
+                    )}
                     <div className="reign-chapter-chips">
                       <span className="reign-chip">{ENDING[c.context]}</span>
                       <span className="reign-chip">{c.reputation}</span>

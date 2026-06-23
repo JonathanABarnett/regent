@@ -108,6 +108,45 @@ describe("Chronicle event tally", () => {
   });
 });
 
+describe("Chronicle highlights", () => {
+  it("captures milestone/life beats and records up to 3, in reading order", () => {
+    const c = new Chronicle();
+    c.noteBeat("system noise", "system"); // ignored
+    c.noteBeat("A wedding at the keep.", "life");
+    c.noteBeat("The cult was put down.", "milestone");
+    c.noteBeat("A festival lit the square.", "milestone");
+    c.noteBeat("rain came", "weather"); // ignored
+    const ch = c.record(summary(2), 1, 14);
+    // Top 3 by rank were all selected (only 3 eligible), shown chronologically.
+    expect(ch.highlights).toEqual([
+      "A wedding at the keep.",
+      "The cult was put down.",
+      "A festival lit the square.",
+    ]);
+    // Beats reset for the next reign.
+    expect(c.record(summary(3), 14, 20).highlights).toEqual([]);
+  });
+
+  it("prefers milestones when there are more than three beats", () => {
+    const c = new Chronicle();
+    c.noteBeat("life 1", "life");
+    c.noteBeat("MILE 1", "milestone");
+    c.noteBeat("life 2", "life");
+    c.noteBeat("MILE 2", "milestone");
+    c.noteBeat("MILE 3", "milestone");
+    // The three milestones win selection; displayed in insertion order.
+    expect(c.record(summary(2), 1, 14).highlights).toEqual(["MILE 1", "MILE 2", "MILE 3"]);
+  });
+
+  it("persists in-progress beats across snapshot/hydrate", () => {
+    const c = new Chronicle();
+    c.noteBeat("A birth in the keep.", "life");
+    const c2 = new Chronicle();
+    c2.hydrate(c.snapshot());
+    expect(c2.record(summary(2), 1, 14).highlights).toEqual(["A birth in the keep."]);
+  });
+});
+
 describe("succession records into the chronicle", () => {
   it("a natural death adds a chapter to world.chronicle", () => {
     const w = new World({ seed: 4 });
